@@ -1,21 +1,21 @@
-// src/services/bookingService.js
 import axios from "axios";
 
 const API_URL = "http://127.0.0.1:8000/api";
-// Adjust if you're on a different host/port
 
-// Get the current availability of table types
-export async function fetchTableAvailability() {
-    const response = await axios.get(`${API_URL}/table-availability`);
-    return response.data; // e.g. [ {id:1, capacity:2, available_count:4}, ... ]
+/**
+ * Fetch available time slots for a given date and meal type.
+ */
+export async function fetchAvailableTimeSlots({ date, mealType }) {
+    const response = await axios.get(`${API_URL}/table-availability`, {
+        params: { date, mealType },
+    });
+    return response.data;
 }
 
-// Book a specific table type
-export async function bookTable(capacity, customer_name) {
-    // We only need to send capacity and optional name
-    const response = await axios.post(`${API_URL}/bookings`, {
-        capacity,
-        customer_name,
-    });
-    return response.data; // e.g. { message: '...', data: {...} }
+/**
+ * Create a booking with the provided data.
+ */
+export async function createBooking(data) {
+    const response = await axios.post(`${API_URL}/bookings`, data);
+    return response.data;
 }

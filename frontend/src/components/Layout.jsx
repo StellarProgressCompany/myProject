@@ -1,8 +1,7 @@
-// src/components/Layout.jsx
 import React from "react";
 import { Link } from "react-router-dom";
 
-function Layout({ children }) {
+const Layout = ({ children }) => {
     return (
         <div>
             {/* Global Navigation Bar */}
@@ -16,17 +15,15 @@ function Layout({ children }) {
                     </Link>
                 </div>
                 <div>
-                    {/* Admin link (you might later want to protect this route) */}
                     <Link to="/admin" className="hover:text-gray-300">
                         Admin
                     </Link>
                 </div>
             </nav>
-
             {/* Page Content */}
             <main>{children}</main>
         </div>
     );
-}
+};
 
 export default Layout;

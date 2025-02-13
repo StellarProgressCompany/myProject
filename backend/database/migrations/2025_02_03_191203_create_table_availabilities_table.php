@@ -11,11 +11,16 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('table_types', function (Blueprint $table) {
+        Schema::create('table_availabilities', function (Blueprint $table) {
             $table->id();
+            $table->date('date');
+            $table->string('meal_type');        // lunch or dinner
             $table->integer('capacity');        // e.g. 2, 4, or 6
-            $table->integer('available_count'); // how many of this capacity remain
+            $table->integer('available_count'); // number of available tables for that capacity
             $table->timestamps();
+
+            // each date+meal_type+capacity is unique
+            $table->unique(['date', 'meal_type', 'capacity']);
         });
     }
 
@@ -24,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('table_types');
+        Schema::dropIfExists('table_availabilities');
     }
 };

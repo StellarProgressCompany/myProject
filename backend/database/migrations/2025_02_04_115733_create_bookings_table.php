@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('table_type_id')->constrained()->onDelete('cascade');
-            $table->date('date');    // e.g. "2025-02-14"
-            $table->time('time');    // e.g. "14:00:00"
+            $table->foreignId('table_availability_id')->constrained()->onDelete('cascade');
+            $table->date('date');
+            $table->time('time');
             $table->string('customer_name')->nullable();
             $table->timestamps();
         });

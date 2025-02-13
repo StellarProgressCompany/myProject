@@ -10,15 +10,16 @@ class Booking extends Model
     use HasFactory;
 
     protected $fillable = [
-        'table_type_id',
+        'table_availability_id',
         'date',
         'time',
         'customer_name'
     ];
 
-    public function tableType()
+    public function tableAvailability()
     {
-        return $this->belongsTo(TableType::class);
+        return $this->belongsTo(TableAvailability::class);
     }
+
 }
 

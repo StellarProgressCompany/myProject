@@ -1,29 +1,21 @@
-// src/pages/AdminAvailabilityPage.jsx
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 
-function AdminAvailabilityPage() {
-    // Object to store bookings grouped by table type ID
+const AdminAvailabilityPage = () => {
     const [groupedBookings, setGroupedBookings] = useState({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    // Base URL for the API endpoints (adjust if needed)
     const API_URL = "http://127.0.0.1:8000/api";
 
-    // Fetch all bookings on component mount
     useEffect(() => {
         const fetchBookings = async () => {
             try {
                 setLoading(true);
                 const response = await axios.get(`${API_URL}/bookings`);
                 const bookings = response.data;
-
-                // Group bookings by table_type.id
                 const groups = {};
                 bookings.forEach((booking) => {
                     const tableType = booking.table_type;
-                    // If this table type hasn't been added yet, initialize it
                     if (!groups[tableType.id]) {
                         groups[tableType.id] = {
                             capacity: tableType.capacity,
@@ -51,10 +43,8 @@ function AdminAvailabilityPage() {
                 <h1 className="text-2xl font-bold mb-4">
                     Admin Dashboard - Bookings Overview
                 </h1>
-
                 {loading && <p>Loading...</p>}
                 {error && <p className="text-red-600 font-semibold">{error}</p>}
-
                 {!loading && !error && (
                     <div>
                         {Object.keys(groupedBookings).length === 0 && (
@@ -62,16 +52,13 @@ function AdminAvailabilityPage() {
                         )}
                         {Object.keys(groupedBookings).map((typeId) => {
                             const group = groupedBookings[typeId];
-                            // Number of bookings for this table type
                             const bookedCount = group.bookings.length;
-                            // Total tables available for this type is assumed to be the sum of booked and available tables
                             const totalCount = bookedCount + group.available_count;
                             return (
                                 <div
                                     key={typeId}
                                     className="mb-8 border rounded shadow p-4 bg-gray-50"
                                 >
-                                    {/* Header with summary info */}
                                     <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4">
                                         <h2 className="text-xl font-bold mb-2 md:mb-0">
                                             Table Type: {group.capacity} Persons
@@ -88,36 +75,26 @@ function AdminAvailabilityPage() {
                       </span>
                                         </div>
                                     </div>
-
-                                    {/* Nested list of bookings for this table type */}
                                     <div className="overflow-x-auto">
                                         <table className="w-full border-collapse">
                                             <thead>
                                             <tr className="bg-gray-200">
                                                 <th className="border p-2 text-left">Booking ID</th>
-                                                <th className="border p-2 text-left">
-                                                    Customer Name
-                                                </th>
+                                                <th className="border p-2 text-left">Customer Name</th>
                                                 <th className="border p-2 text-left">Date</th>
                                                 <th className="border p-2 text-left">Time</th>
-                                                <th className="border p-2 text-left">
-                                                    Created At
-                                                </th>
+                                                <th className="border p-2 text-left">Created At</th>
                                             </tr>
                                             </thead>
                                             <tbody>
                                             {group.bookings.map((booking) => (
                                                 <tr key={booking.id} className="hover:bg-gray-100">
                                                     <td className="border p-2">{booking.id}</td>
-                                                    <td className="border p-2">
-                                                        {booking.customer_name}
-                                                    </td>
+                                                    <td className="border p-2">{booking.customer_name}</td>
                                                     <td className="border p-2">{booking.date}</td>
                                                     <td className="border p-2">{booking.time}</td>
                                                     <td className="border p-2">
-                                                        {new Date(
-                                                            booking.created_at
-                                                        ).toLocaleString()}
+                                                        {new Date(booking.created_at).toLocaleString()}
                                                     </td>
                                                 </tr>
                                             ))}
@@ -132,6 +109,6 @@ function AdminAvailabilityPage() {
             </div>
         </div>
     );
-}
+};
 
 export default AdminAvailabilityPage;

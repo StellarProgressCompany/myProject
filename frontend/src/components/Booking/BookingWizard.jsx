@@ -35,7 +35,7 @@ const BookingWizard = () => {
     // Success popup state
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-    // Fetch available time slots when entering Step 2
+    // --- Fetch available time slots when entering Step 2 ---
     useEffect(() => {
         if (currentStep === 2 && date && mealType) {
             const loadTimeSlots = async () => {
@@ -58,17 +58,18 @@ const BookingWizard = () => {
     const goNext = () => setCurrentStep((prev) => prev + 1);
     const goBack = () => setCurrentStep((prev) => prev - 1);
 
-    // Handlers for steps
+    // Step 1 Handler
     const handleStep1Continue = () => {
         if (!date) {
             setError("Please select a date.");
             return;
         }
         setError("");
-        setTimeSlotData(null); // reset previous time slots
+        setTimeSlotData(null);
         goNext();
     };
 
+    // Step 2 Handler
     const handleStep2Continue = () => {
         if (!selectedRound) {
             setError("Please select a round.");
@@ -78,6 +79,7 @@ const BookingWizard = () => {
         goNext();
     };
 
+    // Step 3 Handler
     const handleConfirmBooking = async () => {
         setError("");
         setConfirmationMessage("");
@@ -89,8 +91,8 @@ const BookingWizard = () => {
 
         const totalGuests = adults + kids;
         const formattedDate = format(date, "yyyy-MM-dd");
-
         let chosenTime = "";
+
         if (mealType === "lunch") {
             chosenTime =
                 selectedRound === "first_round"
@@ -156,9 +158,16 @@ const BookingWizard = () => {
     return (
         <div className="relative min-h-screen">
             <AnimatedBackground />
-            <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+
+            {/*
+              IMPORTANT:
+              - We use "relative" here (NOT fixed)
+              - No 'z-50' on the wrapper
+            */}
+            <div className="relative flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md relative">
                     <StepIndicator />
+
                     {currentStep === 1 && (
                         <ReservationDetailsStep
                             adults={adults}
@@ -174,10 +183,11 @@ const BookingWizard = () => {
                             error={error}
                             onContinue={handleStep1Continue}
                             onClose={() => {
-                                /* Optionally, implement logic to close the wizard */
+                                /* Optionally do something if user closes */
                             }}
                         />
                     )}
+
                     {currentStep === 2 && (
                         <TimeSlotStep
                             mealType={mealType}
@@ -191,6 +201,7 @@ const BookingWizard = () => {
                             onContinue={handleStep2Continue}
                         />
                     )}
+
                     {currentStep === 3 && (
                         <ContactInfoStep
                             fullName={fullName}
@@ -215,9 +226,11 @@ const BookingWizard = () => {
                             onConfirmBooking={handleConfirmBooking}
                         />
                     )}
+
+                    {/* Success Popup */}
                     {showSuccessPopup && (
-                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                            <div className="bg-white p-6 rounded shadow-lg">
+                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                            <div className="bg-white p-6 rounded shadow-lg z-50">
                                 <p className="text-lg font-bold mb-2">Booking Successful!</p>
                                 <p>Redirecting to start...</p>
                             </div>

@@ -3,7 +3,7 @@ import React from "react";
 const AnimatedBackground = () => {
     return (
         <div
-            className="fixed inset-0 z-0"
+            className="fixed inset-0 -z-10"
             style={{
                 background: "linear-gradient(135deg, #f8fafc, #e2e8f0)",
             }}

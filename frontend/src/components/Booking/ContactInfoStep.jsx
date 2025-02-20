@@ -99,9 +99,13 @@ const ContactInfoStep = ({
                 <button onClick={onBack} className="px-4 py-2 border rounded">
                     Back
                 </button>
-                <button onClick={onConfirmBooking} className="bg-blue-600 text-white px-4 py-2 rounded">
+                <button
+                    onClick={onConfirmBooking}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover:shadow-lg transition-all duration-200"
+                >
                     Finalize Booking
                 </button>
+
             </div>
         </div>
     );

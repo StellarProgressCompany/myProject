@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
+import { format, addDays, addMonths, subMonths } from "date-fns";
 import { fetchAvailableTimeSlots, createBooking } from "../../services/bookingService";
 import AnimatedBackground from "../AnimatedBackground";
 import ReservationDetailsStep from "./ReservationDetailsStep";
@@ -18,6 +18,8 @@ const BookingWizard = () => {
     // Step 2: Time slot selection
     const [timeSlotData, setTimeSlotData] = useState(null);
     const [selectedRound, setSelectedRound] = useState("");
+    // NEW state to store the exact chosen time (e.g. "12:45:00")
+    const [selectedTime, setSelectedTime] = useState(null);
     const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
 
     // Step 3: Contact info
@@ -69,17 +71,24 @@ const BookingWizard = () => {
         goNext();
     };
 
-    // Step 2 Handler
-    const handleStep2Continue = () => {
+    // Step 2 Handler:
+    // Instead of a simple continue, we now require a time to be selected.
+    // TimeSlotStep will call onContinue(selectedTime) when the user confirms a round & time.
+    const handleStep2Continue = (chosenTime) => {
         if (!selectedRound) {
             setError("Please select a round.");
             return;
         }
+        if (!chosenTime) {
+            setError("Please select a time.");
+            return;
+        }
+        setSelectedTime(chosenTime);
         setError("");
         goNext();
     };
 
-    // Step 3 Handler
+    // Step 3 Handler: Use the user-chosen time from step 2
     const handleConfirmBooking = async () => {
         setError("");
         setConfirmationMessage("");
@@ -89,23 +98,18 @@ const BookingWizard = () => {
             return;
         }
 
+        if (!selectedTime) {
+            setError("No time selected. Please go back and select a time.");
+            return;
+        }
+
         const totalGuests = adults + kids;
         const formattedDate = format(date, "yyyy-MM-dd");
-        let chosenTime = "";
-
-        if (mealType === "lunch") {
-            chosenTime =
-                selectedRound === "first_round"
-                    ? timeSlotData.first_round.time
-                    : timeSlotData.second_round.time;
-        } else {
-            chosenTime = timeSlotData.dinner_round.time;
-        }
 
         try {
             await createBooking({
                 date: formattedDate,
-                time: chosenTime,
+                time: selectedTime, // using the chosen time from step 2
                 customer_name: fullName,
                 guests: totalGuests,
                 phone,
@@ -129,6 +133,7 @@ const BookingWizard = () => {
         setCurrentStep(1);
         setSelectedRound("");
         setTimeSlotData(null);
+        setSelectedTime(null);
         setFullName("");
         setPhone("");
         setEmail("");
@@ -159,11 +164,6 @@ const BookingWizard = () => {
         <div className="relative min-h-screen">
             <AnimatedBackground />
 
-            {/*
-              IMPORTANT:
-              - We use "relative" here (NOT fixed)
-              - No 'z-50' on the wrapper
-            */}
             <div className="relative flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md relative">
                     <StepIndicator />
@@ -198,7 +198,7 @@ const BookingWizard = () => {
                             isLoading={isLoadingTimeSlots}
                             error={error}
                             onBack={goBack}
-                            onContinue={handleStep2Continue}
+                            onContinue={handleStep2Continue} // now receives the chosen time from the step
                         />
                     )}
 

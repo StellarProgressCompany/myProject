@@ -21,3 +21,10 @@ export async function createBooking(data) {
     const response = await axios.post(`${API_URL}/bookings`, data);
     return response.data;
 }
+
+
+// NEW: fetch all bookings
+export async function fetchAllBookings() {
+    const response = await axios.get(`${API_URL}/bookings`);
+    return response.data;
+}

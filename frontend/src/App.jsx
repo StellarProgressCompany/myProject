@@ -2,7 +2,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import HomePage from "./pages/HomePage";
-import AdminAvailabilityPage from "./pages/AdminAvailabilityPage";
+import AdminDashboard from "./pages/AdminDashboard.jsx";
 import BookingPage from "./pages/BookingPage";
 import Layout from "./components/Layout";
 
@@ -13,7 +13,7 @@ function App() {
                 <Routes>
                     <Route path="/" element={<HomePage />} />
                     <Route path="/booking" element={<BookingPage />} />
-                    <Route path="/admin" element={<AdminAvailabilityPage />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
                 </Routes>
             </Layout>
         </Router>

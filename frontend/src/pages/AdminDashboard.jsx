@@ -1,4 +1,6 @@
+// src/pages/AdminDashboard.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     IconBellRinging,
     IconReceipt2,
@@ -10,14 +12,14 @@ import {
     IconSwitchHorizontal,
     IconLogout,
 } from "@tabler/icons-react";
-import { fetchAllBookings } from "../services/bookingService";
 
-/**
- * A simple array describing our sidebar items. You can expand/modify as needed.
- */
+import { fetchAllBookings } from "../services/bookingService";
+import VisualizeBookings from "../components/VisualizeBookings";
+
+// Updated navData: rename "Billing" => "Visualize Bookings"
 const navData = [
     { label: "Notifications", icon: IconBellRinging },
-    { label: "Billing", icon: IconReceipt2 },
+    { label: "Visualize Bookings", icon: IconReceipt2 },
     { label: "Security", icon: IconFingerprint },
     { label: "SSH Keys", icon: IconKey },
     { label: "Databases", icon: IconDatabaseImport },
@@ -26,10 +28,8 @@ const navData = [
 ];
 
 function AdminDashboard() {
-    // state for active nav item
-    const [active, setActive] = useState("Billing");
-
-    // booking data states
+    const navigate = useNavigate();
+    const [active, setActive] = useState("Visualize Bookings");
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -47,35 +47,26 @@ function AdminDashboard() {
         getBookings();
     }, []);
 
-    // Determine today's date in YYYY-MM-DD
-    const today = new Date().toISOString().split("T")[0];
-    // Filter the bookings to only show today's
-    const todaysBookings = bookings.filter((booking) => booking.date === today);
-
-    /**
-     * Log out handler (replace with real auth logic)
-     */
     function handleLogout() {
-        alert("Logout clicked (add your logic here)!");
+        localStorage.removeItem("isAuthenticated");
+        navigate("/login");
     }
 
     return (
         <div className="flex min-h-screen bg-gray-100">
             {/* SIDEBAR */}
             <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
-                {/* Top: Logo + version block (example) */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
                     <div className="flex items-center space-x-2">
-                        {/* Replace with your own logo if you like */}
                         <div className="h-8 w-8 bg-blue-500 text-white flex items-center justify-center rounded-full">
                             <span className="text-sm font-bold">Logo</span>
                         </div>
-                        <span className="text-xl font-semibold">Stellar Progress</span>
+                        <span className="text-xl font-semibold">My Admin</span>
                     </div>
-                    <code className="text-sm font-semibold text-gray-500">v1.0</code>
+                    <code className="text-sm font-semibold text-gray-500">v3.1.2</code>
                 </div>
 
-                {/* Nav Items */}
+                {/* NAV ITEMS */}
                 <div className="flex-1 p-4 space-y-1">
                     {navData.map((item) => {
                         const Icon = item.icon;
@@ -84,7 +75,7 @@ function AdminDashboard() {
                             <button
                                 key={item.label}
                                 onClick={() => setActive(item.label)}
-                                className={`w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50 
+                                className={`w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50
                   ${
                                     isActive
                                         ? "bg-blue-100 text-blue-700 font-medium"
@@ -122,74 +113,35 @@ function AdminDashboard() {
                 </div>
             </aside>
 
-            {/* MAIN CONTENT AREA */}
+            {/* MAIN CONTENT */}
             <main className="flex-1 p-6">
-                {/* Header + Subheader */}
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-                    <p className="text-gray-600">
-                        Welcome to the admin panel! Here’s an overview of your bookings.
-                    </p>
-                </div>
-
                 {loading ? (
                     <p>Loading bookings...</p>
                 ) : (
                     <>
-                        {/* Stats / Cards Example */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            <div className="bg-white rounded-lg shadow p-4">
-                                <h2 className="text-lg font-semibold mb-2">
-                                    Today&apos;s Bookings
-                                </h2>
-                                <p className="text-2xl font-bold text-blue-600">
-                                    {todaysBookings.length}
-                                </p>
-                            </div>
-                            <div className="bg-white rounded-lg shadow p-4">
-                                <h2 className="text-lg font-semibold mb-2">Total Bookings</h2>
-                                <p className="text-2xl font-bold text-green-600">
-                                    {bookings.length}
-                                </p>
-                            </div>
-                            <div className="bg-white rounded-lg shadow p-4">
-                                <h2 className="text-lg font-semibold mb-2">Active Tab</h2>
-                                <p className="text-2xl font-bold text-purple-600">{active}</p>
-                            </div>
+                        {/* A simple header */}
+                        <div className="mb-8">
+                            <h1 className="text-2xl font-bold">Admin Dashboard</h1>
+                            <p className="text-gray-600">
+                                Welcome to the admin panel! Here’s an overview of your
+                                restaurant’s bookings and settings.
+                            </p>
                         </div>
 
-                        {/* Table of today's bookings */}
-                        <div className="bg-white rounded-lg shadow p-4">
-                            <h2 className="text-xl font-semibold mb-4">Today&apos;s Bookings</h2>
-                            {todaysBookings.length === 0 ? (
-                                <p>No bookings for today.</p>
-                            ) : (
-                                <table className="min-w-full table-auto">
-                                    <thead>
-                                    <tr className="bg-gray-100 text-left">
-                                        <th className="px-4 py-2 border-b">ID</th>
-                                        <th className="px-4 py-2 border-b">Customer Name</th>
-                                        <th className="px-4 py-2 border-b">Date</th>
-                                        <th className="px-4 py-2 border-b">Time</th>
-                                        <th className="px-4 py-2 border-b">Guests</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody>
-                                    {todaysBookings.map((booking) => (
-                                        <tr key={booking.id} className="hover:bg-gray-50">
-                                            <td className="px-4 py-2 border-b">{booking.id}</td>
-                                            <td className="px-4 py-2 border-b">
-                                                {booking.customer_name}
-                                            </td>
-                                            <td className="px-4 py-2 border-b">{booking.date}</td>
-                                            <td className="px-4 py-2 border-b">{booking.time}</td>
-                                            <td className="px-4 py-2 border-b">{booking.guests}</td>
-                                        </tr>
-                                    ))}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
+                        {/* Conditionally render based on 'active' item */}
+                        {active === "Visualize Bookings" && (
+                            <VisualizeBookings bookings={bookings} />
+                        )}
+
+                        {active !== "Visualize Bookings" && (
+                            <div>
+                                {/* Fallback content for other tabs, e.g. notifications, SSH keys, etc. */}
+                                <h2 className="text-xl font-semibold mb-4">{active}</h2>
+                                <p className="text-gray-600">
+                                    This section can be built out for &quot;{active}&quot; features.
+                                </p>
+                            </div>
+                        )}
                     </>
                 )}
             </main>

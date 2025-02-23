@@ -1,38 +1,16 @@
-// src/components/VisualizeBookings.jsx
+// src/components/Admin/VisualizeBookings.jsx
 import React, { useState } from "react";
 
-/**
- * Renders stats for:
- * - last 7 or 30 days (selectable) => total bookings + total guests
- * - today's bookings => separate counts for lunch and dinner
- *
- * Props:
- *  - bookings: Array of booking objects
- *    Each booking is expected to have:
- *      {
- *         id: number,
- *         date: string (YYYY-MM-DD),
- *         time: string (e.g., '19:00'),
- *         guests: number,
- *         mealType: string ('lunch' or 'dinner', assumed)
- *         ...
- *      }
- */
 export default function VisualizeBookings({ bookings }) {
-    // timeFrame can be "7" or "30" days
     const [timeFrame, setTimeFrame] = useState("7");
 
-    // Filter bookings by the selected timeframe
     const filteredBookings = filterBookingsByDays(bookings, parseInt(timeFrame));
+    const totalGuests = filteredBookings.reduce(
+        (acc, booking) => acc + (booking.guests || 0),
+        0
+    );
 
-    // Calculate total guests in the filtered range
-    const totalGuests = filteredBookings.reduce((acc, booking) => {
-        return acc + (booking.guests || 0);
-    }, 0);
-
-    // Today's date in YYYY-MM-DD
     const today = new Date().toISOString().split("T")[0];
-    // Separate today's bookings by meal type
     const todaysLunchBookings = bookings.filter(
         (b) => b.date === today && b.mealType === "lunch"
     );
@@ -85,7 +63,9 @@ export default function VisualizeBookings({ bookings }) {
 
             {/* Today's Bookings: separate lunch vs. dinner */}
             <div className="bg-white rounded-lg shadow p-4">
-                <h3 className="text-lg font-semibold mb-4">Today&apos;s Bookings</h3>
+                <h3 className="text-lg font-semibold mb-4">
+                    Today&apos;s Bookings
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* LUNCH */}
                     <div className="bg-blue-50 p-3 rounded">
@@ -112,10 +92,6 @@ export default function VisualizeBookings({ bookings }) {
     );
 }
 
-/**
- * Returns bookings that are within the last `days` from today.
- * E.g. if days=7, only bookings from the last 7 days up to today.
- */
 function filterBookingsByDays(bookings, days) {
     const now = new Date();
     const cutoff = new Date();
@@ -123,7 +99,7 @@ function filterBookingsByDays(bookings, days) {
 
     return bookings.filter((b) => {
         if (!b.date) return false;
-        const bookingDate = new Date(b.date); // b.date = 'YYYY-MM-DD'
+        const bookingDate = new Date(b.date);
         return bookingDate >= cutoff && bookingDate <= now;
     });
 }

@@ -2,29 +2,19 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-    IconBellRinging,
     IconReceipt2,
-    IconFingerprint,
-    IconKey,
-    IconDatabaseImport,
-    Icon2fa,
-    IconSettings,
-    IconSwitchHorizontal,
     IconLogout,
+    IconChartBar,
 } from "@tabler/icons-react";
 
 import { fetchAllBookings } from "../services/bookingService";
-import VisualizeBookings from "../components/VisualizeBookings";
+import VisualizeBookings from "../components/Admin/VisualizeBookings";
+import StatsGrid from "../components/Admin/StatsGrid";
 
-// Updated navData: rename "Billing" => "Visualize Bookings"
+// NAV DATA: only two buttons now
 const navData = [
-    { label: "Notifications", icon: IconBellRinging },
     { label: "Visualize Bookings", icon: IconReceipt2 },
-    { label: "Security", icon: IconFingerprint },
-    { label: "SSH Keys", icon: IconKey },
-    { label: "Databases", icon: IconDatabaseImport },
-    { label: "Authentication", icon: Icon2fa },
-    { label: "Other Settings", icon: IconSettings },
+    { label: "Metrics", icon: IconChartBar },
 ];
 
 function AdminDashboard() {
@@ -56,6 +46,7 @@ function AdminDashboard() {
         <div className="flex min-h-screen bg-gray-100">
             {/* SIDEBAR */}
             <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+                {/* TOP SECTION: LOGO + VERSION */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200">
                     <div className="flex items-center space-x-2">
                         <div className="h-8 w-8 bg-blue-500 text-white flex items-center justify-center rounded-full">
@@ -80,8 +71,7 @@ function AdminDashboard() {
                                     isActive
                                         ? "bg-blue-100 text-blue-700 font-medium"
                                         : "bg-transparent"
-                                }
-                `}
+                                }`}
                             >
                                 <Icon
                                     className={`mr-3 h-5 w-5 ${
@@ -94,15 +84,8 @@ function AdminDashboard() {
                     })}
                 </div>
 
-                {/* FOOTER */}
-                <div className="p-4 border-t border-gray-200 space-y-1">
-                    <button
-                        onClick={() => alert("Change account clicked!")}
-                        className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                        <IconSwitchHorizontal className="mr-3 h-5 w-5 text-gray-400" />
-                        <span>Change account</span>
-                    </button>
+                {/* FOOTER: LOGOUT ONLY */}
+                <div className="p-4 border-t border-gray-200">
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
@@ -119,29 +102,20 @@ function AdminDashboard() {
                     <p>Loading bookings...</p>
                 ) : (
                     <>
-                        {/* A simple header */}
+                        {/* HEADER */}
                         <div className="mb-8">
                             <h1 className="text-2xl font-bold">Admin Dashboard</h1>
                             <p className="text-gray-600">
                                 Welcome to the admin panel! Here’s an overview of your
-                                restaurant’s bookings and settings.
+                                restaurant’s bookings and metrics.
                             </p>
                         </div>
 
-                        {/* Conditionally render based on 'active' item */}
+                        {/* CONDITIONAL CONTENT */}
                         {active === "Visualize Bookings" && (
                             <VisualizeBookings bookings={bookings} />
                         )}
-
-                        {active !== "Visualize Bookings" && (
-                            <div>
-                                {/* Fallback content for other tabs, e.g. notifications, SSH keys, etc. */}
-                                <h2 className="text-xl font-semibold mb-4">{active}</h2>
-                                <p className="text-gray-600">
-                                    This section can be built out for &quot;{active}&quot; features.
-                                </p>
-                            </div>
-                        )}
+                        {active === "Metrics" && <StatsGrid />}
                     </>
                 )}
             </main>

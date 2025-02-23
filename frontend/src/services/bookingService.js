@@ -1,4 +1,4 @@
-// bookingService.js
+// src/services/bookingService.js
 import axios from "axios";
 
 const API_URL = "http://127.0.0.1:8000/api";
@@ -21,7 +21,6 @@ export async function createBooking(data) {
     const response = await axios.post(`${API_URL}/bookings`, data);
     return response.data;
 }
-
 
 // NEW: fetch all bookings
 export async function fetchAllBookings() {

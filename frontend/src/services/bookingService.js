@@ -22,7 +22,6 @@ export async function createBooking(data) {
     return response.data;
 }
 
-// NEW: fetch all bookings
 export async function fetchAllBookings() {
     const response = await axios.get(`${API_URL}/bookings`);
     return response.data;

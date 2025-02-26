@@ -10,16 +10,17 @@ class Booking extends Model
     use HasFactory;
 
     protected $fillable = [
-        'table_availability_id',
         'date',
         'time',
-        'customer_name'
+        'customer_name',
+        'guest_count',
     ];
 
-    public function tableAvailability()
+    /**
+     * A master booking has many booking details.
+     */
+    public function details()
     {
-        return $this->belongsTo(TableAvailability::class);
+        return $this->hasMany(BookingDetail::class);
     }
-
 }
-

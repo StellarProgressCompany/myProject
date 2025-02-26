@@ -6,32 +6,45 @@ use App\Models\Booking;
 use App\Models\TableAvailability;
 use App\Models\BookingDetail;
 use App\Services\TableAssignmentService;
+use App\Http\Resources\BookingResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class BookingController extends Controller
 {
+    /**
+     * @var TableAssignmentService
+     */
     protected $tableAssignmentService;
 
+    /**
+     * BookingController constructor.
+     *
+     * @param  TableAssignmentService  $tableAssignmentService
+     */
     public function __construct(TableAssignmentService $tableAssignmentService)
     {
         $this->tableAssignmentService = $tableAssignmentService;
     }
 
     /**
-     * Accepts a booking request.
+     * Store (create) a new booking request.
+     *
      * Expected fields:
      *  - date (Y-m-d)
      *  - time (e.g. "14:00:00")
      *  - customer_name (optional)
-     *  - guests (number of guests)
+     *  - guests (number of guests, min:2)
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
      */
     public function store(Request $request)
     {
         // Validate input.
         $validatedData = $request->validate([
             'date'          => 'required|date_format:Y-m-d',
-            'time'          => 'required', // you might add a regex for "H:i:s"
+            'time'          => 'required', // Could add more specific validation (e.g., regex)
             'customer_name' => 'nullable|string',
             'guests'        => 'required|integer|min:2',
         ]);
@@ -64,7 +77,7 @@ class BookingController extends Controller
                     $capacity    = $assign['capacity'];
                     $extraChairs = $assign['extra_chair'] ?? false;
 
-                    // Retrieve the daily availability record for this capacity.
+                    // Retrieve the daily availability record for this capacity (lock for update).
                     $availability = TableAvailability::where('capacity', $capacity)
                         ->where('date', $date)
                         ->lockForUpdate()
@@ -86,29 +99,37 @@ class BookingController extends Controller
                         'capacity'              => $capacity,
                         'extra_chair'           => $extraChairs,
                     ]);
+
                     $bookingDetails[] = $bookingDetail;
                 }
 
-                return response()->json([
-                    'message' => 'Booked successfully!',
-                    'booking' => $booking,
-                    'details' => $bookingDetails,
-                ], 201);
+                // Return the newly created booking in a standardized format
+                return (new BookingResource($booking->load('details.tableAvailability')))
+                    ->additional([
+                        'message' => 'Booked successfully!',
+                        'details' => $bookingDetails, // if you want to keep the raw details
+                    ]);
             });
+
+            return $result;
         } catch (\Exception $e) {
             // Return a clear error message if an exception occurs.
             return response()->json(['error' => $e->getMessage()], 400);
         }
-
-        return $result;
     }
 
     /**
-     * Returns a list of all bookings with details.
+     * Returns a list of all bookings with their details.
+     *
+     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection
      */
     public function index()
     {
-        $bookings = Booking::with('details.tableAvailability')->orderBy('created_at', 'desc')->get();
-        return response()->json($bookings);
+        $bookings = Booking::with('details.tableAvailability')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // Return a standardized collection using the BookingResource.
+        return BookingResource::collection($bookings);
     }
 }

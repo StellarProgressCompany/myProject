@@ -106,6 +106,7 @@ const ReservationDetailsStep = ({
                     )}
                 </div>
             </div>
+
             {error && <p className="text-red-500 mb-4">{error}</p>}
             <div className="flex justify-between">
                 <button onClick={onClose} className="px-4 py-2 border rounded">

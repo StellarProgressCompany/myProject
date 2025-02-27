@@ -14,7 +14,7 @@ export async function fetchAvailabilityRange({ start, end, mealType }) {
     const response = await axios.get(`${API_URL}/table-availability-range`, {
         params: { start, end, mealType },
     });
-    return response.data; // returns an object keyed by YYYY-MM-DD
+    return response.data;
 }
 
 export async function createBooking(data) {

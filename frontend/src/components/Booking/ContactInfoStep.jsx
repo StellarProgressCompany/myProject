@@ -1,3 +1,5 @@
+// src/components/Booking/ContactInfoStep.jsx
+
 import React from "react";
 
 const ContactInfoStep = ({
@@ -27,6 +29,7 @@ const ContactInfoStep = ({
     return (
         <div>
             <h2 className="text-2xl font-semibold mb-6 text-center">Your Details</h2>
+
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Full Name*</label>
                 <input
@@ -34,15 +37,13 @@ const ContactInfoStep = ({
                     value={fullName}
                     onChange={(e) => onChangeFullName(e.target.value)}
                     className="w-full border border-gray-300 rounded p-2"
-                    placeholder="John Doe"
+                    placeholder="Oriol Calls"
                 />
             </div>
 
-            {/* PHONE SECTION (not mandatory) */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Phone (optional)</label>
                 <div className="flex space-x-2">
-                    {/* Prefix selector (default +34) */}
                     <select
                         value={phonePrefix}
                         onChange={(e) => onChangePhonePrefix(e.target.value)}
@@ -51,16 +52,13 @@ const ContactInfoStep = ({
                         <option value="+34">+34 (Spain)</option>
                         <option value="+33">+33 (France)</option>
                         <option value="+44">+44 (UK)</option>
-                        {/* Add more prefixes as needed */}
                     </select>
-
-                    {/* 9-digit phone number (accepts spaces) */}
                     <input
                         type="text"
                         value={phoneNumber}
                         onChange={(e) => onChangePhoneNumber(e.target.value)}
                         className="w-full border border-gray-300 rounded p-2"
-                        placeholder="683 379 643"
+                        placeholder="620 379 850"
                     />
                 </div>
             </div>
@@ -72,7 +70,7 @@ const ContactInfoStep = ({
                     value={email}
                     onChange={(e) => onChangeEmail(e.target.value)}
                     className="w-full border border-gray-300 rounded p-2"
-                    placeholder="example@email.com"
+                    placeholder="example@gmail.com"
                 />
             </div>
 
@@ -83,8 +81,8 @@ const ContactInfoStep = ({
                     onChange={(e) => onChangeSpecialRequests(e.target.value)}
                     className="w-full border border-gray-300 rounded p-2"
                     rows="3"
-                    placeholder="Any dietary requirements, preferred seating, etc."
-                ></textarea>
+                    placeholder="Any dietary requirements, seating preferences, etc."
+                />
             </div>
 
             <div className="mb-4 flex items-center">

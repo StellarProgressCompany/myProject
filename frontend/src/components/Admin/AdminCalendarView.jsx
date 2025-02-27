@@ -11,21 +11,20 @@ import {
 } from "date-fns";
 
 export default function AdminCalendarView({ selectedDate, onSelectDay, bookings }) {
-    // We'll keep an internal “monthToShow” in local state
     const [monthToShow, setMonthToShow] = useState(new Date());
-
-    // Build day-of-week headers (Mon-Sun)
     const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
     const monthStart = startOfMonth(monthToShow);
     const monthEnd = endOfMonth(monthToShow);
     const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
     const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
 
-    // Helper: get # bookings, # clients for a date
+    // Use the nested table_availability.date if available
     function getDayStats(date) {
         const dateStr = format(date, "yyyy-MM-dd");
-        const dayBookings = bookings.filter((b) => b.date === dateStr);
+        const dayBookings = bookings.filter((b) => {
+            const bookingDate = b.table_availability?.date || b.date;
+            return bookingDate === dateStr;
+        });
         const totalClients = dayBookings.reduce((acc, b) => {
             const cap = b?.table_availability?.capacity || 0;
             return acc + cap;
@@ -36,7 +35,6 @@ export default function AdminCalendarView({ selectedDate, onSelectDay, bookings 
         };
     }
 
-    // Build the day grid
     const rows = [];
     let day = gridStart;
     while (day <= gridEnd) {
@@ -46,15 +44,12 @@ export default function AdminCalendarView({ selectedDate, onSelectDay, bookings 
             const { bookingsCount, totalClients } = getDayStats(cloneDay);
             const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
             const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
-
-            // Styles
             let textColor = isCurrentMonth ? "text-gray-900" : "text-gray-400";
             let bgColor = "bg-white";
             if (isSelected) {
                 bgColor = "bg-blue-600";
                 textColor = "text-white";
             }
-
             daysInRow.push(
                 <button
                     key={cloneDay.toString()}
@@ -77,7 +72,6 @@ export default function AdminCalendarView({ selectedDate, onSelectDay, bookings 
 
     return (
         <div className="bg-white p-4 rounded shadow">
-            {/* Calendar Header */}
             <div className="flex items-center justify-between mb-2">
                 <button
                     onClick={() =>
@@ -105,13 +99,11 @@ export default function AdminCalendarView({ selectedDate, onSelectDay, bookings 
                     Next
                 </button>
             </div>
-            {/* Day-of-week labels */}
             <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
                 {weekdayLabels.map((lbl) => (
                     <div key={lbl}>{lbl}</div>
                 ))}
             </div>
-            {/* The days grid */}
             {rows}
         </div>
     );

@@ -11,15 +11,19 @@ class Booking extends Model
 
     protected $fillable = [
         'table_availability_id',
-        'date',
-        'time',
-        'customer_name'
+        'reserved_time',
+        'total_adults',
+        'total_kids',
+        'full_name',
+        'phone',
+        'email',
+        'special_requests',
+        'gdpr_consent',
+        'marketing_opt_in',
     ];
 
     public function tableAvailability()
     {
         return $this->belongsTo(TableAvailability::class);
     }
-
 }
-

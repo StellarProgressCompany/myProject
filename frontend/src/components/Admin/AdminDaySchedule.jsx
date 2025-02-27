@@ -4,7 +4,7 @@ import { format, addMinutes, set } from "date-fns";
 export default function AdminDaySchedule({ selectedDate, bookings, onClose }) {
     if (!selectedDate) return null;
 
-    // Build array of time slots from 08:00 to 22:00 in 15-minute increments
+    // Build time slots from 08:00 to 22:00 in 15-minute increments
     const timeSlots = useMemo(() => {
         const slots = [];
         let slotTime = set(selectedDate, {
@@ -26,13 +26,11 @@ export default function AdminDaySchedule({ selectedDate, bookings, onClose }) {
         return slots;
     }, [selectedDate]);
 
-    // Group relevant bookings by “HH:mm”
+    // Group bookings by time slot based on reserved_time (HH:mm)
     const rows = timeSlots.map((slot) => {
         const slotLabel = format(slot, "HH:mm");
-        // Filter bookings that match this slot
         const slotBookings = bookings.filter((b) => {
-            // b.time is e.g. "20:30:00"
-            const bookingHHmm = b.time.slice(0, 5); // "20:30"
+            const bookingHHmm = b.reserved_time.slice(0, 5); // e.g., "20:30"
             return bookingHHmm === slotLabel;
         });
         const totalBookings = slotBookings.length;

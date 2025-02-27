@@ -11,11 +11,10 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // If you have a TableTypeSeeder, you can call it here.
-        // Then seed table availabilities for the next 30 days
         $this->call([
-            // TableTypeSeeder::class, // remove if you're not actually using TableType
             TableAvailabilitySeeder::class,
+            // Uncomment the following line if you want to seed sample bookings:
+            // BookingSeeder::class,
         ]);
     }
 }

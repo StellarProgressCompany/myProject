@@ -10,63 +10,99 @@ use Illuminate\Support\Facades\DB;
 class BookingController extends Controller
 {
     /**
-     * Accepts a booking request.
-     * Expected fields:
-     *  - date (Y-m-d)
-     *  - time (e.g. "14:00:00")
-     *  - customer_name (optional)
-     *  - guests (number of guests)
+     * Return all bookings (with tableAvailability).
+     */
+    public function index()
+    {
+        $bookings = Booking::with('tableAvailability')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return response()->json($bookings);
+    }
+
+    /**
+     * Create a new booking (auto-assigning one or more tables).
+     * Expected input (example):
+     * {
+     *   "date": "2025-03-01",
+     *   "meal_type": "lunch",
+     *   "reserved_time": "13:00",
+     *   "total_adults": 2,
+     *   "total_kids": 1,
+     *   "full_name": "Oriol Calls",
+     *   "phone": "+34 620 379 850",
+     *   "email": "[email protected]",
+     *   "special_requests": "Allergic to nuts",
+     *   "gdpr_consent": true,
+     *   "marketing_opt_in": false
+     * }
      */
     public function store(Request $request)
     {
-        // Validate input
         $validatedData = $request->validate([
-            'date'          => 'required|date_format:Y-m-d',
-            'time'          => 'required', // you might add a regex for "H:i:s"
-            'customer_name' => 'nullable|string',
-            'guests'        => 'required|integer|min:2',
+            'date'           => 'required|date_format:Y-m-d',
+            'meal_type'      => 'required|in:lunch,dinner',
+            'reserved_time'  => 'required|date_format:H:i:s',
+            'total_adults'   => 'required|integer|min:1',
+            'total_kids'     => 'required|integer|min:0',
+            'full_name'      => 'required|string',
+            'phone'          => 'nullable|string',
+            'email'          => 'nullable|email',
+            'special_requests' => 'nullable|string',
+            'gdpr_consent'   => 'boolean',
+            'marketing_opt_in' => 'boolean',
         ]);
 
-        $date   = $validatedData['date'];
-        $time   = $validatedData['time'];
-        $guests = $validatedData['guests'];
+        $date      = $validatedData['date'];
+        $mealType  = $validatedData['meal_type'];
+        $time      = $validatedData['reserved_time'];
+        $nAdults   = $validatedData['total_adults'];
+        $nKids     = $validatedData['total_kids'];
+        $nPeople   = $nAdults + $nKids;
 
-        // Use our helper method to decide which table(s) to assign.
-        $assignment = $this->assignTables($guests, $date);
+        // Use the algorithm to decide which table(s) to assign for $nPeople
+        $assignment = $this->assignTables($nPeople, $date, $mealType);
 
         if (isset($assignment['error'])) {
             return response()->json(['error' => $assignment['error']], 400);
         }
 
-        // Wrap the booking process in a transaction so that availability decrement and booking(s)
-        // creation happen atomically.
-        return DB::transaction(function () use ($assignment, $date, $time, $validatedData) {
+        // Wrap in a DB transaction so that availability decrement and booking creation is atomic.
+        return DB::transaction(function () use ($assignment, $validatedData, $date, $mealType, $time, $nAdults, $nKids) {
             $bookings = [];
 
-            foreach ($assignment as $assign) {
-                $capacity = $assign['capacity'];
+            foreach ($assignment as $assigned) {
+                $capacity = $assigned['capacity'];
 
-                // Retrieve the daily availability record for this capacity.
-                $availability = TableAvailability::where('capacity', $capacity)
-                    ->where('date', $date)
+                // Get the specific TableAvailability row (for that date, meal_type, capacity).
+                $availability = TableAvailability::where('date', $date)
+                    ->where('meal_type', $mealType)
+                    ->where('capacity', $capacity)
                     ->lockForUpdate()
                     ->first();
 
                 if (!$availability || $availability->available_count <= 0) {
-                    throw new \Exception("No table available for capacity $capacity");
+                    throw new \Exception("No table availability for capacity $capacity on $date ($mealType)");
                 }
 
-                // Decrement the available count.
+                // Decrement the available_count
                 $availability->available_count -= 1;
                 $availability->save();
 
-                // Create a booking record.
+                // Create the booking row
                 $booking = Booking::create([
                     'table_availability_id' => $availability->id,
-                    'date'                  => $date,
-                    'time'                  => $time,
-                    'customer_name'         => $validatedData['customer_name'] ?? 'Unknown',
+                    'reserved_time'         => $time,
+                    'total_adults'          => $nAdults,
+                    'total_kids'            => $nKids,
+                    'full_name'             => $validatedData['full_name'],
+                    'phone'                 => $validatedData['phone'] ?? null,
+                    'email'                 => $validatedData['email'] ?? null,
+                    'special_requests'      => $validatedData['special_requests'] ?? null,
+                    'gdpr_consent'          => $validatedData['gdpr_consent'] ?? false,
+                    'marketing_opt_in'      => $validatedData['marketing_opt_in'] ?? false,
                 ]);
+
                 $bookings[] = $booking;
             }
 
@@ -78,29 +114,29 @@ class BookingController extends Controller
     }
 
     /**
-     * Determines which table(s) to assign based on the number of guests (n) and availability on the given date.
-     * Returns an array of assignments like [ ['capacity' => 2, 'extra_chair' => true], ... ]
-     * If there is an error, returns: ['error' => 'message']
+     * Decide how to split $n guests across table(s) of capacity 2,4,6 for date+meal_type.
+     * Returns array of assignments like [ ['capacity'=>2,'extra_chair'=>true], ... ]
+     * OR returns ['error'=>'...'] if not possible.
      */
-    private function assignTables($n, $date)
+    private function assignTables($n, $date, $mealType)
     {
         // Fetch daily availability keyed by capacity
         $availabilities = TableAvailability::where('date', $date)
+            ->where('meal_type', $mealType)
             ->get()
             ->keyBy('capacity');
 
-        // Helper: returns true if a table of capacity $cap is available
-        $isAvailable = function ($cap) use ($availabilities) {
+        $isAvailable = function($cap) use ($availabilities) {
             return isset($availabilities[$cap]) && $availabilities[$cap]->available_count > 0;
         };
 
-        // Minimum table size is 2
+        // Must have at least 2 people
         if ($n < 2) {
             return ['error' => 'Booking must be for at least 2 people'];
         }
 
-        // --- Direct assignment if exact match ---
-        if (in_array($n, [2, 4, 6])) {
+        // If there's an exact capacity match
+        if (in_array($n, [2,4,6])) {
             if ($isAvailable($n)) {
                 return [['capacity' => $n, 'extra_chair' => false]];
             } else {
@@ -108,13 +144,11 @@ class BookingController extends Controller
             }
         }
 
-        // --- Handling special cases for 3, 5, 7, etc ---
+        // Handle special cases for 3,5,7, etc
         if ($n == 3) {
-            // Prefer a 2-person table with an extra chair
             if ($isAvailable(2)) {
                 return [['capacity' => 2, 'extra_chair' => true]];
             } elseif ($isAvailable(4)) {
-                // Otherwise use a 4-person table
                 return [['capacity' => 4, 'extra_chair' => true]];
             } else {
                 return ['error' => "No available table for 3 people"];
@@ -135,7 +169,7 @@ class BookingController extends Controller
             if ($isAvailable(6)) {
                 return [['capacity' => 6, 'extra_chair' => true]];
             } elseif ($isAvailable(4) && $availabilities[4]->available_count > 1) {
-                // Combine two 4-person tables
+                // combine two 4-person tables
                 return [
                     ['capacity' => 4, 'extra_chair' => false],
                     ['capacity' => 4, 'extra_chair' => false],
@@ -145,10 +179,10 @@ class BookingController extends Controller
             }
         }
 
-        // --- For n > 7 or other unmatched, try combining tables with a simple greedy approach
+        // For n > 7 or others, try a greedy approach
         $assignment = [];
         $remaining = $n;
-        $capacities = [6, 4, 2]; // largest first
+        $capacities = [6,4,2]; // largest first
 
         foreach ($capacities as $cap) {
             while ($remaining > 0 && $isAvailable($cap)) {
@@ -171,14 +205,5 @@ class BookingController extends Controller
         }
 
         return $assignment;
-    }
-
-    /**
-     * Returns a list of all bookings (with TableAvailability) if needed
-     */
-    public function index()
-    {
-        $bookings = Booking::with('tableAvailability')->orderBy('created_at', 'desc')->get();
-        return response()->json($bookings);
     }
 }

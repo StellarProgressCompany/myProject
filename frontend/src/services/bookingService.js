@@ -1,8 +1,7 @@
 // src/services/bookingService.js
-
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000/api";
+export const API_URL = "http://127.0.0.1:8000/api"; // Change API URL here if needed
 
 export async function fetchAvailableTimeSlots({ date, mealType }) {
     const response = await axios.get(`${API_URL}/table-availability`, {
@@ -21,7 +20,6 @@ export async function fetchAllBookings() {
     return response.data;
 }
 
-// NEW: fetch table availability for a date RANGE
 export async function fetchTableAvailabilityRange(start, end, mealType = "lunch") {
     const response = await axios.get(`${API_URL}/table-availability-range`, {
         params: { start, end, mealType },

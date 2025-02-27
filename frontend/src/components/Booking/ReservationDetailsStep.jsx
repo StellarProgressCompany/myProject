@@ -4,11 +4,12 @@ import React from "react";
 import DatePicker from "../DatePicker";
 import { getDayMealTypes } from "../DatePicker/datePickerUtils";
 
-// Simple helper to demonstrate availability
+// Updated getMealStatus function: Always returns available with default time labels.
 function getMealStatus(date, mealType) {
-    // For demonstration, say it's full on Fridays (day=5) if date is even and mealType = lunch
-    if (mealType === "lunch" && date.getDay() === 5 && date.getDate() % 2 === 0) {
-        return { available: false, status: "Full" };
+    if (mealType === "lunch") {
+        return { available: true, status: "(13:30 - 17:30)" };
+    } else if (mealType === "dinner") {
+        return { available: true, status: "(18:00 - 23:00)" };
     }
     return { available: true, status: "" };
 }
@@ -29,7 +30,6 @@ const ReservationDetailsStep = ({
                                     onClose,
                                 }) => {
     const availableMealTypes = date ? getDayMealTypes(date.getDay()) : [];
-
     const lunchStatus = date ? getMealStatus(date, "lunch") : { available: false, status: "" };
     const dinnerStatus = date ? getMealStatus(date, "dinner") : { available: false, status: "" };
 
@@ -89,8 +89,8 @@ const ReservationDetailsStep = ({
                         >
                             Comida <br />
                             <span className="text-sm">
-                {lunchStatus.status || "(13:30 - 17:30)"}
-              </span>
+                                {lunchStatus.status}
+                            </span>
                         </button>
                     )}
                     {availableMealTypes.includes("dinner") && (
@@ -105,8 +105,8 @@ const ReservationDetailsStep = ({
                         >
                             Cena <br />
                             <span className="text-sm">
-                {dinnerStatus.status || "(18:00 - 23:00)"}
-              </span>
+                                {dinnerStatus.status}
+                            </span>
                         </button>
                     )}
                 </div>

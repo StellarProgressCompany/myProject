@@ -1,3 +1,4 @@
+// src/pages/AdminDashboard.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -56,64 +57,62 @@ function AdminDashboard() {
     return (
         <div className="flex min-h-screen bg-gray-100">
             {/* SIDEBAR */}
-            <aside className="w-64 bg-white border-r border-gray-200 h-screen relative">
-                <div className="flex flex-col h-full">
-                    {/* TOP SECTION: LOGO + VERSION */}
-                    <div>
-                        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                            <div className="flex items-center space-x-2">
-                                <div className="h-8 w-8 bg-blue-500 text-white flex items-center justify-center rounded-full">
-                                    <span className="text-sm font-bold">Logo</span>
-                                </div>
-                                <span className="text-xl font-semibold">My Admin</span>
+            <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+                {/* TOP: Logo + Nav */}
+                <div className="flex-1 flex flex-col">
+                    <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                        <div className="flex items-center space-x-2">
+                            <div className="h-8 w-8 bg-blue-500 text-white flex items-center justify-center rounded-full">
+                                <span className="text-sm font-bold">Logo</span>
                             </div>
-                            <code className="text-sm font-semibold text-gray-500">
-                                v0.1.2 (BETA)
-                            </code>
+                            <span className="text-xl font-semibold">My Admin</span>
                         </div>
-                        {/* NAV ITEMS */}
-                        <div className="p-4 space-y-1">
-                            {navData.map((item) => {
-                                const Icon = item.icon;
-                                const isActive = item.label === active;
-                                return (
-                                    <button
-                                        key={item.label}
-                                        onClick={() => setActive(item.label)}
-                                        className={`w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50 ${
-                                            isActive
-                                                ? "bg-blue-100 text-blue-700 font-medium"
-                                                : "bg-transparent"
+                        <code className="text-sm font-semibold text-gray-500">
+                            v0.1.2 (BETA)
+                        </code>
+                    </div>
+                    <div className="p-4 space-y-1">
+                        {navData.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = item.label === active;
+                            return (
+                                <button
+                                    key={item.label}
+                                    onClick={() => setActive(item.label)}
+                                    className={`w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50 ${
+                                        isActive
+                                            ? "bg-blue-100 text-blue-700 font-medium"
+                                            : "bg-transparent"
+                                    }`}
+                                >
+                                    <Icon
+                                        className={`mr-3 h-5 w-5 ${
+                                            isActive ? "text-blue-700" : "text-gray-400"
                                         }`}
-                                    >
-                                        <Icon
-                                            className={`mr-3 h-5 w-5 ${
-                                                isActive ? "text-blue-700" : "text-gray-400"
-                                            }`}
-                                        />
-                                        {item.label}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                                    />
+                                    {item.label}
+                                </button>
+                            );
+                        })}
                     </div>
-                    {/* FOOTER: LOGOUT (fixed at bottom within the sidebar) */}
-                    <div className="p-4 border-t border-gray-200 absolute bottom-0 left-0 w-full">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
-                        >
-                            <IconLogout className="mr-3 h-5 w-5 text-gray-400" />
-                            <span>Logout</span>
-                        </button>
-                    </div>
+                </div>
+
+                {/* FOOTER: LOGOUT (pinned at bottom) */}
+                <div className="p-4 border-t border-gray-200">
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
+                    >
+                        <IconLogout className="mr-3 h-5 w-5 text-gray-400" />
+                        <span>Logout</span>
+                    </button>
                 </div>
             </aside>
 
             {/* MAIN CONTENT */}
             <main className="flex-1 p-6 overflow-auto">
                 {/* HEADER with Refresh Button */}
-                <div className="mb-8 flex items-center justify-between">
+                <div className="mb-8 flex items-center justify-between flex-wrap gap-y-2">
                     <h1 className="text-2xl font-bold">Admin Dashboard</h1>
                     <button
                         onClick={getBookings}

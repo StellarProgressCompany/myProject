@@ -1,46 +1,31 @@
+// src/components/Admin/VisualizeBookings.jsx
+
 import React, { useState, useEffect } from "react";
-import { format, addDays, isSameDay, parseISO, subDays, isAfter, isBefore, isEqual } from "date-fns";
+import {
+    format,
+    addDays,
+    parseISO,
+    isAfter,
+    isBefore,
+    isEqual,
+    subDays,
+} from "date-fns";
+
+import { fetchTableAvailabilityRange } from "../../services/bookingService";
+
 import AdminCompactView from "./AdminCompactView";
 import AdminCalendarView from "./AdminCalendarView";
 import AdminDaySchedule from "./AdminDaySchedule";
+import AdminChartView from "./AdminChartView"; // NEW
 
-// Helper to format a Date as YYYY-MM-DD
-export function formatDate(dateObj) {
+function toYmd(dateObj) {
     const yyyy = dateObj.getFullYear();
     const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
     const dd = String(dateObj.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
 }
 
-// Generate a date range as an array of YYYY-MM-DD strings
-function generateDateRange(mode, range) {
-    const dates = [];
-    const today = new Date();
-    if (mode === "past") {
-        const startDate = subDays(today, range);
-        for (let d = startDate; d <= today; d = addDays(d, 1)) {
-            dates.push(formatDate(d));
-        }
-    } else {
-        for (let i = 0; i <= range; i++) {
-            dates.push(formatDate(addDays(today, i)));
-        }
-    }
-    return dates;
-}
-
-// Filter bookings by range (past or incoming) using the nested date field
-function filterBookingsByRange(bookings, mode, range) {
-    if (!Array.isArray(bookings)) return [];
-    const today = new Date();
-    let startDate, endDate;
-    if (mode === "past") {
-        startDate = subDays(today, range);
-        endDate = today;
-    } else {
-        startDate = today;
-        endDate = addDays(today, range);
-    }
+function filterBookingsInRange(bookings, startDate, endDate) {
     return bookings.filter((b) => {
         const bookingDateStr = b.table_availability?.date || b.date;
         const bookingDate = parseISO(bookingDateStr);
@@ -51,64 +36,133 @@ function filterBookingsByRange(bookings, mode, range) {
     });
 }
 
-// Build a map of total clients per day from bookings
-function getDailyClients(bookings) {
-    const dailyMap = {};
-    bookings.forEach((b) => {
-        const bookingDate = b.table_availability?.date || b.date;
-        const capacity = b?.table_availability?.capacity || 0;
-        dailyMap[bookingDate] = (dailyMap[bookingDate] || 0) + capacity;
-    });
-    return dailyMap;
-}
-
 export default function VisualizeBookings({ bookings }) {
-    if (!Array.isArray(bookings)) {
-        return (
-            <div className="text-red-600 p-4">
-                <p>No valid bookings data available.</p>
-            </div>
-        );
-    }
-
-    const [mode, setMode] = useState("past");
-    const [range, setRange] = useState(7);
-    const [todayStatus, setTodayStatus] = useState("Loading...");
-    const [todayLabel, setTodayLabel] = useState("");
-    const [displayStyle, setDisplayStyle] = useState("compact");
+    const [rangeType, setRangeType] = useState("past7"); // "past7", "future7", "future30", "future90"
+    const [displayStyle, setDisplayStyle] = useState("compact"); // "compact", "calendar", "chart"
     const [selectedDay, setSelectedDay] = useState(null);
 
+    const [tableAvailability, setTableAvailability] = useState({});
+    const [loadingTA, setLoadingTA] = useState(false);
+
+    // Compute start/end from rangeType
+    const today = new Date();
+    let startDate, endDate;
+    if (rangeType === "past7") {
+        startDate = subDays(today, 7);
+        endDate = today;
+    } else if (rangeType === "future7") {
+        startDate = today;
+        endDate = addDays(today, 7);
+    } else if (rangeType === "future30") {
+        startDate = today;
+        endDate = addDays(today, 30);
+    } else if (rangeType === "future90") {
+        startDate = today;
+        endDate = addDays(today, 90);
+    }
+
+    // Fetch tableAvailability for the chosen start/end
     useEffect(() => {
-        const today = new Date();
-        const dayOfWeek = today.getDay();
-        const options = { year: "numeric", month: "long", day: "numeric" };
-        setTodayLabel(today.toLocaleDateString(undefined, options));
-
-        if (dayOfWeek === 1 || dayOfWeek === 2) {
-            setTodayStatus("Closed (Monday or Tuesday)");
-            return;
+        async function loadData() {
+            setLoadingTA(true);
+            try {
+                const data = await fetchTableAvailabilityRange(
+                    toYmd(startDate),
+                    toYmd(endDate),
+                    "lunch"
+                );
+                setTableAvailability(data);
+            } catch (err) {
+                console.error("Error fetching table availability range:", err);
+                setTableAvailability({});
+            } finally {
+                setLoadingTA(false);
+            }
         }
+        loadData();
+    }, [rangeType]); // depends on rangeType (thus startDate/endDate)
 
-        setTodayStatus("Open");
-    }, []);
+    // Filter bookings to that same range
+    const filteredBookings = filterBookingsInRange(bookings, startDate, endDate);
+
+    // Show today's open/closed status
+    const [todayStatus, setTodayStatus] = useState("Loading...");
+    useEffect(() => {
+        const dayOfWeek = today.getDay();
+        if (dayOfWeek === 1 || dayOfWeek === 2) {
+            setTodayStatus("Closed (Mon or Tue)");
+        } else {
+            setTodayStatus("Open");
+        }
+    }, [today]);
 
     return (
         <div>
-            <div className="mb-4">
-                <h2 className="text-xl font-bold">Bookings Overview</h2>
-                <p className="text-sm text-gray-600">
-                    Today: {todayLabel} - {todayStatus}
-                </p>
+            <div className="mb-4 flex items-center justify-between flex-wrap gap-y-2">
+                <div>
+                    <h2 className="text-xl font-bold">Bookings Overview</h2>
+                    <p className="text-sm text-gray-600">
+                        Today: {format(today, "PPP")} - {todayStatus}
+                    </p>
+                </div>
+                <div className="space-x-2">
+                    {/* Range Selector */}
+                    <select
+                        className="border border-gray-300 rounded p-1"
+                        value={rangeType}
+                        onChange={(e) => setRangeType(e.target.value)}
+                    >
+                        <option value="past7">Past 7 Days</option>
+                        <option value="future7">Upcoming 7 Days</option>
+                        <option value="future30">Upcoming 1 Month</option>
+                        <option value="future90">Upcoming 3 Months</option>
+                    </select>
+                    {/* Display Style Selector */}
+                    <select
+                        className="border border-gray-300 rounded p-1"
+                        value={displayStyle}
+                        onChange={(e) => setDisplayStyle(e.target.value)}
+                    >
+                        <option value="compact">Compact</option>
+                        <option value="calendar">Calendar</option>
+                        <option value="chart">Chart</option>
+                    </select>
+                </div>
             </div>
+
             <div className="mb-4">
-                {displayStyle === "compact" ? (
-                    <AdminCompactView selectedDate={selectedDay} onSelectDay={setSelectedDay} bookings={bookings} />
-                ) : (
-                    <AdminCalendarView selectedDate={selectedDay} onSelectDay={setSelectedDay} bookings={bookings} />
+                {displayStyle === "compact" && (
+                    <AdminCompactView
+                        selectedDate={selectedDay}
+                        onSelectDay={setSelectedDay}
+                        bookings={filteredBookings}
+                    />
+                )}
+                {displayStyle === "calendar" && (
+                    <AdminCalendarView
+                        selectedDate={selectedDay}
+                        onSelectDay={setSelectedDay}
+                        bookings={filteredBookings}
+                    />
+                )}
+                {displayStyle === "chart" && (
+                    <AdminChartView bookings={filteredBookings} />
                 )}
             </div>
+
             {selectedDay && (
-                <AdminDaySchedule selectedDate={selectedDay} bookings={bookings} onClose={() => setSelectedDay(null)} />
+                <AdminDaySchedule
+                    selectedDate={selectedDay}
+                    bookings={filteredBookings}
+                    tableAvailability={tableAvailability}
+                    onClose={() => setSelectedDay(null)}
+                />
+            )}
+
+            {loadingTA && (
+                <p className="text-sm text-gray-500">
+                    Loading table availability for the selected range...
+                </p>
             )}
         </div>
     );

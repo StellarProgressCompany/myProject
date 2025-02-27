@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { format, addDays, addMonths, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { fetchAvailableTimeSlots, createBooking } from "../../services/bookingService";
 import AnimatedBackground from "../AnimatedBackground";
 import ReservationDetailsStep from "./ReservationDetailsStep";
@@ -24,7 +24,9 @@ const BookingWizard = () => {
 
     // Step 3: Contact info
     const [fullName, setFullName] = useState("");
-    const [phone, setPhone] = useState("");
+    // Phone is optional, so we split prefix and number
+    const [phonePrefix, setPhonePrefix] = useState("+34");
+    const [phoneNumber, setPhoneNumber] = useState("");
     const [email, setEmail] = useState("");
     const [specialRequests, setSpecialRequests] = useState("");
     const [gdprConsent, setGdprConsent] = useState(false);
@@ -72,8 +74,6 @@ const BookingWizard = () => {
     };
 
     // Step 2 Handler:
-    // Instead of a simple continue, we now require a time to be selected.
-    // TimeSlotStep will call onContinue(selectedTime) when the user confirms a round & time.
     const handleStep2Continue = (chosenTime) => {
         if (!selectedRound) {
             setError("Please select a round.");
@@ -88,13 +88,41 @@ const BookingWizard = () => {
         goNext();
     };
 
+    // Utility to check valid email (very simple)
+    const isValidEmail = (testEmail) => {
+        // Basic pattern: chars@chars.domain
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(testEmail.toLowerCase());
+    };
+
+    // Utility to check valid 9-digit phone with optional spaces
+    const isValidPhoneNumber = (testNumber) => {
+        // Remove all spaces
+        const stripped = testNumber.replace(/\s/g, "");
+        // Must be exactly 9 digits
+        return /^\d{9}$/.test(stripped);
+    };
+
     // Step 3 Handler: Use the user-chosen time from step 2
     const handleConfirmBooking = async () => {
         setError("");
         setConfirmationMessage("");
 
-        if (!fullName || !phone || !email || !gdprConsent) {
+        // Full name, email, and GDPR are mandatory
+        if (!fullName.trim() || !email.trim() || !gdprConsent) {
             setError("Please complete all required fields and consent to GDPR.");
+            return;
+        }
+
+        // Validate email
+        if (!isValidEmail(email)) {
+            setError("Please enter a valid email.");
+            return;
+        }
+
+        // If phone number is filled, validate it; if blank, it's okay (optional).
+        if (phoneNumber.trim() && !isValidPhoneNumber(phoneNumber)) {
+            setError("Please enter a valid 9-digit phone number (spaces allowed).");
             return;
         }
 
@@ -112,7 +140,8 @@ const BookingWizard = () => {
                 time: selectedTime, // using the chosen time from step 2
                 customer_name: fullName,
                 guests: totalGuests,
-                phone,
+                // Combine prefix + number if number is provided, otherwise empty
+                phone: phoneNumber ? `${phonePrefix} ${phoneNumber}` : "",
                 email,
                 specialRequests,
                 marketingOptIn,
@@ -135,7 +164,8 @@ const BookingWizard = () => {
         setTimeSlotData(null);
         setSelectedTime(null);
         setFullName("");
-        setPhone("");
+        setPhoneNumber("");
+        setPhonePrefix("+34");
         setEmail("");
         setSpecialRequests("");
         setGdprConsent(false);
@@ -198,20 +228,22 @@ const BookingWizard = () => {
                             isLoading={isLoadingTimeSlots}
                             error={error}
                             onBack={goBack}
-                            onContinue={handleStep2Continue} // now receives the chosen time from the step
+                            onContinue={handleStep2Continue}
                         />
                     )}
 
                     {currentStep === 3 && (
                         <ContactInfoStep
                             fullName={fullName}
-                            phone={phone}
+                            phonePrefix={phonePrefix}
+                            phoneNumber={phoneNumber}
                             email={email}
                             specialRequests={specialRequests}
                             gdprConsent={gdprConsent}
                             marketingOptIn={marketingOptIn}
                             onChangeFullName={setFullName}
-                            onChangePhone={setPhone}
+                            onChangePhonePrefix={setPhonePrefix}
+                            onChangePhoneNumber={setPhoneNumber}
                             onChangeEmail={setEmail}
                             onChangeSpecialRequests={setSpecialRequests}
                             onToggleGdpr={setGdprConsent}

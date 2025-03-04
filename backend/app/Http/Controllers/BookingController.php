@@ -6,6 +6,12 @@ use App\Models\Booking;
 use App\Models\TableAvailability;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;         // For Mail::to(...)
+use App\Mail\BookingConfirmationMail;        // For new BookingConfirmationMail(...)
+use App\Mail\BookingReminderMail;            // For new BookingReminderMail(...)
+use App\Mail\BookingFeedbackMail;            // For new BookingFeedbackMail(...)
+use Carbon\Carbon;                           // For Carbon::parse(...)
+
 
 class BookingController extends Controller
 {
@@ -37,19 +43,23 @@ class BookingController extends Controller
      *   "marketing_opt_in": false
      * }
      */
+    /**
+     * Create a new booking (auto-assigning one or more tables),
+     * then send 3 emails (immediate confirmation, 24h reminder, and 3h post-meal feedback).
+     */
     public function store(Request $request)
     {
         $validatedData = $request->validate([
-            'date'           => 'required|date_format:Y-m-d',
-            'meal_type'      => 'required|in:lunch,dinner',
-            'reserved_time'  => 'required|date_format:H:i:s',
-            'total_adults'   => 'required|integer|min:1',
-            'total_kids'     => 'required|integer|min:0',
-            'full_name'      => 'required|string',
-            'phone'          => 'nullable|string',
-            'email'          => 'nullable|email',
+            'date'             => 'required|date_format:Y-m-d',
+            'meal_type'        => 'required|in:lunch,dinner',
+            'reserved_time'    => 'required|date_format:H:i:s',
+            'total_adults'     => 'required|integer|min:1',
+            'total_kids'       => 'required|integer|min:0',
+            'full_name'        => 'required|string',
+            'phone'            => 'nullable|string',
+            'email'            => 'nullable|email', // We will rely on having an email to send
             'special_requests' => 'nullable|string',
-            'gdpr_consent'   => 'boolean',
+            'gdpr_consent'     => 'boolean',
             'marketing_opt_in' => 'boolean',
         ]);
 
@@ -69,6 +79,7 @@ class BookingController extends Controller
 
         // Wrap in a DB transaction so that availability decrement and booking creation is atomic.
         return DB::transaction(function () use ($assignment, $validatedData, $date, $mealType, $time, $nAdults, $nKids) {
+
             $bookings = [];
 
             foreach ($assignment as $assigned) {
@@ -103,6 +114,36 @@ class BookingController extends Controller
                     'marketing_opt_in'      => $validatedData['marketing_opt_in'] ?? false,
                 ]);
 
+                // ---------------------------
+                // Send the 3 emails (if email is present)
+                // ---------------------------
+                if (!empty($booking->email)) {
+
+                    // 1) Immediate Confirmation
+                    Mail::to($booking->email)
+                        ->send(new BookingConfirmationMail($booking));
+
+                    // Prepare the datetime of the meal
+                    $mealDateTime = Carbon::parse("{$date} {$time}");
+
+                    // 2) Reminder 24h before
+                    //    We'll only schedule if that time is still in the future
+                    $reminderTime = $mealDateTime->copy()->subHours(24);
+                    if ($reminderTime->isFuture()) {
+                        Mail::to($booking->email)
+                            ->later($reminderTime, new BookingReminderMail($booking));
+                    }
+
+                    // 3) Feedback 3h after
+                    //    We'll only schedule if that time is in the future
+                    $feedbackTime = $mealDateTime->copy()->addHours(3);
+                    if ($feedbackTime->isFuture()) {
+                        Mail::to($booking->email)
+                            ->later($feedbackTime, new BookingFeedbackMail($booking));
+                    }
+                }
+                // ---------------------------
+
                 $bookings[] = $booking;
             }
 
@@ -112,7 +153,6 @@ class BookingController extends Controller
             ], 201);
         });
     }
-
     /**
      * Decide how to split $n guests across table(s) of capacity 2,4,6 for date+meal_type.
      * Returns array of assignments like [ ['capacity'=>2,'extra_chair'=>true], ... ]

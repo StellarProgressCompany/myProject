@@ -1,4 +1,3 @@
-// src/services/bookingService.js
 import axios from "axios";
 
 export const API_URL = "http://127.0.0.1:8000/api"; // Change API URL here if needed
@@ -15,10 +14,17 @@ export async function createBooking(data) {
     return response.data;
 }
 
+/**
+ * Easiest fix:
+ * Return response.data.data directly so the calling code
+ * receives the bookings array as an array.
+ */
 export async function fetchAllBookings() {
     const response = await axios.get(`${API_URL}/bookings`);
-    return response.data;
+    // Return the .data array directly
+    return response.data.data;
 }
+
 
 export async function fetchTableAvailabilityRange(start, end, mealType = "lunch") {
     const response = await axios.get(`${API_URL}/table-availability-range`, {

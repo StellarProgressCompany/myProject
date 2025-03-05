@@ -15,4 +15,9 @@ class TableAvailability extends Model
         'capacity',
         'available_count',
     ];
+
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 }

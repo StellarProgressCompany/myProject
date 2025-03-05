@@ -19,12 +19,9 @@ export default function StatsGrid() {
     const [metrics, setMetrics] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // Mock fetching metrics data
     useEffect(() => {
         setLoading(true);
-        // Simulate an async fetch with 1-second delay
         const timer = setTimeout(() => {
-            // Fake metrics response
             const data = {
                 revenue: { value: 13456, diff: 34 },
                 profit: { value: 4145, diff: -13 },
@@ -35,7 +32,6 @@ export default function StatsGrid() {
             setLoading(false);
         }, 1000);
 
-        // Cleanup
         return () => clearTimeout(timer);
     }, []);
 
@@ -47,7 +43,6 @@ export default function StatsGrid() {
         return <p>No metrics data available.</p>;
     }
 
-    // Transform the object into an array for .map()
     const data = [
         {
             key: "revenue",
@@ -84,35 +79,23 @@ export default function StatsGrid() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {data.map((stat) => {
                     const StatIcon = icons[stat.icon];
-                    const DiffIcon =
-                        stat.diff > 0 ? IconArrowUpRight : IconArrowDownRight;
-                    const diffColor =
-                        stat.diff > 0 ? "text-teal-500" : "text-red-500";
+                    const DiffIcon = stat.diff > 0 ? IconArrowUpRight : IconArrowDownRight;
+                    const diffColor = stat.diff > 0 ? "text-teal-500" : "text-red-500";
 
                     return (
-                        <div
-                            key={stat.title}
-                            className="border rounded-md p-4 shadow bg-white"
-                        >
-                            {/* Top: Title + Icon */}
+                        <div key={stat.title} className="border rounded-md p-4 shadow bg-white">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500 font-semibold uppercase">
-                                    {stat.title}
-                                </p>
+                                <p className="text-xs text-gray-500 font-semibold uppercase">{stat.title}</p>
                                 <StatIcon className="w-5 h-5 text-gray-400" />
                             </div>
-
-                            {/* Value + diff */}
                             <div className="flex items-end space-x-2 mt-4">
                                 <span className="text-2xl font-bold">{stat.value}</span>
                                 <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
-                  <span>{stat.diff}%</span>
-                  <DiffIcon className="w-4 h-4 ml-1" />
-                </span>
+                                    <span>{stat.diff}%</span>
+                                    <DiffIcon className="w-4 h-4 ml-1" />
+                                </span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                                Compared to previous month
-                            </p>
+                            <p className="text-xs text-gray-500 mt-2">Compared to previous month</p>
                         </div>
                     );
                 })}

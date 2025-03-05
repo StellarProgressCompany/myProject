@@ -4,174 +4,203 @@ namespace App\Http\Controllers;
 
 use App\Models\TableAvailability;
 use App\Models\Booking;
-use App\Services\AvailabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Config;
-use App\Http\Resources\TableAvailabilityResource;
+use Illuminate\Support\Collection;
 
 class TableAvailabilityController extends Controller
 {
     /**
-     * @var AvailabilityService
+     * Returns availability for a SINGLE day + mealType
+     * e.g. GET /api/table-availability?date=2025-03-10&mealType=lunch
      */
-    protected $availabilityService;
-
-    /**
-     * TableAvailabilityController constructor.
-     *
-     * @param AvailabilityService $availabilityService
-     */
-    public function __construct(AvailabilityService $availabilityService)
-    {
-        $this->availabilityService = $availabilityService;
-    }
-
-    /**
-     * Show availability for a single day (and a specified meal type).
-     *
-     * Expected query params:
-     *  - date=YYYY-MM-DD
-     *  - mealType=lunch|dinner
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return TableAvailabilityResource|\Illuminate\Http\JsonResponse
-     */
-    public function showDailyAvailability(Request $request)
+    public function index(Request $request)
     {
         $date = trim($request->query('date'));
         $mealType = trim($request->query('mealType')); // "lunch" or "dinner"
-
-        // Quick validation.
         if (!$date || !$mealType) {
-            return response()->json(['error' => 'Missing date or mealType'], 400);
+            return response()->json([], 400);
         }
 
-        // Convert to Carbon for potential checks (like closed days).
-        $carbonDate = Carbon::parse($date);
+        // Grab the relevant TableAvailability rows
+        $availabilities = TableAvailability::where('date', $date)
+            ->where('meal_type', $mealType)
+            ->get()
+            ->keyBy('capacity');
 
-        // Check if restaurant is closed on this day.
-        $closedDays = Config::get('meal.closed_days', [1, 2]); // Monday, Tuesday
-        if (in_array($carbonDate->dayOfWeek, $closedDays)) {
-            return new TableAvailabilityResource(['closed' => true]);
+        if ($availabilities->isEmpty()) {
+            return response()->json([]);
         }
 
-        // Gather the day availability data
-        $dayAvailability = $this->generateDayAvailability($carbonDate->format('Y-m-d'), $mealType);
+        // Example time-round sets
+        if ($mealType === 'lunch') {
+            $firstRoundTimes  = ['12:30','12:45','13:00','13:15','13:30','13:45','14:00'];
+            $secondRoundTimes = ['15:00','15:15','15:30','15:45','16:00'];
 
-        // Wrap in resource
-        return new TableAvailabilityResource($dayAvailability);
+            $firstRound = $this->computeRoundAvailability($availabilities, $firstRoundTimes);
+            $secondRound = $this->computeRoundAvailability($availabilities, $secondRoundTimes);
+
+            return response()->json([
+                'first_round' => [
+                    'time' => $firstRoundTimes[0],
+                    'availability' => $firstRound,
+                    'note' => 'Must leave by 15:00'
+                ],
+                'second_round' => [
+                    'time' => $secondRoundTimes[0],
+                    'availability' => $secondRound,
+                    'note' => 'Must leave by 17:30'
+                ],
+            ]);
+        } else {
+            // dinner
+            $dinnerTimes = ['20:00','20:30','21:00','21:30'];
+            $dinnerRound = $this->computeRoundAvailability($availabilities, $dinnerTimes);
+
+            return response()->json([
+                'dinner_round' => [
+                    'time' => $dinnerTimes[0],
+                    'availability' => $dinnerRound,
+                    'note' => 'Dinner booking'
+                ],
+            ]);
+        }
     }
 
     /**
-     * Show availability for a range of days (start to end) for a specified meal type.
-     *
-     * Expected query params:
-     *  - start=YYYY-MM-DD
-     *  - end=YYYY-MM-DD
-     *  - mealType=lunch|dinner
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return TableAvailabilityResource|\Illuminate\Http\JsonResponse
+     * Returns availability for a RANGE of dates
+     * e.g. /api/table-availability-range?start=2025-02-26&end=2025-03-26&mealType=lunch
      */
-    public function showRangeAvailability(Request $request)
+    public function range(Request $request): \Illuminate\Http\JsonResponse
     {
         $start = $request->query('start');
         $end = $request->query('end');
         $mealType = $request->query('mealType'); // "lunch" or "dinner"
 
-        // Validate input.
         if (!$start || !$end || !$mealType) {
             return response()->json(['error' => 'Missing parameters (start, end, mealType)'], 400);
         }
 
         $startDate = Carbon::parse($start);
-        $endDate = Carbon::parse($end);
+        $endDate   = Carbon::parse($end);
+
         if ($endDate->lt($startDate)) {
             return response()->json(['error' => 'end must be after start'], 400);
         }
 
-        // Build an associative array keyed by YYYY-MM-DD
+        // Get all table_availability rows in the range for the given meal_type
+        $availabilities = TableAvailability::whereBetween('date', [
+            $startDate->format('Y-m-d'),
+            $endDate->format('Y-m-d')
+        ])
+            ->where('meal_type', $mealType)
+            ->get();
+
+        // Grab all relevant bookings (by referencing the above table_availabilities)
+        $availabilityIds = $availabilities->pluck('id');
+        $bookings = Booking::whereIn('table_availability_id', $availabilityIds)->get();
+
         $results = [];
         $current = $startDate->copy();
-
         while ($current->lte($endDate)) {
-            $dateString = $current->format('Y-m-d');
+            $dateStr = $current->format('Y-m-d');
 
-            // Check closed day
-            $closedDays = Config::get('meal.closed_days', [1, 2]);
-            if (in_array($current->dayOfWeek, $closedDays)) {
-                $results[$dateString] = ['closed' => true];
+            // For example, Monday(1) or Tuesday(2) => closed
+            if ($current->dayOfWeek == 1 || $current->dayOfWeek == 2) {
+                $results[$dateStr] = 'closed';
+                $current->addDay();
+                continue;
+            }
+
+            // Filter table_availability rows for this date
+            $rowsForDay = $availabilities->where('date', $dateStr);
+
+            if ($rowsForDay->isEmpty()) {
+                // means no data => closed or empty
+                $results[$dateStr] = [];
+                $current->addDay();
+                continue;
+            }
+
+            // Build round availability
+            if ($mealType === 'lunch') {
+                $firstRoundTimes  = ['12:30','12:45','13:00','13:15','13:30','13:45','14:00'];
+                $secondRoundTimes = ['15:00','15:15','15:30','15:45','16:00'];
+
+                $firstRound = $this->computeRoundAvailability($rowsForDay, $firstRoundTimes, $bookings);
+                $secondRound = $this->computeRoundAvailability($rowsForDay, $secondRoundTimes, $bookings);
+
+                $results[$dateStr] = [
+                    'first_round' => [
+                        'time' => $firstRoundTimes[0],
+                        'availability' => $firstRound,
+                        'note' => 'Must leave by 15:00',
+                    ],
+                    'second_round' => [
+                        'time' => $secondRoundTimes[0],
+                        'availability' => $secondRound,
+                        'note' => 'Must leave by 17:30',
+                    ],
+                ];
             } else {
-                // Compute availability for that day
-                $results[$dateString] = $this->generateDayAvailability($dateString, $mealType);
+                // dinner
+                $dinnerTimes = ['20:00','20:30','21:00','21:30'];
+                $dinnerRound = $this->computeRoundAvailability($rowsForDay, $dinnerTimes, $bookings);
+
+                $results[$dateStr] = [
+                    'dinner_round' => [
+                        'time' => $dinnerTimes[0],
+                        'availability' => $dinnerRound,
+                        'note' => 'Dinner booking',
+                    ],
+                ];
             }
 
             $current->addDay();
         }
 
-        // Return as a single resource that contains the entire range structure
-        return new TableAvailabilityResource($results);
+        return response()->json($results);
     }
 
     /**
-     * Private helper that computes the availability structure for a single day
-     * and a specific meal type (e.g., 'lunch' or 'dinner').
+     * Compute how many tables remain for each capacity if we factor in existing bookings.
      *
-     * @param  string  $dateString
-     * @param  string  $mealType
-     * @return array
+     * @param  Collection $tableAvailabilities   (one or more TableAvailability rows)
+     * @param  array      $roundTimes           e.g. ['12:30','12:45']
+     * @param  Collection $allBookings          all relevant Booking rows
+     * @return array      e.g. ['2'=>3,'4'=>2,'6'=>2]
      */
-    private function generateDayAvailability(string $dateString, string $mealType): array
+    private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings = null)
     {
-        // Load the seeded availability for this date & mealType
-        $availabilities = TableAvailability::where('date', $dateString)
-            ->where('meal_type', $mealType)
-            ->get()
-            ->keyBy('capacity');
-
-        // If no records, means no availability (or not scheduled).
-        if ($availabilities->isEmpty()) {
-            return [];
+        if ($allBookings === null) {
+            // if not provided, fetch from DB
+            $ids = $tableAvailabilities->pluck('id');
+            $allBookings = Booking::whereIn('table_availability_id', $ids)->get();
         }
 
-        // Gather all bookings for that date (not capacity-specific yet,
-        // the computeRoundAvailability method handles filtering).
-        $bookingsForDay = Booking::where('date', $dateString)->get();
+        $availabilityByCapacity = [];
+        foreach ([2,4,6] as $cap) {
+            // find the matching TableAvailability for that capacity
+            $taRow = $tableAvailabilities->where('capacity', $cap)->first();
 
-        // Pull from config
-        $mealConfig = Config::get("meal.{$mealType}", []);
+            if (!$taRow) {
+                $availabilityByCapacity["$cap"] = 0;
+                continue;
+            }
 
-        // For lunch, we might have first_round & second_round
-        // For dinner, we might have main_round, etc.
+            // how many were seeded
+            $seededCount = $taRow->available_count;
 
-        // If the config is missing or not properly structured, return empty.
-        if (empty($mealConfig)) {
-            return [];
+            // count how many bookings exist for that row and round times
+            $bookedCount = $allBookings
+                ->where('table_availability_id', $taRow->id)
+                ->whereIn('reserved_time', $roundTimes)
+                ->count();
+
+            $remaining = max($seededCount - $bookedCount, 0);
+            $availabilityByCapacity["$cap"] = $remaining;
         }
 
-        // We'll build the response round-by-round.
-        $response = [];
-
-        foreach ($mealConfig as $roundName => $roundData) {
-            $times = $roundData['times'] ?? [];
-            $note = $roundData['note'] ?? '';
-
-            // Compute availability for this round.
-            $roundAvailability = $this->availabilityService->computeRoundAvailability(
-                $dateString,
-                $times,
-                $availabilities,
-                $bookingsForDay
-            );
-
-            $response[$roundName] = [
-                'time'        => $times[0] ?? null, // representative time
-                'availability'=> $roundAvailability,
-                'note'        => $note,
-            ];
-        }
-
-        return $response;
+        return $availabilityByCapacity;
     }
 }

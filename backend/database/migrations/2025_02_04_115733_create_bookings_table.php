@@ -6,24 +6,34 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
-            $table->date('date');
-            $table->time('time');
-            $table->string('customer_name')->nullable();
-            $table->integer('guest_count');
+            $table->foreignId('table_availability_id')->constrained()->onDelete('cascade');
+
+            // Instead of storing date/time, we only store the chosen time.
+            // (The date is in table_availability.)
+            $table->time('reserved_time');
+
+            // Breakdown of guests
+            $table->unsignedInteger('total_adults')->default(1);
+            $table->unsignedInteger('total_kids')->default(0);
+
+            // Contact & personal info
+            $table->string('full_name');
+            $table->string('phone')->nullable();
+            $table->string('email')->nullable();
+            $table->text('special_requests')->nullable();
+
+            // Consents
+            $table->boolean('gdpr_consent')->default(false);
+            $table->boolean('marketing_opt_in')->default(false);
+
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('bookings');

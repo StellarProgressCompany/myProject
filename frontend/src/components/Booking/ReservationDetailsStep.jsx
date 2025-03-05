@@ -1,16 +1,16 @@
+// src/components/Booking/ReservationDetailsStep.jsx
+
 import React from "react";
 import DatePicker from "../DatePicker";
 import { getDayMealTypes } from "../DatePicker/datePickerUtils";
 
-// Stub helper to simulate meal availability check.
-// Replace with your actual API or logic.
+// Updated getMealStatus function: Always returns available with default time labels.
 function getMealStatus(date, mealType) {
-    // For demonstration:
-    // - On Fridays (day 5), if the date's day is even, simulate that lunch is full.
-    if (mealType === "lunch" && date.getDay() === 5 && date.getDate() % 2 === 0) {
-        return { available: false, status: "Full" };
+    if (mealType === "lunch") {
+        return { available: true, status: "(13:30 - 17:30)" };
+    } else if (mealType === "dinner") {
+        return { available: true, status: "(18:00 - 23:00)" };
     }
-    // Otherwise assume the meal is available.
     return { available: true, status: "" };
 }
 
@@ -29,10 +29,7 @@ const ReservationDetailsStep = ({
                                     onContinue,
                                     onClose,
                                 }) => {
-    // Determine which meal types are valid for the selected day.
     const availableMealTypes = date ? getDayMealTypes(date.getDay()) : [];
-
-    // Check availability for each meal type.
     const lunchStatus = date ? getMealStatus(date, "lunch") : { available: false, status: "" };
     const dinnerStatus = date ? getMealStatus(date, "dinner") : { available: false, status: "" };
 
@@ -41,6 +38,8 @@ const ReservationDetailsStep = ({
             <h2 className="text-2xl font-semibold mb-6 text-center">
                 Choose Your Reservation
             </h2>
+
+            {/* ADULTS */}
             <div className="mb-4">
                 <p className="mb-2 font-medium">Adults</p>
                 <div className="flex items-center">
@@ -53,6 +52,8 @@ const ReservationDetailsStep = ({
                     </button>
                 </div>
             </div>
+
+            {/* KIDS */}
             <div className="mb-6">
                 <p className="mb-2 font-medium">Kids</p>
                 <div className="flex items-center">
@@ -65,10 +66,14 @@ const ReservationDetailsStep = ({
                     </button>
                 </div>
             </div>
+
+            {/* DATE */}
             <div className="mb-6">
                 <p className="mb-2 font-medium">Select Date</p>
                 <DatePicker selectedDate={date} onDateSelect={onDateSelect} />
             </div>
+
+            {/* MEAL TYPE */}
             <div className="mb-6">
                 <p className="mb-2 font-medium">Meal Type</p>
                 <div className="flex space-x-4">
@@ -84,8 +89,8 @@ const ReservationDetailsStep = ({
                         >
                             Comida <br />
                             <span className="text-sm">
-                {lunchStatus.status || "(13:30 - 17:30)"}
-              </span>
+                                {lunchStatus.status}
+                            </span>
                         </button>
                     )}
                     {availableMealTypes.includes("dinner") && (
@@ -100,13 +105,16 @@ const ReservationDetailsStep = ({
                         >
                             Cena <br />
                             <span className="text-sm">
-                {dinnerStatus.status || "(18:00 - 23:00)"}
-              </span>
+                                {dinnerStatus.status}
+                            </span>
                         </button>
                     )}
                 </div>
             </div>
+
             {error && <p className="text-red-500 mb-4">{error}</p>}
+
+            {/* CONTROLS */}
             <div className="flex justify-between">
                 <button onClick={onClose} className="px-4 py-2 border rounded">
                     Close

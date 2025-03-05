@@ -9,7 +9,7 @@ use Carbon\Carbon;
 class TableAvailabilitySeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * Run the database seeds for table availabilities.
      */
     public function run(): void
     {
@@ -17,7 +17,7 @@ class TableAvailabilitySeeder extends Seeder
         $startDate = Carbon::today();
         $endDate   = Carbon::today()->addDays(29);
 
-        // We have 3 "capacities": 2, 4, or 6 seats
+        // Define the available table types (capacities) and counts
         $tableTypes = [
             ['capacity' => 2, 'available_count' => 4],
             ['capacity' => 4, 'available_count' => 3],
@@ -25,24 +25,24 @@ class TableAvailabilitySeeder extends Seeder
         ];
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-            // dayOfWeek: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday
+            // dayOfWeek: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.
             $dayOfWeek = $date->dayOfWeek;
 
-            // Determine which meal types apply
-            // Monday (1) & Tuesday (2) => closed => skip
-            // Wed (3), Thu (4) => lunch only
-            // Fri (5), Sat (6), Sun (0) => lunch & dinner
+            // Determine which meal types apply:
+            // - Monday (1) & Tuesday (2) => restaurant is closed (skip)
+            // - Wednesday (3) & Thursday (4) => lunch only
+            // - Friday (5), Saturday (6), Sunday (0) => lunch & dinner
             $mealTypes = [];
             if ($dayOfWeek === 3 || $dayOfWeek === 4) {
                 $mealTypes = ['lunch'];
             } elseif (in_array($dayOfWeek, [5, 6, 0])) {
                 $mealTypes = ['lunch', 'dinner'];
             } else {
-                // Monday or Tuesday => skip (no availability)
+                // Skip Monday & Tuesday
                 continue;
             }
 
-            // For each meal type, create records for each capacity
+            // Create a record for each meal type and table capacity
             foreach ($mealTypes as $mealType) {
                 foreach ($tableTypes as $type) {
                     TableAvailability::create([

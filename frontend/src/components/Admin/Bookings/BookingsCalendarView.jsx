@@ -1,5 +1,4 @@
-// src/components/Admin/AdminCalendarView.jsx
-
+// src/components/Admin/Bookings/BookingsCalendarView.jsx
 import React, { useState } from "react";
 import {
     format,
@@ -12,11 +11,7 @@ import {
     isSameDay,
 } from "date-fns";
 
-export default function AdminCalendarView({
-                                              selectedDate,
-                                              onSelectDay,
-                                              bookings,
-                                          }) {
+export default function BookingsCalendarView({ selectedDate, onSelectDay, bookings }) {
     const [monthToShow, setMonthToShow] = useState(new Date());
     const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
     const monthStart = startOfMonth(monthToShow);
@@ -49,38 +44,26 @@ export default function AdminCalendarView({
             const { bookingsCount, totalClients } = getDayStats(cloneDay);
             const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
             const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
-
-            // base style
-            let cellClasses = "relative p-2 h-24 border border-gray-200 flex";
             let textColor = isCurrentMonth ? "text-gray-800" : "text-gray-400";
             let bgColor = "bg-white";
-
-            // if selected:
             if (isSelected) {
                 bgColor = "bg-blue-600";
                 textColor = "text-white";
             }
-
             daysInRow.push(
                 <button
                     key={cloneDay.toString()}
                     onClick={() => onSelectDay(cloneDay)}
-                    className={`${cellClasses} ${bgColor} ${textColor} items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition`}
+                    className={`relative p-2 h-24 border border-gray-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition`}
                     style={{ minWidth: 50 }}
                 >
                     <div className="flex flex-col items-center">
-            <span className="text-sm font-semibold">
-              {format(cloneDay, "d")}
-            </span>
-
-                        {/* Booking count pill */}
+                        <span className="text-sm font-semibold">{format(cloneDay, "d")}</span>
                         {bookingsCount > 0 && (
                             <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
                 {bookingsCount} Bkg
               </span>
                         )}
-
-                        {/* Clients pill */}
                         {totalClients > 0 && (
                             <span className="text-xs mt-1 inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
                 {totalClients} Cl
@@ -100,7 +83,6 @@ export default function AdminCalendarView({
 
     return (
         <div className="bg-white p-4 rounded shadow">
-            {/* Month header */}
             <div className="flex items-center justify-between mb-2">
                 <button
                     onClick={() =>
@@ -114,9 +96,7 @@ export default function AdminCalendarView({
                 >
                     Prev
                 </button>
-                <h3 className="font-semibold">
-                    {format(monthToShow, "MMMM yyyy")}
-                </h3>
+                <h3 className="font-semibold">{format(monthToShow, "MMMM yyyy")}</h3>
                 <button
                     onClick={() =>
                         setMonthToShow((prev) => {
@@ -130,13 +110,11 @@ export default function AdminCalendarView({
                     Next
                 </button>
             </div>
-            {/* Weekdays row */}
             <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
                 {weekdayLabels.map((lbl) => (
                     <div key={lbl}>{lbl}</div>
                 ))}
             </div>
-            {/* The date grid */}
             {rows}
         </div>
     );

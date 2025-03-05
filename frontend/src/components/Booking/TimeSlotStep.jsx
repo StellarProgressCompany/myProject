@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+// src/components/Booking/TimeSlotStep.jsx
+
+import React, { useState, useEffect } from "react";
 
 const TimeSlotStep = ({
                           mealType,
@@ -11,174 +13,155 @@ const TimeSlotStep = ({
                           onBack,
                           onContinue,
                       }) => {
-    const [chosenTime, setChosenTime] = useState(null);
+    const [selectedTime, setSelectedTime] = useState(null);
 
-    // Debug logs
-    console.log("TimeSlotStep: date =", date);
-    console.log("TimeSlotStep: timeSlotData =", timeSlotData);
+    // Clear selected time if round changes
+    useEffect(() => {
+        setSelectedTime(null);
+    }, [selectedRound]);
 
-    // For the single-date endpoint, the shape is simply: { data: { first_round, second_round, ... } }
-    // So we can grab it directly:
-    const dailyData = timeSlotData?.data || null;
-    console.log("TimeSlotStep: dailyData =", dailyData);
+    // Generate 15-min increments for the chosen round
+    const generateTimeOptions = (meal, round) => {
+        let start, end;
+        if (meal === "lunch" && round === "first_round") {
+            start = "12:30";
+            end = "14:00";
+        } else if (meal === "lunch" && round === "second_round") {
+            start = "15:00";
+            end = "16:00";
+        } else if (meal === "dinner" && round === "dinner_round") {
+            start = "20:00";
+            end = "22:00";
+        } else {
+            return [];
+        }
 
-    // Check if closed
-    const isClosed = dailyData?.closed === true;
-    console.log("TimeSlotStep: isClosed =", isClosed);
-    if (isClosed) {
+        const options = [];
+        const [startHour, startMin] = start.split(":").map(Number);
+        const [endHour, endMin] = end.split(":").map(Number);
+
+        const startTotal = startHour * 60 + startMin;
+        const endTotal = endHour * 60 + endMin;
+
+        for (let mins = startTotal; mins <= endTotal; mins += 15) {
+            const hh = String(Math.floor(mins / 60)).padStart(2, "0");
+            const mm = String(mins % 60).padStart(2, "0");
+            options.push(`${hh}:${mm}:00`);
+        }
+
+        return options;
+    };
+
+    const renderTimePopup = () => {
+        if (!selectedRound) return null;
+        const times = generateTimeOptions(mealType, selectedRound);
+        if (times.length === 0) return null;
         return (
-            <div>
-                <h2>Sorry, We Are Closed on This Day</h2>
-                <button onClick={onBack}>Back</button>
+            <div className="mt-4 p-4 border rounded bg-gray-50">
+                <p className="text-center font-medium mb-2">Select a Time</p>
+                <div className="grid grid-cols-4 gap-2">
+                    {times.map((timeStr) => (
+                        <button
+                            key={timeStr}
+                            onClick={() => setSelectedTime(timeStr)}
+                            className={`px-2 py-1 rounded border text-center ${
+                                selectedTime === timeStr
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-100 text-black hover:bg-blue-200"
+                            }`}
+                        >
+                            {timeStr.slice(0,5)}
+                        </button>
+                    ))}
+                </div>
             </div>
         );
-    }
+    };
 
-    // If loading
-    if (isLoading) {
-        return <div>Loading time slots...</div>;
-    }
-
-    // The API for a single date can have "first_round", "second_round", etc. directly on dailyData.
-    const mealData = dailyData;
-    console.log("TimeSlotStep: mealData =", mealData);
-
-    // Build round options based on mealType
-    let roundOptions = [];
-    if (mealType === "lunch") {
-        roundOptions = [
-            { key: "first_round", label: "First Round", data: mealData?.first_round },
-            { key: "second_round", label: "Second Round", data: mealData?.second_round },
-        ];
-    } else {
-        // dinner
-        roundOptions = [
-            { key: "main_round", label: "Main Round", data: mealData?.main_round },
-        ];
-    }
-    console.log("TimeSlotStep: roundOptions =", roundOptions);
-
-    // If there's no data for the selected meal type:
-    const hasNoData =
-        !mealData?.first_round &&
-        !mealData?.second_round &&
-        !mealData?.main_round;
-    console.log("TimeSlotStep: hasNoData =", hasNoData);
-    if (hasNoData) {
-        return (
-            <div>
-                <h2>No Availability Found</h2>
-                <button onClick={onBack}>Back</button>
-            </div>
-        );
-    }
-
-    // Handler for continue button
-    const handleContinueClick = () => {
-        console.log("TimeSlotStep: chosenTime =", chosenTime);
-        onContinue(chosenTime);
+    const handleContinue = () => {
+        if (!selectedRound) {
+            alert("Please select a round.");
+            return;
+        }
+        if (!selectedTime) {
+            alert("Please select a time.");
+            return;
+        }
+        onContinue(selectedTime);
     };
 
     return (
         <div>
-            <h2>Select a Time Slot</h2>
+            <h2 className="text-2xl font-semibold mb-6 text-center">Select a Round</h2>
+            <p className="mb-4 text-center">
+                Available rounds for {mealType === "lunch" ? "Comida" : "Cena"} on{" "}
+                {date.toLocaleDateString()}:
+            </p>
 
-            {/* Round selection */}
-            <div>
-                <p>
-                    Available Rounds for {mealType} on {date.toLocaleDateString()}:
-                </p>
-                <div className="flex space-x-4">
-                    {roundOptions.map((roundObj) => {
-                        const roundKey = roundObj.key;
-                        const roundData = roundObj.data;
-                        if (!roundData) {
-                            console.log(`TimeSlotStep: round ${roundKey} has no data`);
-                            return null;
-                        }
-                        const roundLabel = roundObj.label;
-                        const isSelected = selectedRound === roundKey;
-                        return (
-                            <button
-                                key={roundKey}
-                                onClick={() => {
-                                    console.log("TimeSlotStep: selected round =", roundKey);
-                                    onSelectRound(roundKey);
-                                    setChosenTime(null); // Reset chosen time when round changes
-                                }}
-                                className={
-                                    isSelected
-                                        ? "bg-blue-600 text-white"
-                                        : "bg-gray-100 text-gray-800"
-                                }
-                            >
-                                {roundLabel}
-                            </button>
-                        );
-                    })}
+            {isLoading ? (
+                <div className="flex justify-center items-center py-8">
+                    <div className="w-8 h-8 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
                 </div>
-            </div>
+            ) : (
+                <div className="grid grid-cols-2 gap-4">
+                    {mealType === "lunch" && timeSlotData ? (
+                        <>
+                            <button
+                                onClick={() => onSelectRound("first_round")}
+                                className={`px-4 py-2 rounded border text-center ${
+                                    selectedRound === "first_round"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-100 text-black"
+                                }`}
+                            >
+                                First Round
+                                <br />
+                                <span className="text-xs">{timeSlotData.first_round?.note}</span>
+                            </button>
 
-            {/* Times within the selected round */}
-            {selectedRound && (
-                <div>
-                    {(() => {
-                        // Find the data for the selected round.
-                        const currentRoundData = roundOptions.find(
-                            (ro) => ro.key === selectedRound
-                        )?.data;
-
-                        console.log("TimeSlotStep: currentRoundData =", currentRoundData);
-
-                        if (!currentRoundData) {
-                            return <p>No data found for this round.</p>;
-                        }
-
-                        // The API returns a single time as a string (not an array)
-                        const timeValue = currentRoundData.time;
-                        const availability = currentRoundData.availability;
-                        const note = currentRoundData.note;
-
-                        return (
-                            <div>
-                                <p>Note: {note}</p>
-                                <label>Select Exact Time:</label>
-                                <select
-                                    className="w-full border border-gray-300 rounded p-2 mt-1"
-                                    value={chosenTime || ""}
-                                    onChange={(e) => {
-                                        console.log(
-                                            "TimeSlotStep: chosenTime changed to =",
-                                            e.target.value
-                                        );
-                                        setChosenTime(e.target.value);
-                                    }}
-                                >
-                                    <option value="">-- Choose a time --</option>
-                                    {/* If you had multiple times, you'd map them here,
-                                        but the API only returns a single `time` string. */}
-                                    <option value={timeValue}>{timeValue}</option>
-                                </select>
-                                <p>
-                                    Availability:{" "}
-                                    {availability ? JSON.stringify(availability) : "unknown"}
-                                </p>
-                            </div>
-                        );
-                    })()}
+                            <button
+                                onClick={() => onSelectRound("second_round")}
+                                className={`px-4 py-2 rounded border text-center ${
+                                    selectedRound === "second_round"
+                                        ? "bg-blue-600 text-white"
+                                        : "bg-gray-100 text-black"
+                                }`}
+                            >
+                                Second Round
+                                <br />
+                                <span className="text-xs">{timeSlotData.second_round?.note}</span>
+                            </button>
+                        </>
+                    ) : mealType === "dinner" && timeSlotData ? (
+                        <button
+                            onClick={() => onSelectRound("dinner_round")}
+                            className={`col-span-2 px-4 py-2 rounded border text-center ${
+                                selectedRound === "dinner_round"
+                                    ? "bg-blue-600 text-white"
+                                    : "bg-gray-100 text-black"
+                            }`}
+                        >
+                            Dinner Round
+                            <br />
+                            <span className="text-xs">{timeSlotData.dinner_round?.note}</span>
+                        </button>
+                    ) : (
+                        <p className="col-span-2 text-center">No available rounds.</p>
+                    )}
                 </div>
             )}
 
-            {error && <p className="text-red-500">{error}</p>}
+            {selectedRound && renderTimePopup()}
 
-            {/* Navigation Buttons */}
-            <div className="flex justify-between">
+            {error && <p className="text-red-500 mt-4">{error}</p>}
+
+            <div className="flex justify-between mt-6">
                 <button onClick={onBack} className="px-4 py-2 border rounded">
                     Back
                 </button>
                 <button
-                    onClick={handleContinueClick}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-all duration-200"
+                    onClick={handleContinue}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover:shadow-lg transition-all duration-200"
                 >
                     Continue
                 </button>

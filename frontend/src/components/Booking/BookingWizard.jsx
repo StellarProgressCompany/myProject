@@ -1,5 +1,7 @@
+// src/components/Booking/BookingWizard.jsx
+
 import React, { useState, useEffect } from "react";
-import { format, addDays, addMonths, subMonths } from "date-fns";
+import { format } from "date-fns";
 import { fetchAvailableTimeSlots, createBooking } from "../../services/bookingService";
 import AnimatedBackground from "../AnimatedBackground";
 import ReservationDetailsStep from "./ReservationDetailsStep";
@@ -18,26 +20,26 @@ const BookingWizard = () => {
     // Step 2: Time slot selection
     const [timeSlotData, setTimeSlotData] = useState(null);
     const [selectedRound, setSelectedRound] = useState("");
-    // NEW state to store the exact chosen time (e.g. "12:45:00")
     const [selectedTime, setSelectedTime] = useState(null);
     const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
 
     // Step 3: Contact info
     const [fullName, setFullName] = useState("");
-    const [phone, setPhone] = useState("");
+    const [phonePrefix, setPhonePrefix] = useState("+34");
+    const [phoneNumber, setPhoneNumber] = useState("");
     const [email, setEmail] = useState("");
     const [specialRequests, setSpecialRequests] = useState("");
     const [gdprConsent, setGdprConsent] = useState(false);
     const [marketingOptIn, setMarketingOptIn] = useState(false);
 
-    // Confirmation and error messages
+    // Messages
     const [confirmationMessage, setConfirmationMessage] = useState("");
     const [error, setError] = useState("");
 
-    // Success popup state
+    // Success popup
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-    // --- Fetch available time slots when entering Step 2 ---
+    // --- Load available time slots when entering Step 2 ---
     useEffect(() => {
         if (currentStep === 2 && date && mealType) {
             const loadTimeSlots = async () => {
@@ -57,10 +59,11 @@ const BookingWizard = () => {
         }
     }, [currentStep, date, mealType]);
 
+    // Navigation
     const goNext = () => setCurrentStep((prev) => prev + 1);
     const goBack = () => setCurrentStep((prev) => prev - 1);
 
-    // Step 1 Handler
+    // Step 1: Validate date
     const handleStep1Continue = () => {
         if (!date) {
             setError("Please select a date.");
@@ -71,9 +74,7 @@ const BookingWizard = () => {
         goNext();
     };
 
-    // Step 2 Handler:
-    // Instead of a simple continue, we now require a time to be selected.
-    // TimeSlotStep will call onContinue(selectedTime) when the user confirms a round & time.
+    // Step 2: Validate round/time
     const handleStep2Continue = (chosenTime) => {
         if (!selectedRound) {
             setError("Please select a round.");
@@ -88,36 +89,56 @@ const BookingWizard = () => {
         goNext();
     };
 
-    // Step 3 Handler: Use the user-chosen time from step 2
+    // Utilities for step 3
+    const isValidEmail = (testEmail) => {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(testEmail.toLowerCase());
+    };
+
+    const isValidPhoneNumber = (testNumber) => {
+        const stripped = testNumber.replace(/\s/g, "");
+        return /^\d{9}$/.test(stripped);
+    };
+
+    // Step 3: Final confirm
     const handleConfirmBooking = async () => {
         setError("");
         setConfirmationMessage("");
 
-        if (!fullName || !phone || !email || !gdprConsent) {
+        // Validate mandatory fields
+        if (!fullName.trim() || !email.trim() || !gdprConsent) {
             setError("Please complete all required fields and consent to GDPR.");
             return;
         }
-
+        if (!isValidEmail(email)) {
+            setError("Please enter a valid email.");
+            return;
+        }
+        if (phoneNumber.trim() && !isValidPhoneNumber(phoneNumber)) {
+            setError("Please enter a valid 9-digit phone number (spaces allowed).");
+            return;
+        }
         if (!selectedTime) {
             setError("No time selected. Please go back and select a time.");
             return;
         }
 
-        const totalGuests = adults + kids;
-        const formattedDate = format(date, "yyyy-MM-dd");
-
         try {
+            const formattedDate = format(date, "yyyy-MM-dd");
             await createBooking({
                 date: formattedDate,
-                time: selectedTime, // using the chosen time from step 2
-                customer_name: fullName,
-                guests: totalGuests,
-                phone,
+                meal_type: mealType,
+                reserved_time: selectedTime,
+                total_adults: adults,
+                total_kids: kids,
+                full_name: fullName,
+                phone: phoneNumber ? `${phonePrefix} ${phoneNumber}` : null,
                 email,
-                specialRequests,
-                marketingOptIn,
-                mealType,
+                special_requests: specialRequests,
+                gdpr_consent: gdprConsent,
+                marketing_opt_in: marketingOptIn,
             });
+
             setShowSuccessPopup(true);
             setTimeout(() => {
                 setShowSuccessPopup(false);
@@ -135,19 +156,24 @@ const BookingWizard = () => {
         setTimeSlotData(null);
         setSelectedTime(null);
         setFullName("");
-        setPhone("");
+        setPhoneNumber("");
+        setPhonePrefix("+34");
         setEmail("");
         setSpecialRequests("");
         setGdprConsent(false);
         setMarketingOptIn(false);
         setError("");
         setConfirmationMessage("");
+        setAdults(2);
+        setKids(0);
+        setDate(new Date());
+        setMealType("lunch");
     };
 
-    // Step indicator component
+    // Step indicator
     const StepIndicator = () => (
         <div className="flex justify-center space-x-2 mb-6">
-            {[1, 2, 3].map((step) => (
+            {[1,2,3].map((step) => (
                 <div
                     key={step}
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
@@ -163,7 +189,6 @@ const BookingWizard = () => {
     return (
         <div className="relative min-h-screen">
             <AnimatedBackground />
-
             <div className="relative flex items-center justify-center p-4">
                 <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md relative">
                     <StepIndicator />
@@ -172,19 +197,17 @@ const BookingWizard = () => {
                         <ReservationDetailsStep
                             adults={adults}
                             kids={kids}
-                            onIncrementAdults={() => setAdults((prev) => Math.min(prev + 1, 20))}
-                            onDecrementAdults={() => setAdults((prev) => Math.max(prev - 1, 1))}
-                            onIncrementKids={() => setKids((prev) => Math.min(prev + 1, 20))}
-                            onDecrementKids={() => setKids((prev) => Math.max(prev - 1, 0))}
+                            onIncrementAdults={() => setAdults((prev) => Math.min(prev+1, 20))}
+                            onDecrementAdults={() => setAdults((prev) => Math.max(prev-1, 1))}
+                            onIncrementKids={() => setKids((prev) => Math.min(prev+1, 20))}
+                            onDecrementKids={() => setKids((prev) => Math.max(prev-1, 0))}
                             date={date}
                             onDateSelect={setDate}
                             mealType={mealType}
                             onSetMealType={setMealType}
                             error={error}
                             onContinue={handleStep1Continue}
-                            onClose={() => {
-                                /* Optionally do something if user closes */
-                            }}
+                            onClose={() => {}}
                         />
                     )}
 
@@ -198,20 +221,22 @@ const BookingWizard = () => {
                             isLoading={isLoadingTimeSlots}
                             error={error}
                             onBack={goBack}
-                            onContinue={handleStep2Continue} // now receives the chosen time from the step
+                            onContinue={handleStep2Continue}
                         />
                     )}
 
                     {currentStep === 3 && (
                         <ContactInfoStep
                             fullName={fullName}
-                            phone={phone}
+                            phonePrefix={phonePrefix}
+                            phoneNumber={phoneNumber}
                             email={email}
                             specialRequests={specialRequests}
                             gdprConsent={gdprConsent}
                             marketingOptIn={marketingOptIn}
                             onChangeFullName={setFullName}
-                            onChangePhone={setPhone}
+                            onChangePhonePrefix={setPhonePrefix}
+                            onChangePhoneNumber={setPhoneNumber}
                             onChangeEmail={setEmail}
                             onChangeSpecialRequests={setSpecialRequests}
                             onToggleGdpr={setGdprConsent}
@@ -227,7 +252,6 @@ const BookingWizard = () => {
                         />
                     )}
 
-                    {/* Success Popup */}
                     {showSuccessPopup && (
                         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                             <div className="bg-white p-6 rounded shadow-lg z-50">

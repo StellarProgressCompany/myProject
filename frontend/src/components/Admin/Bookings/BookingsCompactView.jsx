@@ -1,19 +1,11 @@
-// src/components/Admin/AdminCompactView.jsx
-
+// src/components/Admin/Bookings/BookingsCompactView.jsx
 import React from "react";
 import { format, addDays, isSameDay } from "date-fns";
 
-export default function AdminCompactView({
-                                             selectedDate,
-                                             onSelectDay,
-                                             bookings,
-                                         }) {
+export default function BookingsCompactView({ selectedDate, onSelectDay, bookings }) {
     const today = new Date();
     const days = [];
-    // We'll show next 7 days from "today" by default (but you can extend or shorten)
-    // However, since we're already filtering in VisualizeBookings,
-    // we can just show 7 consecutive days from "today".
-    // If you want a quick "today + 6 more," do:
+    // Display next 7 days
     for (let i = 0; i < 7; i++) {
         days.push(addDays(today, i));
     }
@@ -25,7 +17,7 @@ export default function AdminCompactView({
             return bookingDate === dayStr;
         });
         const totalClients = dayBookings.reduce((acc, b) => {
-            const cap = b?.table_availability?.capacity || 0;
+            const cap = b.table_availability?.capacity || 0;
             return acc + cap;
         }, 0);
         return {
@@ -51,12 +43,8 @@ export default function AdminCompactView({
                         onClick={() => onSelectDay(day)}
                         className={`flex flex-col items-center w-16 py-2 rounded ${bgColor} ${textColor}`}
                     >
-            <span className="text-xs font-semibold">
-              {format(day, "E")}
-            </span>
-                        <span className="text-xl font-bold leading-none">
-              {format(day, "d")}
-            </span>
+                        <span className="text-xs font-semibold">{format(day, "E")}</span>
+                        <span className="text-xl font-bold leading-none">{format(day, "d")}</span>
                         <span className="text-xs">{format(day, "MMM")}</span>
                         <span className="mt-1 text-xs">{bookingsCount} Bkg</span>
                         <span className="text-xs">{totalClients} Cl</span>

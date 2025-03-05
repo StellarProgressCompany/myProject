@@ -24,6 +24,6 @@ Route::get('/test', function () {
 Route::get('/table-availability', [TableAvailabilityController::class, 'showDailyAvailability']);
 Route::get('/table-availability-range', [TableAvailabilityController::class, 'showRangeAvailability']);
 
-// Bookings routes
+// Booking routes
 Route::post('/bookings', [BookingController::class, 'store']);
 Route::get('/bookings', [BookingController::class, 'index']);

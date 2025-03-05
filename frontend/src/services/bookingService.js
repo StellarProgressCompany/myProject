@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://127.0.0.1:8000/api";
+export const API_URL = "http://127.0.0.1:8000/api"; // Change API URL here if needed
 
 export async function fetchAvailableTimeSlots({ date, mealType }) {
     const response = await axios.get(`${API_URL}/table-availability`, {
@@ -23,4 +23,11 @@ export async function fetchAllBookings() {
     const response = await axios.get(`${API_URL}/bookings`);
     // Return the .data array directly
     return response.data.data;
+}
+
+export async function fetchTableAvailabilityRange(start, end, mealType = "lunch") {
+    const response = await axios.get(`${API_URL}/table-availability-range`, {
+        params: { start, end, mealType },
+    });
+    return response.data;
 }

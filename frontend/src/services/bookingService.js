@@ -25,6 +25,7 @@ export async function fetchAllBookings() {
     return response.data.data;
 }
 
+
 export async function fetchTableAvailabilityRange(start, end, mealType = "lunch") {
     const response = await axios.get(`${API_URL}/table-availability-range`, {
         params: { start, end, mealType },

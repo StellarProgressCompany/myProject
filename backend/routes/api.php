@@ -2,31 +2,21 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-
-// Controllers
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\TableAvailabilityController;
 
-Route::get('/', function () {
-    return response()->json(['message' => 'API root']);
-});
+/* Root */
+Route::get('/', fn () => response()->json(['message' => 'API root']));
 
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
-});
+/* Auth stub */
+Route::middleware('auth:sanctum')->get('/user', fn (Request $r) => $r->user());
 
-// Simple test endpoint
-Route::get('/test', function () {
-    return response()->json(['message' => 'Hello from Laravel Backend!']);
-});
+/* Availability */
+Route::get('/table-availability',        [TableAvailabilityController::class, 'index']);
+Route::get('/table-availability-range',  [TableAvailabilityController::class, 'range']);
 
-// Table availability routes
-// Single‑day availability
-Route::get('/table-availability', [TableAvailabilityController::class, 'index']);
-
-// Range availability
-Route::get('/table-availability-range', [TableAvailabilityController::class, 'range']);
-
-// Booking routes
-Route::post('/bookings', [BookingController::class, 'store']);
-Route::get('/bookings', [BookingController::class, 'index']);
+/* Bookings */
+Route::get   ('/bookings',          [BookingController::class, 'index']);
+Route::post  ('/bookings',          [BookingController::class, 'store']);
+Route::patch ('/bookings/{booking}',[BookingController::class, 'update']);
+Route::delete('/bookings/{booking}',[BookingController::class, 'destroy']);

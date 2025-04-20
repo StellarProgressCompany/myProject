@@ -1,5 +1,3 @@
-// src/components/Booking/TimeSlotStep.jsx
-
 import React, { useState, useEffect } from "react";
 
 const TimeSlotStep = ({
@@ -15,62 +13,59 @@ const TimeSlotStep = ({
                       }) => {
     const [selectedTime, setSelectedTime] = useState(null);
 
-    // Clear selected time if round changes
+    /* wipe pick if round changes */
     useEffect(() => {
         setSelectedTime(null);
     }, [selectedRound]);
 
-    // Generate 15-min increments for the chosen round
+    /* authoritative slot‑sets */
     const generateTimeOptions = (meal, round) => {
         let start, end;
+
         if (meal === "lunch" && round === "first_round") {
-            start = "12:30";
-            end = "14:00";
+            start = "13:00";
+            end   = "14:00";
         } else if (meal === "lunch" && round === "second_round") {
             start = "15:00";
-            end = "16:00";
+            end   = "16:00";
         } else if (meal === "dinner" && round === "dinner_round") {
             start = "20:00";
-            end = "22:00";
+            end   = "22:00";
         } else {
             return [];
         }
 
-        const options = [];
-        const [startHour, startMin] = start.split(":").map(Number);
-        const [endHour, endMin] = end.split(":").map(Number);
-
-        const startTotal = startHour * 60 + startMin;
-        const endTotal = endHour * 60 + endMin;
-
-        for (let mins = startTotal; mins <= endTotal; mins += 15) {
-            const hh = String(Math.floor(mins / 60)).padStart(2, "0");
-            const mm = String(mins % 60).padStart(2, "0");
-            options.push(`${hh}:${mm}:00`);
+        const opts = [];
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        for (let t = sh * 60 + sm; t <= eh * 60 + em; t += 15) {
+            const hh = String(Math.floor(t / 60)).padStart(2, "0");
+            const mm = String(t % 60).padStart(2, "0");
+            opts.push(`${hh}:${mm}:00`);
         }
-
-        return options;
+        return opts;
     };
 
-    const renderTimePopup = () => {
+    const renderTimePicker = () => {
         if (!selectedRound) return null;
-        const times = generateTimeOptions(mealType, selectedRound);
-        if (times.length === 0) return null;
+        const options = generateTimeOptions(mealType, selectedRound);
+        if (options.length === 0) return null;
+
         return (
             <div className="mt-4 p-4 border rounded bg-gray-50">
                 <p className="text-center font-medium mb-2">Select a Time</p>
                 <div className="grid grid-cols-4 gap-2">
-                    {times.map((timeStr) => (
+                    {options.map((t) => (
                         <button
-                            key={timeStr}
-                            onClick={() => setSelectedTime(timeStr)}
+                            key={t}
+                            onClick={() => setSelectedTime(t)}
                             className={`px-2 py-1 rounded border text-center ${
-                                selectedTime === timeStr
+                                selectedTime === t
                                     ? "bg-blue-600 text-white"
-                                    : "bg-gray-100 text-black hover:bg-blue-200"
+                                    : "bg-gray-100 hover:bg-blue-200"
                             }`}
                         >
-                            {timeStr.slice(0,5)}
+                            {t.slice(0, 5)}
                         </button>
                     ))}
                 </div>
@@ -78,15 +73,9 @@ const TimeSlotStep = ({
         );
     };
 
-    const handleContinue = () => {
-        if (!selectedRound) {
-            alert("Please select a round.");
-            return;
-        }
-        if (!selectedTime) {
-            alert("Please select a time.");
-            return;
-        }
+    const next = () => {
+        if (!selectedRound) return alert("Pick a round.");
+        if (!selectedTime)  return alert("Pick a time.");
         onContinue(selectedTime);
     };
 
@@ -104,55 +93,53 @@ const TimeSlotStep = ({
                 </div>
             ) : (
                 <div className="grid grid-cols-2 gap-4">
-                    {mealType === "lunch" && timeSlotData ? (
+                    {mealType === "lunch" && timeSlotData && (
                         <>
                             <button
                                 onClick={() => onSelectRound("first_round")}
                                 className={`px-4 py-2 rounded border text-center ${
                                     selectedRound === "first_round"
                                         ? "bg-blue-600 text-white"
-                                        : "bg-gray-100 text-black"
+                                        : "bg-gray-100"
                                 }`}
                             >
-                                First Round
+                                1st&nbsp;Round
                                 <br />
                                 <span className="text-xs">{timeSlotData.first_round?.note}</span>
                             </button>
-
                             <button
                                 onClick={() => onSelectRound("second_round")}
                                 className={`px-4 py-2 rounded border text-center ${
                                     selectedRound === "second_round"
                                         ? "bg-blue-600 text-white"
-                                        : "bg-gray-100 text-black"
+                                        : "bg-gray-100"
                                 }`}
                             >
-                                Second Round
+                                2nd&nbsp;Round
                                 <br />
                                 <span className="text-xs">{timeSlotData.second_round?.note}</span>
                             </button>
                         </>
-                    ) : mealType === "dinner" && timeSlotData ? (
+                    )}
+
+                    {mealType === "dinner" && timeSlotData && (
                         <button
                             onClick={() => onSelectRound("dinner_round")}
                             className={`col-span-2 px-4 py-2 rounded border text-center ${
                                 selectedRound === "dinner_round"
                                     ? "bg-blue-600 text-white"
-                                    : "bg-gray-100 text-black"
+                                    : "bg-gray-100"
                             }`}
                         >
-                            Dinner Round
+                            Dinner
                             <br />
                             <span className="text-xs">{timeSlotData.dinner_round?.note}</span>
                         </button>
-                    ) : (
-                        <p className="col-span-2 text-center">No available rounds.</p>
                     )}
                 </div>
             )}
 
-            {selectedRound && renderTimePopup()}
-
+            {renderTimePicker()}
             {error && <p className="text-red-500 mt-4">{error}</p>}
 
             <div className="flex justify-between mt-6">
@@ -160,8 +147,8 @@ const TimeSlotStep = ({
                     Back
                 </button>
                 <button
-                    onClick={handleContinue}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover:shadow-lg transition-all duration-200"
+                    onClick={next}
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 >
                     Continue
                 </button>

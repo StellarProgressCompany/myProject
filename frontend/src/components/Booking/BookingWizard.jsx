@@ -6,246 +6,191 @@ import ReservationDetailsStep from "./ReservationDetailsStep";
 import TimeSlotStep from "./TimeSlotStep";
 import ContactInfoStep from "./ContactInfoStep";
 
-const BookingWizard = () => {
-    const [currentStep, setCurrentStep] = useState(1);
+export default function BookingWizard() {
+    /* wizard state */
+    const [step, setStep] = useState(1);
 
-    // Reservation details
-    const [adults, setAdults] = useState(2);
-    const [kids, setKids] = useState(0);
-    const [date, setDate] = useState(new Date());
-    const [mealType, setMealType] = useState("lunch");
-    const [longStay, setLongStay] = useState(false);        // ← NEW
+    /* details */
+    const [adults, setAdults]   = useState(2);
+    const [kids,   setKids]     = useState(0);
+    const [date,   setDate]     = useState(new Date());
+    const [meal,   setMeal]     = useState("lunch");
 
-    // Time slots
-    const [timeSlotData, setTimeSlotData] = useState(null);
-    const [selectedRound, setSelectedRound] = useState("");
-    const [selectedTime, setSelectedTime] = useState(null);
-    const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
+    /* long‑stay flag now chosen in step 3 */
+    const [longStay, setLongStay] = useState(false);
 
-    // Contact info
-    const [fullName, setFullName] = useState("");
-    const [phonePrefix, setPhonePrefix] = useState("+34");
-    const [phoneNumber, setPhoneNumber] = useState("");
-    const [email, setEmail] = useState("");
-    const [specialRequests, setSpecialRequests] = useState("");
-    const [gdprConsent, setGdprConsent] = useState(false);
-    const [marketingOptIn, setMarketingOptIn] = useState(false);
+    /* time‑slot */
+    const [slotData, setSlotData]     = useState(null);
+    const [round,    setRound]        = useState("");
+    const [time,     setTime]         = useState(null);
+    const [loadingSlots, setLoading]  = useState(false);
 
-    const [confirmationMessage, setConfirmationMessage] = useState("");
-    const [error, setError] = useState("");
+    /* contact */
+    const [fullName, setFullName]       = useState("");
+    const [phonePref, setPhonePref]     = useState("+34");
+    const [phoneNum,  setPhoneNum]      = useState("");
+    const [email,     setEmail]         = useState("");
+    const [requests,  setRequests]      = useState("");
+    const [gdpr,      setGdpr]          = useState(false);
+    const [marketing, setMarketing]     = useState(false);
 
-    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    /* misc */
+    const [error, setError]         = useState("");
+    const [success, setSuccess]     = useState(false);
 
-    /* ---------- fetch time‑slots on entering step‑2 ---------- */
+    /* fetch slots on step‑2 entrance */
     useEffect(() => {
-        if (currentStep === 2 && date && mealType) {
-            const loadTimeSlots = async () => {
-                try {
-                    setIsLoadingTimeSlots(true);
-                    const formattedDate = format(date, "yyyy-MM-dd");
-                    const response = await fetchAvailableTimeSlots({ date: formattedDate, mealType });
-                    setTimeSlotData(response);
-                } catch (err) {
-                    console.error("Failed to fetch time slots:", err);
-                    setTimeSlotData(null);
-                } finally {
-                    setIsLoadingTimeSlots(false);
-                }
-            };
-            loadTimeSlots();
-        }
-    }, [currentStep, date, mealType]);
+        if (step !== 2) return;
+        (async () => {
+            try {
+                setLoading(true);
+                const data = await fetchAvailableTimeSlots({
+                    date: format(date, "yyyy-MM-dd"),
+                    mealType: meal,
+                });
+                setSlotData(data);
+            } catch (e) {
+                console.error(e);
+                setSlotData(null);
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [step, date, meal]);
 
-    /* ---------- step / nav helpers ---------- */
-    const goNext = () => setCurrentStep(prev => prev + 1);
-    const goBack = () => setCurrentStep(prev => prev - 1);
+    /* helpers */
+    const next  = () => setStep((s) => s + 1);
+    const back  = () => setStep((s) => s - 1);
+    const reset = () => window.location.reload();
 
-    const handleStep1Continue = () => {
-        if (!date) {
-            setError("Please select a date.");
-            return;
-        }
+    /* confirm */
+    const save = async () => {
         setError("");
-        setTimeSlotData(null);
-        goNext();
-    };
 
-    const handleStep2Continue = (chosenTime) => {
-        if (!selectedRound) {
-            setError("Please select a round.");
-            return;
+        if (!fullName.trim() || !email.trim() || !gdpr) {
+            return setError("Name, e‑mail and GDPR consent are required.");
         }
-        if (!chosenTime) {
-            setError("Please select a time.");
-            return;
-        }
-        setSelectedTime(chosenTime);
-        setError("");
-        goNext();
-    };
-
-    /* ---------- validation utils ---------- */
-    const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.toLowerCase());
-    const isValidPhone = (n) => /^\d{9}$/.test(n.replace(/\s/g, ""));
-
-    /* ---------- final confirm ---------- */
-    const handleConfirmBooking = async () => {
-        setError("");
-        if (!fullName.trim() || !email.trim() || !gdprConsent) {
-            setError("Please complete all required fields and consent to GDPR.");
-            return;
-        }
-        if (!isValidEmail(email)) {
-            setError("Please enter a valid email.");
-            return;
-        }
-        if (phoneNumber.trim() && !isValidPhone(phoneNumber)) {
-            setError("Please enter a valid 9‑digit phone number.");
-            return;
-        }
-        if (!selectedTime) {
-            setError("No time selected.");
-            return;
-        }
+        const okEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!okEmail) return setError("Invalid e‑mail.");
 
         try {
-            const formattedDate = format(date, "yyyy-MM-dd");
             await createBooking({
-                date: formattedDate,
-                meal_type: mealType,
-                reserved_time: selectedTime,
-                total_adults: adults,
-                total_kids: kids,
-                full_name: fullName,
-                phone: phoneNumber ? `${phonePrefix} ${phoneNumber}` : null,
+                date:          format(date, "yyyy-MM-dd"),
+                meal_type:     meal,
+                reserved_time: time,
+                total_adults:  adults,
+                total_kids:    kids,
+                full_name:     fullName,
+                phone:         phoneNum ? `${phonePref} ${phoneNum}` : null,
                 email,
-                special_requests: specialRequests,
-                gdpr_consent: gdprConsent,
-                marketing_opt_in: marketingOptIn,
-                long_stay: longStay,                        // ← NEW
+                special_requests: requests,
+                gdpr_consent:     gdpr,
+                marketing_opt_in: marketing,
+                long_stay:        longStay,
             });
-
-            setShowSuccessPopup(true);
-            setTimeout(() => {
-                setShowSuccessPopup(false);
-                resetWizard();
-            }, 2000);
-        } catch (err) {
-            console.error(err);
-            setError(err?.response?.data?.error ?? "Could not confirm your booking.");
+            setSuccess(true);
+            setTimeout(reset, 2000);
+        } catch (e) {
+            console.error(e);
+            setError(e.response?.data?.error || "Booking failed.");
         }
     };
-
-    const resetWizard = () => {
-        setCurrentStep(1);
-        setSelectedRound("");
-        setTimeSlotData(null);
-        setSelectedTime(null);
-        setFullName("");
-        setPhoneNumber("");
-        setPhonePrefix("+34");
-        setEmail("");
-        setSpecialRequests("");
-        setGdprConsent(false);
-        setMarketingOptIn(false);
-        setLongStay(false);
-        setError("");
-        setConfirmationMessage("");
-        setAdults(2);
-        setKids(0);
-        setDate(new Date());
-        setMealType("lunch");
-    };
-
-    /* ---------- UI ---------- */
-    const StepIndicator = () => (
-        <div className="flex justify-center space-x-2 mb-6">
-            {[1, 2, 3].map(step => (
-                <div
-                    key={step}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                        currentStep === step ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
-                    }`}
-                >
-                    {step}
-                </div>
-            ))}
-        </div>
-    );
 
     return (
         <div className="relative min-h-screen">
             <AnimatedBackground />
             <div className="relative flex items-center justify-center p-4">
-                <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md relative">
-                    <StepIndicator />
+                <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+                    {/* step indicator */}
+                    <div className="flex justify-center space-x-2 mb-6">
+                        {[1,2,3].map((i) => (
+                            <div
+                                key={i}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                    step === i ? "bg-blue-600 text-white" : "bg-gray-200"
+                                }`}
+                            >
+                                {i}
+                            </div>
+                        ))}
+                    </div>
 
-                    {currentStep === 1 && (
+                    {step === 1 && (
                         <ReservationDetailsStep
                             adults={adults}
                             kids={kids}
-                            onIncrementAdults={() => setAdults(prev => Math.min(prev + 1, 20))}
-                            onDecrementAdults={() => setAdults(prev => Math.max(prev - 1, 1))}
-                            onIncrementKids={() => setKids(prev => Math.min(prev + 1, 20))}
-                            onDecrementKids={() => setKids(prev => Math.max(prev - 1, 0))}
+                            onIncrementAdults={() => setAdults((v) => Math.min(v + 1, 20))}
+                            onDecrementAdults={() => setAdults((v) => Math.max(v - 1, 1))}
+                            onIncrementKids={() => setKids((v) => Math.min(v + 1, 20))}
+                            onDecrementKids={() => setKids((v) => Math.max(v - 1, 0))}
                             date={date}
                             onDateSelect={setDate}
-                            mealType={mealType}
-                            onSetMealType={setMealType}
-                            longStay={longStay}                    // ← NEW
-                            onToggleLongStay={setLongStay}         // ← NEW
+                            mealType={meal}
+                            onSetMealType={setMeal}
                             error={error}
-                            onContinue={handleStep1Continue}
-                            onClose={() => {}}
+                            onContinue={() => {
+                                setError("");
+                                if (!date) return setError("Pick a date first.");
+                                next();
+                            }}
+                            onClose={reset}
                         />
                     )}
 
-                    {currentStep === 2 && (
+                    {step === 2 && (
                         <TimeSlotStep
-                            mealType={mealType}
+                            mealType={meal}
                             date={date}
-                            timeSlotData={timeSlotData}
-                            selectedRound={selectedRound}
-                            onSelectRound={setSelectedRound}
-                            isLoading={isLoadingTimeSlots}
+                            timeSlotData={slotData}
+                            selectedRound={round}
+                            onSelectRound={setRound}
+                            isLoading={loadingSlots}
                             error={error}
-                            onBack={goBack}
-                            onContinue={handleStep2Continue}
+                            onBack={back}
+                            onContinue={(t) => {
+                                setTime(t);
+                                next();
+                            }}
                         />
                     )}
 
-                    {currentStep === 3 && (
+                    {step === 3 && (
                         <ContactInfoStep
+                            /* contact */
                             fullName={fullName}
-                            phonePrefix={phonePrefix}
-                            phoneNumber={phoneNumber}
+                            phonePrefix={phonePref}
+                            phoneNumber={phoneNum}
                             email={email}
-                            specialRequests={specialRequests}
-                            gdprConsent={gdprConsent}
-                            marketingOptIn={marketingOptIn}
+                            specialRequests={requests}
+                            gdprConsent={gdpr}
+                            marketingOptIn={marketing}
+                            longStay={longStay}
                             onChangeFullName={setFullName}
-                            onChangePhonePrefix={setPhonePrefix}
-                            onChangePhoneNumber={setPhoneNumber}
+                            onChangePhonePrefix={setPhonePref}
+                            onChangePhoneNumber={setPhoneNum}
                             onChangeEmail={setEmail}
-                            onChangeSpecialRequests={setSpecialRequests}
-                            onToggleGdpr={setGdprConsent}
-                            onToggleMarketing={setMarketingOptIn}
+                            onChangeSpecialRequests={setRequests}
+                            onToggleGdpr={setGdpr}
+                            onToggleMarketing={setMarketing}
+                            onToggleLongStay={setLongStay}
+                            /* summary */
                             adults={adults}
                             kids={kids}
-                            selectedRound={selectedRound}
+                            selectedRound={round}
                             date={date}
                             error={error}
-                            confirmationMessage={confirmationMessage}
-                            onBack={goBack}
-                            onConfirmBooking={handleConfirmBooking}
+                            confirmationMessage=""
+                            onBack={back}
+                            onConfirmBooking={save}
                         />
                     )}
 
-                    {showSuccessPopup && (
-                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-                            <div className="bg-white p-6 rounded shadow-lg z-50">
-                                <p className="text-lg font-bold mb-2">Booking Successful!</p>
-                                <p>Redirecting to start...</p>
+                    {/* success overlay */}
+                    {success && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <div className="bg-white p-6 rounded shadow-lg">
+                                <p className="text-lg font-bold mb-2">Booking confirmed 🎉</p>
+                                <p>Returning…</p>
                             </div>
                         </div>
                     )}
@@ -253,6 +198,4 @@ const BookingWizard = () => {
             </div>
         </div>
     );
-};
-
-export default BookingWizard;
+}

@@ -1,90 +1,103 @@
-// src/components/Booking/ContactInfoStep.jsx
-
 import React from "react";
 
-const ContactInfoStep = ({
-                             fullName,
-                             phonePrefix,
-                             phoneNumber,
-                             email,
-                             specialRequests,
-                             gdprConsent,
-                             marketingOptIn,
-                             onChangeFullName,
-                             onChangePhonePrefix,
-                             onChangePhoneNumber,
-                             onChangeEmail,
-                             onChangeSpecialRequests,
-                             onToggleGdpr,
-                             onToggleMarketing,
-                             adults,
-                             kids,
-                             selectedRound,
-                             date,
-                             error,
-                             confirmationMessage,
-                             onBack,
-                             onConfirmBooking,
-                         }) => {
+export default function ContactInfoStep({
+                                            fullName,
+                                            phonePrefix,
+                                            phoneNumber,
+                                            email,
+                                            specialRequests,
+                                            gdprConsent,
+                                            marketingOptIn,
+                                            longStay,
+                                            onChangeFullName,
+                                            onChangePhonePrefix,
+                                            onChangePhoneNumber,
+                                            onChangeEmail,
+                                            onChangeSpecialRequests,
+                                            onToggleGdpr,
+                                            onToggleMarketing,
+                                            onToggleLongStay,
+                                            adults,
+                                            kids,
+                                            selectedRound,
+                                            date,
+                                            error,
+                                            confirmationMessage,
+                                            onBack,
+                                            onConfirmBooking,
+                                        }) {
     return (
         <div>
             <h2 className="text-2xl font-semibold mb-6 text-center">Your Details</h2>
 
+            {/* name */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Full Name*</label>
                 <input
-                    type="text"
+                    className="w-full border rounded p-2"
                     value={fullName}
                     onChange={(e) => onChangeFullName(e.target.value)}
-                    className="w-full border border-gray-300 rounded p-2"
-                    placeholder="Oriol Calls"
                 />
             </div>
 
+            {/* phone */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Phone (optional)</label>
                 <div className="flex space-x-2">
                     <select
+                        className="border rounded p-2"
                         value={phonePrefix}
                         onChange={(e) => onChangePhonePrefix(e.target.value)}
-                        className="border border-gray-300 rounded p-2"
                     >
-                        <option value="+34">+34 (Spain)</option>
-                        <option value="+33">+33 (France)</option>
-                        <option value="+44">+44 (UK)</option>
+                        <option value="+34">+34</option>
+                        <option value="+33">+33</option>
+                        <option value="+44">+44</option>
                     </select>
                     <input
-                        type="text"
+                        className="w-full border rounded p-2"
                         value={phoneNumber}
                         onChange={(e) => onChangePhoneNumber(e.target.value)}
-                        className="w-full border border-gray-300 rounded p-2"
-                        placeholder="620 379 850"
+                        placeholder="620 379 850"
                     />
                 </div>
             </div>
 
+            {/* email */}
             <div className="mb-4">
-                <label className="block mb-1 font-medium">Email Address*</label>
+                <label className="block mb-1 font-medium">Email*</label>
                 <input
+                    className="w-full border rounded p-2"
                     type="email"
                     value={email}
                     onChange={(e) => onChangeEmail(e.target.value)}
-                    className="w-full border border-gray-300 rounded p-2"
-                    placeholder="example@gmail.com"
                 />
             </div>
 
+            {/* long‑stay (birthday) */}
+            <div className="mb-4 flex items-center">
+                <input
+                    type="checkbox"
+                    checked={longStay}
+                    onChange={(e) => onToggleLongStay(e.target.checked)}
+                    className="mr-2"
+                />
+                <label className="text-sm">
+                    Tick for extended stay (birthday / celebration ⁠→ ⁠2 h 15 m)
+                </label>
+            </div>
+
+            {/* special requests */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Special Requests</label>
                 <textarea
+                    className="w-full border rounded p-2"
+                    rows="3"
                     value={specialRequests}
                     onChange={(e) => onChangeSpecialRequests(e.target.value)}
-                    className="w-full border border-gray-300 rounded p-2"
-                    rows="3"
-                    placeholder="Any dietary requirements, seating preferences, etc."
                 />
             </div>
 
+            {/* GDPR */}
             <div className="mb-4 flex items-center">
                 <input
                     type="checkbox"
@@ -92,11 +105,10 @@ const ContactInfoStep = ({
                     onChange={(e) => onToggleGdpr(e.target.checked)}
                     className="mr-2"
                 />
-                <label className="text-sm">
-                    I consent to the processing of my data (GDPR)*.
-                </label>
+                <label className="text-sm">I consent to data processing (GDPR)*</label>
             </div>
 
+            {/* marketing */}
             <div className="mb-6 flex items-center">
                 <input
                     type="checkbox"
@@ -104,20 +116,17 @@ const ContactInfoStep = ({
                     onChange={(e) => onToggleMarketing(e.target.checked)}
                     className="mr-2"
                 />
-                <label className="text-sm">I would like to receive marketing emails.</label>
+                <label className="text-sm">Send me occasional offers</label>
             </div>
 
-            <div className="mb-4">
-                <p className="text-gray-700">
-                    Reservation for: {adults} Adult{adults !== 1 && "s"}, {kids} Kid{kids !== 1 && "s"}
-                </p>
-                <p className="text-gray-700">
-                    Round: {selectedRound} on {date.toLocaleDateString()}
-                </p>
+            {/* summary */}
+            <div className="mb-4 text-gray-700">
+                {adults} adult{adults !== 1 && "s"}, {kids} kid{kids !== 1 && "s"} – {selectedRound.replace("_", " ")} on{" "}
+                {date.toLocaleDateString()}
             </div>
 
-            {error && <p className="text-red-500 mb-4">{error}</p>}
-            {confirmationMessage && <p className="text-green-600 mb-4">{confirmationMessage}</p>}
+            {error && <p className="text-red-600 mb-3">{error}</p>}
+            {confirmationMessage && <p className="text-green-600 mb-3">{confirmationMessage}</p>}
 
             <div className="flex justify-between">
                 <button onClick={onBack} className="px-4 py-2 border rounded">
@@ -125,13 +134,11 @@ const ContactInfoStep = ({
                 </button>
                 <button
                     onClick={onConfirmBooking}
-                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 hover:shadow-lg transition-all duration-200"
+                    className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
                 >
-                    Finalize Booking
+                    Finalise Booking
                 </button>
             </div>
         </div>
     );
-};
-
-export default ContactInfoStep;
+}

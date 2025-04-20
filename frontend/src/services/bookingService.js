@@ -1,42 +1,32 @@
 import axios from "axios";
+axios.defaults.baseURL = "";                       // proxy via Vite
 
-// We rely on Vite's proxy: all `/api/*` requests will be forwarded to our Laravel backend.
-axios.defaults.baseURL = "";
-
-/**
- * Fetch availability for the given date & meal.
- * Vite will proxy `/api/table-availability` → http://localhost:8000/api/table-availability
- */
-export async function fetchAvailableTimeSlots({ date, mealType }) {
-    const response = await axios.get(`/api/table-availability`, {
-        params: { date, mealType },
+/* Availability helpers – unchanged */
+export async function fetchAvailableTimeSlots(params){
+    const { data } = await axios.get("/api/table-availability",{ params });
+    return data;
+}
+export async function fetchTableAvailabilityRange(start,end,mealType="lunch"){
+    const { data } = await axios.get("/api/table-availability-range",{
+        params:{ start,end,mealType }
     });
-    return response.data;
+    return data;
 }
 
-/**
- * Create a new booking.
- * Proxy magic handles `/api/bookings` → http://localhost:8000/api/bookings
- */
-export async function createBooking(data) {
-    const response = await axios.post(`/api/bookings`, data);
-    return response.data;
+/* CRUD bookings */
+export async function fetchAllBookings(){
+    const { data } = await axios.get("/api/bookings");
+    return data.data;
 }
-
-/**
- * Fetch all bookings.
- */
-export async function fetchAllBookings() {
-    const response = await axios.get(`/api/bookings`);
-    return response.data.data;
+export async function createBooking(payload){
+    const { data } = await axios.post("/api/bookings",payload);
+    return data;
 }
-
-/**
- * Fetch availability over a date range.
- */
-export async function fetchTableAvailabilityRange(start, end, mealType = "lunch") {
-    const response = await axios.get(`/api/table-availability-range`, {
-        params: { start, end, mealType },
-    });
-    return response.data;
+export async function updateBooking(id,payload){
+    const { data } = await axios.patch(`/api/bookings/${id}`,payload);
+    return data;
+}
+export async function deleteBooking(id){
+    const { data } = await axios.delete(`/api/bookings/${id}`);
+    return data;
 }

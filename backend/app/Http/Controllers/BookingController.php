@@ -129,4 +129,42 @@ class BookingController extends Controller
             ], 201);
         });
     }
+
+    /* -------------------------------------------------------------------- */
+    /* NEW: edit a booking – PATCH /api/bookings/{id}                       */
+    /* -------------------------------------------------------------------- */
+    public function update(Request $request, Booking $booking)
+    {
+        $validated = $request->validate([
+            'reserved_time' => 'sometimes|date_format:H:i:s',
+            'total_adults'  => 'sometimes|integer|min:1',
+            'total_kids'    => 'sometimes|integer|min:0',
+            'full_name'     => 'sometimes|string',
+            'phone'         => 'sometimes|nullable|string',
+        ]);
+
+        $booking->update($validated);
+
+        return response()->json([
+            'message' => 'Booking updated',
+            'data'    => $booking->fresh('tableAvailability'),
+        ]);
+    }
+
+    /* -------------------------------------------------------------------- */
+    /* NEW: delete a booking – DELETE /api/bookings/{id}                    */
+    /* -------------------------------------------------------------------- */
+    public function destroy(Booking $booking)
+    {
+        DB::transaction(function () use ($booking) {
+            // restore table availability count
+            $ta = $booking->tableAvailability;
+            if ($ta) {
+                $ta->increment('available_count');
+            }
+            $booking->delete();
+        });
+
+        return response()->json(['message' => 'Booking deleted']);
+    }
 }

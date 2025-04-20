@@ -71,17 +71,11 @@ class BookingController extends Controller
             $master = null;   // main booking row (first table)
             foreach ($assign as $i => $slot) {
 
-                /* lock + decrement availability row */
+                /* fetch the static TableAvailability row (no stock mutation) */
                 $ta = TableAvailability::where('date', $validated['date'])
                     ->where('meal_type', $validated['meal_type'])
                     ->where('capacity', $slot['capacity'])
-                    ->lockForUpdate()
                     ->firstOrFail();
-
-                if ($ta->available_count <= 0) {
-                    throw new \Exception("No availability for {$slot['capacity']}-tops");
-                }
-                $ta->decrement('available_count');
 
                 /* first table = master booking row */
                 if ($i === 0) {
@@ -156,10 +150,7 @@ class BookingController extends Controller
     /* DELETE /api/bookings/{id} */
     public function destroy(Booking $booking)
     {
-        DB::transaction(function () use ($booking) {
-            $booking->tableAvailability?->increment('available_count');
-            $booking->delete();
-        });
+        $booking->delete();
 
         return response()->json(['message' => 'Booking deleted']);
     }

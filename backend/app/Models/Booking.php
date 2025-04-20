@@ -20,6 +20,7 @@ class Booking extends Model
         'special_requests',
         'gdpr_consent',
         'marketing_opt_in',
+        'long_stay',               // ← added
     ];
 
     public function tableAvailability()

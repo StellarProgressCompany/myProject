@@ -20,9 +20,12 @@ Route::get('/test', function () {
     return response()->json(['message' => 'Hello from Laravel Backend!']);
 });
 
-// Table availability routes (renamed to match refactored controller methods)
-Route::get('/table-availability', [TableAvailabilityController::class, 'showDailyAvailability']);
-Route::get('/table-availability-range', [TableAvailabilityController::class, 'showRangeAvailability']);
+// Table availability routes
+// Single‑day availability
+Route::get('/table-availability', [TableAvailabilityController::class, 'index']);
+
+// Range availability
+Route::get('/table-availability-range', [TableAvailabilityController::class, 'range']);
 
 // Booking routes
 Route::post('/bookings', [BookingController::class, 'store']);

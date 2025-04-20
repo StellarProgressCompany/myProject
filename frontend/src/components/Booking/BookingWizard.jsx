@@ -1,5 +1,3 @@
-// src/components/Booking/BookingWizard.jsx
-
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { fetchAvailableTimeSlots, createBooking } from "../../services/bookingService";
@@ -11,19 +9,20 @@ import ContactInfoStep from "./ContactInfoStep";
 const BookingWizard = () => {
     const [currentStep, setCurrentStep] = useState(1);
 
-    // Step 1: Reservation details
+    // Reservation details
     const [adults, setAdults] = useState(2);
     const [kids, setKids] = useState(0);
     const [date, setDate] = useState(new Date());
     const [mealType, setMealType] = useState("lunch");
+    const [longStay, setLongStay] = useState(false);        // ← NEW
 
-    // Step 2: Time slot selection
+    // Time slots
     const [timeSlotData, setTimeSlotData] = useState(null);
     const [selectedRound, setSelectedRound] = useState("");
     const [selectedTime, setSelectedTime] = useState(null);
     const [isLoadingTimeSlots, setIsLoadingTimeSlots] = useState(false);
 
-    // Step 3: Contact info
+    // Contact info
     const [fullName, setFullName] = useState("");
     const [phonePrefix, setPhonePrefix] = useState("+34");
     const [phoneNumber, setPhoneNumber] = useState("");
@@ -32,14 +31,12 @@ const BookingWizard = () => {
     const [gdprConsent, setGdprConsent] = useState(false);
     const [marketingOptIn, setMarketingOptIn] = useState(false);
 
-    // Messages
     const [confirmationMessage, setConfirmationMessage] = useState("");
     const [error, setError] = useState("");
 
-    // Success popup
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-    // --- Load available time slots when entering Step 2 ---
+    /* ---------- fetch time‑slots on entering step‑2 ---------- */
     useEffect(() => {
         if (currentStep === 2 && date && mealType) {
             const loadTimeSlots = async () => {
@@ -59,11 +56,10 @@ const BookingWizard = () => {
         }
     }, [currentStep, date, mealType]);
 
-    // Navigation
-    const goNext = () => setCurrentStep((prev) => prev + 1);
-    const goBack = () => setCurrentStep((prev) => prev - 1);
+    /* ---------- step / nav helpers ---------- */
+    const goNext = () => setCurrentStep(prev => prev + 1);
+    const goBack = () => setCurrentStep(prev => prev - 1);
 
-    // Step 1: Validate date
     const handleStep1Continue = () => {
         if (!date) {
             setError("Please select a date.");
@@ -74,7 +70,6 @@ const BookingWizard = () => {
         goNext();
     };
 
-    // Step 2: Validate round/time
     const handleStep2Continue = (chosenTime) => {
         if (!selectedRound) {
             setError("Please select a round.");
@@ -89,23 +84,13 @@ const BookingWizard = () => {
         goNext();
     };
 
-    // Utilities for step 3
-    const isValidEmail = (testEmail) => {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(testEmail.toLowerCase());
-    };
+    /* ---------- validation utils ---------- */
+    const isValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.toLowerCase());
+    const isValidPhone = (n) => /^\d{9}$/.test(n.replace(/\s/g, ""));
 
-    const isValidPhoneNumber = (testNumber) => {
-        const stripped = testNumber.replace(/\s/g, "");
-        return /^\d{9}$/.test(stripped);
-    };
-
-    // Step 3: Final confirm
+    /* ---------- final confirm ---------- */
     const handleConfirmBooking = async () => {
         setError("");
-        setConfirmationMessage("");
-
-        // Validate mandatory fields
         if (!fullName.trim() || !email.trim() || !gdprConsent) {
             setError("Please complete all required fields and consent to GDPR.");
             return;
@@ -114,12 +99,12 @@ const BookingWizard = () => {
             setError("Please enter a valid email.");
             return;
         }
-        if (phoneNumber.trim() && !isValidPhoneNumber(phoneNumber)) {
-            setError("Please enter a valid 9-digit phone number (spaces allowed).");
+        if (phoneNumber.trim() && !isValidPhone(phoneNumber)) {
+            setError("Please enter a valid 9‑digit phone number.");
             return;
         }
         if (!selectedTime) {
-            setError("No time selected. Please go back and select a time.");
+            setError("No time selected.");
             return;
         }
 
@@ -137,6 +122,7 @@ const BookingWizard = () => {
                 special_requests: specialRequests,
                 gdpr_consent: gdprConsent,
                 marketing_opt_in: marketingOptIn,
+                long_stay: longStay,                        // ← NEW
             });
 
             setShowSuccessPopup(true);
@@ -146,7 +132,7 @@ const BookingWizard = () => {
             }, 2000);
         } catch (err) {
             console.error(err);
-            setError("Could not confirm your booking. Please try again later.");
+            setError(err?.response?.data?.error ?? "Could not confirm your booking.");
         }
     };
 
@@ -162,6 +148,7 @@ const BookingWizard = () => {
         setSpecialRequests("");
         setGdprConsent(false);
         setMarketingOptIn(false);
+        setLongStay(false);
         setError("");
         setConfirmationMessage("");
         setAdults(2);
@@ -170,10 +157,10 @@ const BookingWizard = () => {
         setMealType("lunch");
     };
 
-    // Step indicator
+    /* ---------- UI ---------- */
     const StepIndicator = () => (
         <div className="flex justify-center space-x-2 mb-6">
-            {[1,2,3].map((step) => (
+            {[1, 2, 3].map(step => (
                 <div
                     key={step}
                     className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
@@ -197,14 +184,16 @@ const BookingWizard = () => {
                         <ReservationDetailsStep
                             adults={adults}
                             kids={kids}
-                            onIncrementAdults={() => setAdults((prev) => Math.min(prev+1, 20))}
-                            onDecrementAdults={() => setAdults((prev) => Math.max(prev-1, 1))}
-                            onIncrementKids={() => setKids((prev) => Math.min(prev+1, 20))}
-                            onDecrementKids={() => setKids((prev) => Math.max(prev-1, 0))}
+                            onIncrementAdults={() => setAdults(prev => Math.min(prev + 1, 20))}
+                            onDecrementAdults={() => setAdults(prev => Math.max(prev - 1, 1))}
+                            onIncrementKids={() => setKids(prev => Math.min(prev + 1, 20))}
+                            onDecrementKids={() => setKids(prev => Math.max(prev - 1, 0))}
                             date={date}
                             onDateSelect={setDate}
                             mealType={mealType}
                             onSetMealType={setMealType}
+                            longStay={longStay}                    // ← NEW
+                            onToggleLongStay={setLongStay}         // ← NEW
                             error={error}
                             onContinue={handleStep1Continue}
                             onClose={() => {}}

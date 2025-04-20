@@ -1,33 +1,41 @@
 import axios from "axios";
 
-export const API_URL = "http://127.0.0.1:8000/api"; // Change API URL here if needed
+// We rely on Vite's proxy: all `/api/*` requests will be forwarded to our Laravel backend.
+axios.defaults.baseURL = "";
 
+/**
+ * Fetch availability for the given date & meal.
+ * Vite will proxy `/api/table-availability` → http://localhost:8000/api/table-availability
+ */
 export async function fetchAvailableTimeSlots({ date, mealType }) {
-    const response = await axios.get(`${API_URL}/table-availability`, {
+    const response = await axios.get(`/api/table-availability`, {
         params: { date, mealType },
     });
     return response.data;
 }
 
+/**
+ * Create a new booking.
+ * Proxy magic handles `/api/bookings` → http://localhost:8000/api/bookings
+ */
 export async function createBooking(data) {
-    const response = await axios.post(`${API_URL}/bookings`, data);
+    const response = await axios.post(`/api/bookings`, data);
     return response.data;
 }
 
 /**
- * Easiest fix:
- * Return response.data.data directly so the calling code
- * receives the bookings array as an array.
+ * Fetch all bookings.
  */
 export async function fetchAllBookings() {
-    const response = await axios.get(`${API_URL}/bookings`);
-    // Return the .data array directly
+    const response = await axios.get(`/api/bookings`);
     return response.data.data;
 }
 
-
+/**
+ * Fetch availability over a date range.
+ */
 export async function fetchTableAvailabilityRange(start, end, mealType = "lunch") {
-    const response = await axios.get(`${API_URL}/table-availability-range`, {
+    const response = await axios.get(`/api/table-availability-range`, {
         params: { start, end, mealType },
     });
     return response.data;

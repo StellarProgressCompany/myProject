@@ -1,76 +1,99 @@
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import {
     IconArrowDownRight,
     IconArrowUpRight,
-    IconCoin,
-    IconDiscount2,
-    IconReceipt2,
-    IconUserPlus,
+    IconCalendarStats,
+    IconUsers,
+    IconLayoutGrid,
+    IconTrendingUp,
 } from "@tabler/icons-react";
+import { parseISO, subDays } from "date-fns";
+
+/**
+ * Calculates last‑30‑days vs previous‑30‑days metrics.
+ */
+function computeMetrics(bookings) {
+    const today = new Date();
+    const startCurr = subDays(today, 30);
+    const startPrev = subDays(today, 60);
+
+    let currBookings = 0,
+        prevBookings = 0,
+        currGuests = 0,
+        prevGuests = 0,
+        uniqueGuests = new Set();
+
+    bookings.forEach((b) => {
+        const dateStr = b.table_availability?.date || b.date;
+        if (!dateStr) return;
+        const d = parseISO(dateStr);
+
+        const guests = (b.total_adults || 0) + (b.total_kids || 0);
+        uniqueGuests.add(b.full_name?.trim() || `#${b.id}`);
+
+        if (d >= startCurr && d <= today) {
+            currBookings += 1;
+            currGuests += guests;
+        } else if (d >= startPrev && d < startCurr) {
+            prevBookings += 1;
+            prevGuests += guests;
+        }
+    });
+
+    const bookingDiff =
+        prevBookings === 0 ? 100 : ((currBookings - prevBookings) / prevBookings) * 100;
+    const guestDiff =
+        prevGuests === 0 ? 100 : ((currGuests - prevGuests) / prevGuests) * 100;
+
+    return {
+        currBookings,
+        currGuests,
+        uniqueGuests: uniqueGuests.size,
+        avgGuests:
+            currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
+        bookingDiff: bookingDiff.toFixed(0),
+        guestDiff: guestDiff.toFixed(0),
+    };
+}
 
 const icons = {
-    user: IconUserPlus,
-    discount: IconDiscount2,
-    receipt: IconReceipt2,
-    coin: IconCoin,
+    calendar: IconCalendarStats,
+    users: IconUsers,
+    grid: IconLayoutGrid,
+    trend: IconTrendingUp,
 };
 
-export default function StatsGrid() {
-    const [metrics, setMetrics] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        setLoading(true);
-        const timer = setTimeout(() => {
-            const data = {
-                revenue: { value: 13456, diff: 34 },
-                profit: { value: 4145, diff: -13 },
-                coupons: { value: 745, diff: 18 },
-                newCustomers: { value: 188, diff: -30 },
-            };
-            setMetrics(data);
-            setLoading(false);
-        }, 1000);
-
-        return () => clearTimeout(timer);
-    }, []);
-
-    if (loading) {
-        return <p>Loading metrics...</p>;
-    }
-
-    if (!metrics) {
-        return <p>No metrics data available.</p>;
-    }
+export default function StatsGrid({ bookings = [] }) {
+    const m = useMemo(() => computeMetrics(bookings), [bookings]);
 
     const data = [
         {
-            key: "revenue",
-            title: "Revenue",
-            icon: "receipt",
-            value: metrics.revenue.value,
-            diff: metrics.revenue.diff,
+            key: "bookings",
+            title: "Bookings (30 d)",
+            icon: "calendar",
+            value: m.currBookings,
+            diff: m.bookingDiff,
         },
         {
-            key: "profit",
-            title: "Profit",
-            icon: "coin",
-            value: metrics.profit.value,
-            diff: metrics.profit.diff,
+            key: "guests",
+            title: "Guests (30 d)",
+            icon: "users",
+            value: m.currGuests,
+            diff: m.guestDiff,
         },
         {
-            key: "coupons",
-            title: "Coupons usage",
-            icon: "discount",
-            value: metrics.coupons.value,
-            diff: metrics.coupons.diff,
+            key: "avg",
+            title: "Avg Guests / Booking",
+            icon: "grid",
+            value: m.avgGuests,
+            diff: 0,
         },
         {
-            key: "newCustomers",
-            title: "New customers",
-            icon: "user",
-            value: metrics.newCustomers.value,
-            diff: metrics.newCustomers.diff,
+            key: "unique",
+            title: "Unique Names",
+            icon: "trend",
+            value: m.uniqueGuests,
+            diff: 0,
         },
     ];
 
@@ -79,23 +102,39 @@ export default function StatsGrid() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {data.map((stat) => {
                     const StatIcon = icons[stat.icon];
-                    const DiffIcon = stat.diff > 0 ? IconArrowUpRight : IconArrowDownRight;
-                    const diffColor = stat.diff > 0 ? "text-teal-500" : "text-red-500";
+                    const positive = Number(stat.diff) >= 0;
+                    const DiffIcon = positive ? IconArrowUpRight : IconArrowDownRight;
+                    const diffColor = positive ? "text-teal-500" : "text-red-500";
 
                     return (
-                        <div key={stat.title} className="border rounded-md p-4 shadow bg-white">
+                        <div
+                            key={stat.key}
+                            className="border rounded-md p-4 shadow bg-white"
+                        >
                             <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500 font-semibold uppercase">{stat.title}</p>
+                                <p className="text-xs text-gray-500 font-semibold uppercase">
+                                    {stat.title}
+                                </p>
                                 <StatIcon className="w-5 h-5 text-gray-400" />
                             </div>
+
                             <div className="flex items-end space-x-2 mt-4">
                                 <span className="text-2xl font-bold">{stat.value}</span>
-                                <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
-                                    <span>{stat.diff}%</span>
-                                    <DiffIcon className="w-4 h-4 ml-1" />
-                                </span>
+                                {stat.diff !== 0 && (
+                                    <span
+                                        className={`flex items-center text-sm font-semibold ${diffColor}`}
+                                    >
+                    <span>{stat.diff}%</span>
+                    <DiffIcon className="w-4 h-4 ml-1" />
+                  </span>
+                                )}
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">Compared to previous month</p>
+
+                            <p className="text-xs text-gray-500 mt-2">
+                                {stat.key === "bookings" || stat.key === "guests"
+                                    ? "vs previous 30 d"
+                                    : ""}
+                            </p>
                         </div>
                     );
                 })}

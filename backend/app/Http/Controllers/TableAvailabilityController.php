@@ -162,45 +162,45 @@ class TableAvailabilityController extends Controller
         return response()->json($results);
     }
 
-    /**
-     * Compute how many tables remain for each capacity if we factor in existing bookings.
-     *
-     * @param  Collection $tableAvailabilities   (one or more TableAvailability rows)
-     * @param  array      $roundTimes           e.g. ['12:30','12:45']
-     * @param  Collection $allBookings          all relevant Booking rows
-     * @return array      e.g. ['2'=>3,'4'=>2,'6'=>2]
-     */
     private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings = null)
     {
         if ($allBookings === null) {
-            // if not provided, fetch from DB
             $ids = $tableAvailabilities->pluck('id');
             $allBookings = Booking::whereIn('table_availability_id', $ids)->get();
         }
 
-        $availabilityByCapacity = [];
-        foreach ([2,4,6] as $cap) {
-            // find the matching TableAvailability for that capacity
-            $taRow = $tableAvailabilities->where('capacity', $cap)->first();
+        // If we are computing the second lunch round, block tables whose long‑stay
+        // bookings started in the first round (before 15:00)
+        $isSecondLunch = in_array('15:00', $roundTimes);
 
+        $availabilityByCapacity = [];
+        foreach ([2, 4, 6] as $cap) {
+            $taRow = $tableAvailabilities->where('capacity', $cap)->first();
             if (!$taRow) {
                 $availabilityByCapacity["$cap"] = 0;
                 continue;
             }
 
-            // how many were seeded
-            $seededCount = $taRow->available_count;
+            $seeded = $taRow->available_count;
 
-            // count how many bookings exist for that row and round times
-            $bookedCount = $allBookings
+            $booked = $allBookings
                 ->where('table_availability_id', $taRow->id)
-                ->whereIn('reserved_time', $roundTimes)
-                ->count();
+                ->filter(function ($b) use ($roundTimes, $isSecondLunch) {
+                    // direct clash
+                    if (in_array($b->reserved_time, $roundTimes)) {
+                        return true;
+                    }
+                    // long‑stay from first round blocks second round
+                    if ($isSecondLunch && $b->long_stay && $b->reserved_time < '15:00:00') {
+                        return true;
+                    }
+                    return false;
+                })->count();
 
-            $remaining = max($seededCount - $bookedCount, 0);
-            $availabilityByCapacity["$cap"] = $remaining;
+            $availabilityByCapacity["$cap"] = max($seeded - $booked, 0);
         }
 
         return $availabilityByCapacity;
     }
+
 }

@@ -1,116 +1,98 @@
-import React, { useState, useEffect } from "react";
-import {
-    format,
-    addDays,
-    subDays,
-    parseISO,
-    isAfter,
-    isBefore,
-    differenceInCalendarDays,
-} from "date-fns";
-import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-import BookingsCompactView from "./BookingsCompactView";
-import BookingsCalendarView from "./BookingsCalendarView";
-import BookingsChart from "./BookingsChart";
-import DaySchedule from "./DaySchedule";
-// NEW
-import AddBookingModal from "../Current/AddBookingModal";
+// frontend/src/components/Admin/Bookings/BookingsOverview.jsx
 
-const ymd = (d) => format(d, "yyyy-MM-dd");
+import React, { useState, useEffect } from 'react';
+import { format, addDays, subDays, parseISO, differenceInCalendarDays } from 'date-fns';
+import { fetchTableAvailabilityRange } from '../../../services/bookingService';
+import BookingsCompactView from './BookingsCompactView';
+import BookingsCalendarView from './BookingsCalendarView';
+import BookingsChart from './BookingsChart';
+import DaySchedule from './DaySchedule';
+import AddBookingModal from '../Current/AddBookingModal';
 
-/* helper – skip TODAY for future view */
-function inWindow(d, start, end, mode) {
-    const cmp = differenceInCalendarDays(d, new Date()); // <0 past, 0 today, >0 future
-    if (mode === "future" && cmp <= 0) return false; // tomorrow+
-    if (mode === "past" && cmp >= 0) return false; // strictly yesterday back
-    return !isBefore(d, start) && !isAfter(d, end);
-}
-
-function filterBookings(bookings, start, end, mode) {
-    return bookings.filter((b) => {
-        const dStr = b.table_availability?.date || b.date;
-        if (!dStr) return false;
-        return inWindow(parseISO(dStr), start, end, mode);
-    });
-}
+const ymd = (d) => format(d, 'yyyy-MM-dd');
 
 export default function BookingsOverview({ mode, bookings }) {
     const today = new Date();
-    const [rangeDays, setRange] = useState(7);
-    const [view, setView] = useState("compact");
+
+    const [rangeDays, setRangeDays] = useState(7);
+    const [view, setView] = useState('compact');
     const [selDay, setSelDay] = useState(null);
     const [ta, setTA] = useState({});
-    const [loadingTA, setLoading] = useState(false);
-    // NEW state
-    const [showModal, setModal] = useState(false);
+    const [loadingTA, setLoadingTA] = useState(false);
+    const [showModal, setShowModal] = useState(false);
 
-    const start = mode === "future" ? today : subDays(today, rangeDays);
-    const end = mode === "future" ? addDays(today, rangeDays) : today;
+    const start = mode === 'future' ? today : subDays(today, rangeDays);
+    const end = mode === 'future' ? addDays(today, rangeDays) : today;
 
-    /* pull table availability for schedule */
     useEffect(() => {
         (async () => {
-            setLoading(true);
+            setLoadingTA(true);
             try {
                 const data = await fetchTableAvailabilityRange(
                     ymd(start),
                     ymd(end),
-                    "lunch"
+                    'lunch'
                 );
                 setTA(data);
-            } catch (e) {
-                console.error(e);
+            } catch {
                 setTA({});
             } finally {
-                setLoading(false);
+                setLoadingTA(false);
             }
         })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mode, rangeDays]);
 
-    const filtered = filterBookings(bookings, start, end, mode);
+    const filtered = bookings.filter((b) => {
+        const dateStr = b.table_availability?.date || b.date;
+        const d = parseISO(dateStr);
+        if (mode === 'future' && differenceInCalendarDays(d, today) <= 0) {
+            return false;
+        }
+        if (mode === 'past' && differenceInCalendarDays(d, today) >= 0) {
+            return false;
+        }
+        return d >= start && d <= end;
+    });
+
     const totalBookings = filtered.length;
     const totalClients = filtered.reduce(
-        (s, b) => s + (b.total_adults || 0) + (b.total_kids || 0),
+        (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
 
-    /* save from modal */
     const handleSaved = () => {
-        setModal(false);
+        setShowModal(false);
         window.location.reload();
     };
 
     return (
         <div className="p-6 bg-white rounded shadow">
-            {/* header & summary */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold">
-                        {mode === "future" ? "Future" : "Past"} Bookings
+                        {mode === 'future' ? 'Future' : 'Past'} Bookings
                     </h2>
                     <p className="text-sm text-gray-500">
                         Window: {ymd(start)} → {ymd(end)}
                     </p>
                 </div>
-
                 <div className="flex space-x-2">
                     <select
                         className="border rounded p-1"
                         value={rangeDays}
-                        onChange={(e) => setRange(Number(e.target.value))}
+                        onChange={(e) => setRangeDays(Number(e.target.value))}
                     >
-                        {mode === "future" ? (
+                        {mode === 'future' ? (
                             <>
-                                <option value={7}>Upcoming 7 d</option>
-                                <option value={30}>Upcoming 1 mo</option>
-                                <option value={90}>Upcoming 3 mo</option>
+                                <option value={7}>Upcoming 7 d</option>
+                                <option value={30}>Upcoming 1 mo</option>
+                                <option value={90}>Upcoming 3 mo</option>
                             </>
                         ) : (
                             <>
-                                <option value={7}>Past 7 d</option>
-                                <option value={30}>Past 1 mo</option>
-                                <option value={90}>Past 3 mo</option>
+                                <option value={7}>Past 7 d</option>
+                                <option value={30}>Past 1 mo</option>
+                                <option value={90}>Past 3 mo</option>
                             </>
                         )}
                     </select>
@@ -126,7 +108,6 @@ export default function BookingsOverview({ mode, bookings }) {
                 </div>
             </div>
 
-            {/* quick stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
                 <div className="bg-blue-50 p-3 rounded text-center">
                     <p className="text-xs text-gray-600">Bookings</p>
@@ -138,8 +119,7 @@ export default function BookingsOverview({ mode, bookings }) {
                 </div>
             </div>
 
-            {/* main view */}
-            {view === "compact" && (
+            {view === 'compact' && (
                 <BookingsCompactView
                     mode={mode}
                     rangeDays={rangeDays}
@@ -148,21 +128,27 @@ export default function BookingsOverview({ mode, bookings }) {
                     bookings={filtered}
                 />
             )}
-            {view === "calendar" && (
+            {view === 'calendar' && (
                 <BookingsCalendarView
                     selectedDate={selDay}
                     onSelectDay={setSelDay}
                     bookings={filtered}
                 />
             )}
-            {view === "chart" && <BookingsChart bookings={filtered} />}
+            {view === 'chart' && (
+                <BookingsChart
+                    key={`${mode}-${rangeDays}`}
+                    bookings={filtered}
+                    startDate={start}
+                    days={rangeDays}
+                />
+            )}
 
-            {/* schedule & manual‑booking btn */}
             {selDay && (
                 <div className="mt-4 relative">
-                    {mode === "future" && (
+                    {mode === 'future' && (
                         <button
-                            onClick={() => setModal(true)}
+                            onClick={() => setShowModal(true)}
                             className="absolute right-0 -top-10 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                         >
                             + Manual Booking
@@ -173,19 +159,15 @@ export default function BookingsOverview({ mode, bookings }) {
                         bookings={filtered}
                         tableAvailability={ta}
                         onClose={() => setSelDay(null)}
+                        showTables={false}
                     />
                 </div>
             )}
 
-            {loadingTA && (
-                <p className="text-sm text-gray-500 mt-2">Loading table availability…</p>
-            )}
-
-            {/* modal */}
             {showModal && selDay && (
                 <AddBookingModal
                     dateObj={selDay}
-                    onClose={() => setModal(false)}
+                    onClose={() => setShowModal(false)}
                     onSaved={handleSaved}
                 />
             )}

@@ -1,51 +1,61 @@
-// src/components/Admin/Bookings/BookingsChart.jsx
 import React, { useMemo } from "react";
 import { Bar } from "react-chartjs-2";
-import { Chart as ChartJS, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from "chart.js";
-import { parseISO, format } from "date-fns";
+import {
+    Chart as ChartJS,
+    BarElement,
+    CategoryScale,
+    LinearScale,
+    Tooltip,
+    Legend,
+} from "chart.js";
+import { format, addDays } from "date-fns";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-function groupBookingsByDay(bookings) {
-    const map = {};
-    bookings.forEach((b) => {
-        const dateStr = b.table_availability?.date || b.date;
-        const capacity = b.table_availability?.capacity || 0;
-        if (!map[dateStr]) {
-            map[dateStr] = { date: dateStr, totalClients: 0 };
-        }
-        map[dateStr].totalClients += capacity;
-    });
-    // Convert to array sorted by date
-    const entries = Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
-    return entries;
-}
+/**
+ * Props:
+ *  • bookings – array of bookings in the window
+ *  • startDate – JS Date at window start
+ *  • days – number of days in window
+ */
+export default function BookingsChart({ bookings, startDate, days }) {
+    // Map ISO date → total clients
+    const counts = bookings.reduce((map, b) => {
+        const d = b.table_availability?.date || b.date;
+        const clients = (b.total_adults || 0) + (b.total_kids || 0);
+        map[d] = (map[d] || 0) + clients;
+        return map;
+    }, {});
 
-export default function BookingsChart({ bookings }) {
-    const chartData = useMemo(() => {
-        const grouped = groupBookingsByDay(bookings);
-        return {
-            labels: grouped.map((item) => {
-                const d = parseISO(item.date);
-                return format(d, "MMM d");
-            }),
-            datasets: [
-                {
-                    label: "Total People",
-                    data: grouped.map((item) => item.totalClients),
-                    backgroundColor: "#4F46E5", // futuristic purple/blue
-                    borderRadius: 5,
-                    barPercentage: 0.6,
-                },
-            ],
-        };
-    }, [bookings]);
+    // Build full day list & corresponding data
+    const { labels, data } = useMemo(() => {
+        const lab = [];
+        const dat = [];
+        for (let i = 0; i < days; i++) {
+            const d = addDays(startDate, i);
+            const key = format(d, "yyyy-MM-dd");
+            lab.push(format(d, "MMM d"));
+            dat.push(counts[key] || 0);
+        }
+        return { labels: lab, data: dat };
+    }, [counts, startDate, days]);
+
+    const chartData = {
+        labels,
+        datasets: [
+            {
+                label: "Total People",
+                data,
+                backgroundColor: "#4F46E5",
+                borderRadius: 5,
+                barPercentage: 0.6,
+            },
+        ],
+    };
 
     const options = {
         plugins: {
-            legend: {
-                display: false,
-            },
+            legend: { display: false },
             tooltip: {
                 backgroundColor: "rgba(0,0,0,0.7)",
                 titleFont: { size: 14 },

@@ -1,169 +1,135 @@
-// src/components/Admin/VisualizeBookings.jsx
+import React, { useState } from "react";
+import { format } from "date-fns";
+import TableUsage from "./TableUsage";
 
-import React, { useState, useEffect } from "react";
-import {
-    format,
-    addDays,
-    parseISO,
-    isAfter,
-    isBefore,
-    isEqual,
-    subDays,
-} from "date-fns";
+const prettyRound = (key) => {
+    if (key.includes("first")) return { lbl: "Lunch – 1st Round", bg: "bg-green-50" };
+    if (key.includes("second")) return { lbl: "Lunch – 2nd Round", bg: "bg-orange-50" };
+    return { lbl: "Dinner", bg: "bg-purple-50" };
+};
 
-import { fetchTableAvailabilityRange } from "../../services/bookingService";
+/**
+ * DaySchedule – shows three rounds & optional floor plan.
+ */
+export default function DaySchedule({
+                                        selectedDate,
+                                        bookings,
+                                        tableAvailability,
+                                        onClose,
+                                        enableZoom = false,
+                                    }) {
+    const [showFloor, setShowFloor] = useState(false);
+    if (!selectedDate) return null;
 
-import AdminCompactView from "./AdminCompactView";
-import AdminCalendarView from "./AdminCalendarView";
-import AdminDaySchedule from "./AdminDaySchedule";
-import AdminChartView from "./AdminChartView"; // NEW
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const dayInfo = tableAvailability[dateStr];
 
-function toYmd(dateObj) {
-    const yyyy = dateObj.getFullYear();
-    const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
-    const dd = String(dateObj.getDate()).padStart(2, "0");
-    return `${yyyy}-${mm}-${dd}`;
-}
-
-function filterBookingsInRange(bookings, startDate, endDate) {
-    return bookings.filter((b) => {
-        const bookingDateStr = b.table_availability?.date || b.date;
-        const bookingDate = parseISO(bookingDateStr);
+    if (!dayInfo || dayInfo === "closed") {
         return (
-            (isAfter(bookingDate, startDate) || isEqual(bookingDate, startDate)) &&
-            (isBefore(bookingDate, endDate) || isEqual(bookingDate, endDate))
+            <div className="mt-6 border rounded bg-white p-4 shadow">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">
+                        Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                    </h3>
+                    <button onClick={onClose} className="text-sm text-red-500 underline">
+                        Close
+                    </button>
+                </div>
+                <p className={dayInfo === "closed" ? "text-red-600 font-semibold" : "text-gray-700"}>
+                    {dayInfo === "closed" ? "CLOSED" : "No availability data."}
+                </p>
+            </div>
         );
-    });
-}
-
-export default function VisualizeBookings({ bookings }) {
-    const [rangeType, setRangeType] = useState("past7"); // "past7", "future7", "future30", "future90"
-    const [displayStyle, setDisplayStyle] = useState("compact"); // "compact", "calendar", "chart"
-    const [selectedDay, setSelectedDay] = useState(null);
-
-    const [tableAvailability, setTableAvailability] = useState({});
-    const [loadingTA, setLoadingTA] = useState(false);
-
-    // Compute start/end from rangeType
-    const today = new Date();
-    let startDate, endDate;
-    if (rangeType === "past7") {
-        startDate = subDays(today, 7);
-        endDate = today;
-    } else if (rangeType === "future7") {
-        startDate = today;
-        endDate = addDays(today, 7);
-    } else if (rangeType === "future30") {
-        startDate = today;
-        endDate = addDays(today, 30);
-    } else if (rangeType === "future90") {
-        startDate = today;
-        endDate = addDays(today, 90);
     }
 
-    // Fetch tableAvailability for the chosen start/end
-    useEffect(() => {
-        async function loadData() {
-            setLoadingTA(true);
-            try {
-                const data = await fetchTableAvailabilityRange(
-                    toYmd(startDate),
-                    toYmd(endDate),
-                    "lunch"
-                );
-                setTableAvailability(data);
-            } catch (err) {
-                console.error("Error fetching table availability range:", err);
-                setTableAvailability({});
-            } finally {
-                setLoadingTA(false);
-            }
-        }
-        loadData();
-    }, [rangeType]); // depends on rangeType (thus startDate/endDate)
+    /* ---- group bookings per round ---- */
+    const roundKeys = ["first_round", "second_round", "dinner_round"].filter((rk) => rk in dayInfo);
+    const roundBookings = {};
+    roundKeys.forEach((rk) => {
+        const rows = bookings
+            .filter((b) => {
+                const d = b.table_availability?.date;
+                if (d !== dateStr) return false;
+                if (rk.includes("first")) return b.reserved_time < "15:00:00";
+                if (rk.includes("second"))
+                    return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
+                return b.reserved_time >= "20:00:00"; // dinner
+            })
+            .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
+        roundBookings[rk] = rows;
+    });
 
-    // Filter bookings to that same range
-    const filteredBookings = filterBookingsInRange(bookings, startDate, endDate);
-
-    // Show today's open/closed status
-    const [todayStatus, setTodayStatus] = useState("Loading...");
-    useEffect(() => {
-        const dayOfWeek = today.getDay();
-        if (dayOfWeek === 1 || dayOfWeek === 2) {
-            setTodayStatus("Closed (Mon or Tue)");
-        } else {
-            setTodayStatus("Open");
-        }
-    }, [today]);
+    /* ---- compute FULL stock for the day (per capacity) ---- */
+    const fullStock = { 2: 0, 4: 0, 6: 0 };
+    roundKeys.forEach((rk) => {
+        const avail = dayInfo[rk]?.availability || {};
+        const bookedCounts = { 2: 0, 4: 0, 6: 0 };
+        roundBookings[rk].forEach((bk) => {
+            const cap = bk.table_availability?.capacity || 0;
+            bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
+        });
+        [2, 4, 6].forEach((cap) => {
+            const totalHere = (avail[cap] ?? 0) + bookedCounts[cap];
+            fullStock[cap] = Math.max(fullStock[cap], totalHere);
+        });
+    });
 
     return (
-        <div>
-            <div className="mb-4 flex items-center justify-between flex-wrap gap-y-2">
-                <div>
-                    <h2 className="text-xl font-bold">Bookings Overview</h2>
-                    <p className="text-sm text-gray-600">
-                        Today: {format(today, "PPP")} - {todayStatus}
-                    </p>
-                </div>
-                <div className="space-x-2">
-                    {/* Range Selector */}
-                    <select
-                        className="border border-gray-300 rounded p-1"
-                        value={rangeType}
-                        onChange={(e) => setRangeType(e.target.value)}
-                    >
-                        <option value="past7">Past 7 Days</option>
-                        <option value="future7">Upcoming 7 Days</option>
-                        <option value="future30">Upcoming 1 Month</option>
-                        <option value="future90">Upcoming 3 Months</option>
-                    </select>
-                    {/* Display Style Selector */}
-                    <select
-                        className="border border-gray-300 rounded p-1"
-                        value={displayStyle}
-                        onChange={(e) => setDisplayStyle(e.target.value)}
-                    >
-                        <option value="compact">Compact</option>
-                        <option value="calendar">Calendar</option>
-                        <option value="chart">Chart</option>
-                    </select>
+        <div className="mt-6 border rounded bg-white p-4 shadow">
+            <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold">
+                    Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                </h3>
+                <div className="space-x-3">
+                    {enableZoom && (
+                        <button
+                            onClick={() => setShowFloor((v) => !v)}
+                            className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
+                        >
+                            {showFloor ? "Hide floor" : "Expand floor"}
+                        </button>
+                    )}
+                    <button onClick={onClose} className="text-sm text-red-500 underline hover:text-red-700">
+                        Close
+                    </button>
                 </div>
             </div>
 
-            <div className="mb-4">
-                {displayStyle === "compact" && (
-                    <AdminCompactView
-                        selectedDate={selectedDay}
-                        onSelectDay={setSelectedDay}
-                        bookings={filteredBookings}
-                    />
-                )}
-                {displayStyle === "calendar" && (
-                    <AdminCalendarView
-                        selectedDate={selectedDay}
-                        onSelectDay={setSelectedDay}
-                        bookings={filteredBookings}
-                    />
-                )}
-                {displayStyle === "chart" && (
-                    <AdminChartView bookings={filteredBookings} />
-                )}
-            </div>
+            {roundKeys.map((rk) => {
+                const { lbl, bg } = prettyRound(rk);
+                const rows = roundBookings[rk];
 
-            {selectedDay && (
-                <AdminDaySchedule
-                    selectedDate={selectedDay}
-                    bookings={filteredBookings}
-                    tableAvailability={tableAvailability}
-                    onClose={() => setSelectedDay(null)}
-                />
-            )}
+                return (
+                    <div key={rk} className="mb-8">
+                        <h4 className="text-md font-semibold mb-2">{lbl}</h4>
 
-            {loadingTA && (
-                <p className="text-sm text-gray-500">
-                    Loading table availability for the selected range...
-                </p>
-            )}
+                        {rows.length > 0 ? (
+                            <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
+                                <thead>
+                                <tr className="bg-gray-50">
+                                    <th className="px-3 py-2 text-left font-semibold">Time</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Name</th>
+                                    <th className="px-3 py-2 text-left font-semibold">Total Clients</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {rows.map((bk) => (
+                                    <tr key={bk.id} className={`${bg} hover:bg-yellow-50 transition`}>
+                                        <td className="px-3 py-2">{bk.reserved_time.slice(0, 5)}</td>
+                                        <td className="px-3 py-2 truncate max-w-[160px]">{bk.full_name}</td>
+                                        <td className="px-3 py-2">{bk.total_adults + bk.total_kids}</td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <p className="text-gray-500 mb-3">No bookings in this round.</p>
+                        )}
+
+                        {showFloor && <TableUsage capacityTotals={fullStock} bookings={rows} expanded />}
+                    </div>
+                );
+            })}
         </div>
     );
 }

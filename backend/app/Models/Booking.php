@@ -20,11 +20,19 @@ class Booking extends Model
         'special_requests',
         'gdpr_consent',
         'marketing_opt_in',
-        'long_stay',               // ← added
+        'long_stay',
     ];
+
+    /* ──────────── relations ──────────── */
 
     public function tableAvailability()
     {
         return $this->belongsTo(TableAvailability::class);
+    }
+
+    /** extra tables when one party spans several tables */
+    public function details()
+    {
+        return $this->hasMany(BookingDetail::class);
     }
 }

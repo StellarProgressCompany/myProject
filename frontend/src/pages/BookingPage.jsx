@@ -1,10 +1,10 @@
 import React from "react";
-import BookingWizard from "../components/BookingWizard/BookingWizard";
+import BookingWizard from "../components/bookingWizard/BookingWizard";
 
 const BookingPage = () => {
     return (
         <div>
-            {/* BookingWizard contains the multi-step booking process */}
+            {/* bookingWizard contains the multi-step booking process */}
             <BookingWizard />
         </div>
     );

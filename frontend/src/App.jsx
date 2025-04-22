@@ -9,8 +9,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import LoginPage from "./pages/LoginPage";
 
 // Components
-import Layout from "./components/Layout";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Layout from "./components/layout/Layout.jsx";
+import ProtectedRoute from "./components/layout/ProtectedRoute.jsx";
 
 function App() {
     return (
@@ -24,7 +24,7 @@ function App() {
                     {/* Public Login Route */}
                     <Route path="/login" element={<LoginPage />} />
 
-                    {/* Protected Admin Dashboard */}
+                    {/* Protected admin Dashboard */}
                     <Route
                         path="/admin"
                         element={

@@ -11,18 +11,17 @@ import {
 } from "@tabler/icons-react";
 
 import { fetchAllBookings } from "../services/bookingService";
-// ← the one correct import
-import BookingsOverview from "../components/Admin/SharedBookings/BookingsOverview";
-import CurrentBookings from "../components/Admin/CurrentBookings/CurrentBookings.jsx";
-import StatsGrid from "../components/Admin/Metrics/StatsGrid.jsx";
-import AlgorithmTester from "../components/Admin/AlgorithmTest/AlgorithmTester.jsx";
+import BookingsOverview from "../components/admin/sharedBookings/BookingsOverview";
+import CurrentBookings from "../components/admin/currentBookings/CurrentBookings.jsx";
+import StatsGrid from "../components/admin/metrics/StatsGrid.jsx";
+import AlgorithmTester from "../components/admin/algorithmTest/AlgorithmTester.jsx";
 
 /* navigation */
 const navData = [
     { key: "current", label: "Current Bookings", icon: IconClock },
     { key: "future",  label: "Future Bookings",  icon: IconCalendarClock },
     { key: "past",    label: "Past Bookings",    icon: IconHistory },
-    { key: "metrics", label: "Metrics",          icon: IconChartBar },
+    { key: "metrics", label: "metrics",          icon: IconChartBar },
     { key: "tester",  label: "Algorithm Test",   icon: IconFlask },
 ];
 

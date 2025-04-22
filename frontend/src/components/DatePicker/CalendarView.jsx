@@ -1,4 +1,4 @@
-// src/components/DatePicker/CalendarView.jsx
+// src/components/DatePicker/BookingsCalendarView.jsx
 import React from "react";
 import {
     format,

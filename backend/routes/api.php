@@ -15,7 +15,7 @@ Route::middleware('auth:sanctum')->get('/user', fn (Request $r) => $r->user());
 Route::get('/table-availability',        [TableAvailabilityController::class, 'index']);
 Route::get('/table-availability-range',  [TableAvailabilityController::class, 'range']);
 
-/* Bookings */
+/* CurrentBookings */
 Route::get   ('/bookings',          [BookingController::class, 'index']);
 Route::post  ('/bookings',          [BookingController::class, 'store']);
 Route::patch ('/bookings/{booking}',[BookingController::class, 'update']);

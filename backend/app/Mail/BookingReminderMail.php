@@ -21,7 +21,7 @@ class BookingReminderMail extends Mailable
     public function build()
     {
         return $this
-            ->subject('Reminder: Your Booking is Tomorrow')
+            ->subject('Reminder: Your BookingWizard is Tomorrow')
             ->html("
                 <h1>Don't forget your reservation!</h1>
                 <p>Dear {$this->booking->full_name}, this is a friendly reminder that you have a reservation tomorrow.</p>

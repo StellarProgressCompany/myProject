@@ -1,4 +1,4 @@
-// src/components/DatePicker/CompactView.jsx
+// src/components/DatePicker/BookingsCompactView.jsx
 import React from "react";
 import { format, addDays, isSameDay, isBefore, isAfter } from "date-fns";
 import { getDayMealTypes, sumAvailability } from "./datePickerUtils";

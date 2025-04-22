@@ -29,7 +29,7 @@ class TableAssignmentService
 
         // Minimum table size is 2.
         if ($n < 2) {
-            return ['error' => 'Booking must be for at least 2 people'];
+            return ['error' => 'BookingWizard must be for at least 2 people'];
         }
 
         // --- Direct assignment if exact match ---

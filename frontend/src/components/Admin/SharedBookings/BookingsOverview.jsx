@@ -1,5 +1,3 @@
-// frontend/src/components/Admin/Bookings/BookingsOverview.jsx
-
 import React, { useState, useEffect } from 'react';
 import { format, addDays, subDays, parseISO, differenceInCalendarDays } from 'date-fns';
 import { fetchTableAvailabilityRange } from '../../../services/bookingService';
@@ -7,10 +5,11 @@ import BookingsCompactView from './BookingsCompactView';
 import BookingsCalendarView from './BookingsCalendarView';
 import BookingsChart from './BookingsChart';
 import DaySchedule from './DaySchedule';
-import AddBookingModal from '../Current/AddBookingModal';
+import AddBookingModal from '../CurrentBookings/AddBookingModal';
 
 const ymd = (d) => format(d, 'yyyy-MM-dd');
 
+// eslint-disable-next-line react/prop-types
 export default function BookingsOverview({ mode, bookings }) {
     const today = new Date();
 
@@ -18,23 +17,31 @@ export default function BookingsOverview({ mode, bookings }) {
     const [view, setView] = useState('compact');
     const [selDay, setSelDay] = useState(null);
     const [ta, setTA] = useState({});
-    const [loadingTA, setLoadingTA] = useState(false);
+    const [, setLoadingTA] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
     const start = mode === 'future' ? today : subDays(today, rangeDays);
-    const end = mode === 'future' ? addDays(today, rangeDays) : today;
+    const end   = mode === 'future' ? addDays(today, rangeDays) : today;
 
     useEffect(() => {
         (async () => {
             setLoadingTA(true);
             try {
-                const data = await fetchTableAvailabilityRange(
-                    ymd(start),
-                    ymd(end),
-                    'lunch'
+                const [lunchData, dinnerData] = await Promise.all([
+                    fetchTableAvailabilityRange(ymd(start), ymd(end), 'lunch'),
+                    fetchTableAvailabilityRange(ymd(start), ymd(end), 'dinner'),
+                ]);
+                const merged = {};
+                [lunchData, dinnerData].forEach(src =>
+                    Object.entries(src).forEach(([date, info]) => {
+                        merged[date] = merged[date]
+                            ? { ...merged[date], ...info }
+                            : info;
+                    })
                 );
-                setTA(data);
-            } catch {
+                setTA(merged);
+            } catch (e) {
+                console.error('Error fetching table availability', e);
                 setTA({});
             } finally {
                 setLoadingTA(false);
@@ -42,22 +49,17 @@ export default function BookingsOverview({ mode, bookings }) {
         })();
     }, [mode, rangeDays]);
 
-    const filtered = bookings.filter((b) => {
+    const filtered = bookings.filter(b => {
         const dateStr = b.table_availability?.date || b.date;
         const d = parseISO(dateStr);
-        if (mode === 'future' && differenceInCalendarDays(d, today) <= 0) {
-            return false;
-        }
-        if (mode === 'past' && differenceInCalendarDays(d, today) >= 0) {
-            return false;
-        }
+        if (mode === 'future' && differenceInCalendarDays(d, today) <= 0) return false;
+        if (mode === 'past'   && differenceInCalendarDays(d, today) >= 0) return false;
         return d >= start && d <= end;
     });
 
     const totalBookings = filtered.length;
-    const totalClients = filtered.reduce(
-        (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
-        0
+    const totalClients  = filtered.reduce((sum, b) =>
+        sum + (b.total_adults || 0) + (b.total_kids || 0), 0
     );
 
     const handleSaved = () => {
@@ -84,15 +86,15 @@ export default function BookingsOverview({ mode, bookings }) {
                     >
                         {mode === 'future' ? (
                             <>
-                                <option value={7}>Upcoming 7 d</option>
-                                <option value={30}>Upcoming 1 mo</option>
-                                <option value={90}>Upcoming 3 mo</option>
+                                <option value={7}>Upcoming 7d</option>
+                                <option value={30}>Upcoming 1mo</option>
+                                <option value={90}>Upcoming 3mo</option>
                             </>
                         ) : (
                             <>
-                                <option value={7}>Past 7 d</option>
-                                <option value={30}>Past 1 mo</option>
-                                <option value={90}>Past 3 mo</option>
+                                <option value={7}>Past 7d</option>
+                                <option value={30}>Past 1mo</option>
+                                <option value={90}>Past 3mo</option>
                             </>
                         )}
                     </select>
@@ -159,7 +161,7 @@ export default function BookingsOverview({ mode, bookings }) {
                         bookings={filtered}
                         tableAvailability={ta}
                         onClose={() => setSelDay(null)}
-                        showTables={false}
+                        enableZoom={false}
                     />
                 </div>
             )}

@@ -12,14 +12,7 @@ import { format, addDays } from "date-fns";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-/**
- * Props:
- *  • bookings – array of bookings in the window
- *  • startDate – JS Date at window start
- *  • days – number of days in window
- */
 export default function BookingsChart({ bookings, startDate, days }) {
-    // Map ISO date → total clients
     const counts = bookings.reduce((map, b) => {
         const d = b.table_availability?.date || b.date;
         const clients = (b.total_adults || 0) + (b.total_kids || 0);
@@ -27,7 +20,6 @@ export default function BookingsChart({ bookings, startDate, days }) {
         return map;
     }, {});
 
-    // Build full day list & corresponding data
     const { labels, data } = useMemo(() => {
         const lab = [];
         const dat = [];
@@ -64,14 +56,8 @@ export default function BookingsChart({ bookings, startDate, days }) {
             },
         },
         scales: {
-            x: {
-                grid: { display: false },
-                ticks: { color: "#9CA3AF" },
-            },
-            y: {
-                grid: { color: "#E5E7EB" },
-                ticks: { color: "#9CA3AF", stepSize: 1 },
-            },
+            x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+            y: { grid: { color: "#E5E7EB" }, ticks: { color: "#9CA3AF", stepSize: 1 } },
         },
         maintainAspectRatio: false,
     };

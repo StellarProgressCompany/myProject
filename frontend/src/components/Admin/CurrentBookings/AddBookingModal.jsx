@@ -19,41 +19,34 @@ const build = (start, end) => {
     return out;
 };
 
-/* official slot‑sets */
-const lunchFirst  = build("13:00", "14:00");
+const lunchFirst = build("13:00", "14:00");
 const lunchSecond = build("15:00", "16:00");
 const dinnerSlots = build("20:00", "22:00");
 
 export default function AddBookingModal({ dateObj, onClose, onSaved }) {
-    /* which meals are actually allowed that day? */
     const allowedMeals = useMemo(
         () => getDayMealTypes(dateObj.getDay()),
         [dateObj]
     );
-
-    /* pick first allowed meal as default */
     const [mealType, setMealType] = useState(
         allowedMeals.includes("lunch") ? "lunch" : "dinner"
     );
 
-    /* snap state if user flips to a date without dinner */
     useEffect(() => {
         if (!allowedMeals.includes(mealType)) {
             setMealType(allowedMeals[0] || "lunch");
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [allowedMeals.join(",")]);
 
-    const [round, setRound] = useState("first");          // lunch only
-    const [time, setTime]   = useState(lunchFirst[0]);
+    const [round, setRound] = useState("first");
+    const [time, setTime] = useState(lunchFirst[0]);
 
     const [fullName, setFullName] = useState("");
-    const [party, setParty]       = useState(2);
-    const [phone, setPhone]       = useState("");
-    const [saving, setSaving]     = useState(false);
-    const [error,  setError]      = useState("");
+    const [party, setParty] = useState(2);
+    const [phone, setPhone] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
 
-    /* derive slots for UI */
     const timeOptions = useMemo(() => {
         if (mealType === "lunch") {
             return round === "first" ? lunchFirst : lunchSecond;
@@ -61,12 +54,10 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
         return dinnerSlots;
     }, [mealType, round]);
 
-    /* keep selected time in range */
     useEffect(() => {
         if (!timeOptions.includes(time)) setTime(timeOptions[0]);
-    }, [timeOptions]);                        // eslint-disable-line
+    }, [timeOptions]);
 
-    /* submit */
     const save = async () => {
         if (!fullName.trim() || party < 1) {
             return setError("Name and guest count required.");
@@ -75,16 +66,16 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
         setError("");
         try {
             await createBooking({
-                date:          format(dateObj, "yyyy-MM-dd"),
-                meal_type:     mealType,
+                date: format(dateObj, "yyyy-MM-dd"),
+                meal_type: mealType,
                 reserved_time: time,
-                total_adults:  party,
-                total_kids:    0,
-                full_name:     fullName,
-                phone:         phone || null,
-                email:         null,
+                total_adults: party,
+                total_kids: 0,
+                full_name: fullName,
+                phone: phone || null,
+                email: null,
                 special_requests: null,
-                gdpr_consent:     false,
+                gdpr_consent: false,
                 marketing_opt_in: false,
             });
             onSaved();
@@ -102,22 +93,14 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
                 <h3 className="text-lg font-bold mb-4">Add Manual Booking</h3>
+                <p className="text-sm mb-4">{format(dateObj, "EEEE, d LLL yyyy")}</p>
 
-                {/* date label */}
-                <p className="text-sm mb-4">
-                    {format(dateObj, "EEEE, d LLL yyyy")}
-                </p>
-
-                {/* closed day guard */}
-                {closedDay && (
+                {closedDay ? (
                     <p className="text-red-600 font-semibold mb-4">
                         Restaurant closed on this day.
                     </p>
-                )}
-
-                {!closedDay && (
+                ) : (
                     <>
-                        {/* name */}
                         <label className="block mb-1 text-sm font-medium">Full Name</label>
                         <input
                             className="w-full border p-2 mb-3 rounded"
@@ -125,7 +108,6 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
                             onChange={(e) => setFullName(e.target.value)}
                         />
 
-                        {/* party size */}
                         <label className="block mb-1 text-sm font-medium">Guests</label>
                         <input
                             type="number"
@@ -135,17 +117,13 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
                             onChange={(e) => setParty(Number(e.target.value))}
                         />
 
-                        {/* phone */}
-                        <label className="block mb-1 text-sm font-medium">
-                            Phone (optional)
-                        </label>
+                        <label className="block mb-1 text-sm font-medium">Phone (optional)</label>
                         <input
                             className="w-full border p-2 mb-3 rounded"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
                         />
 
-                        {/* meal‑type radios */}
                         <div className="flex space-x-4 mb-3">
                             {allowedMeals.includes("lunch") && (
                                 <label className="flex items-center space-x-1">
@@ -169,7 +147,6 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
                             )}
                         </div>
 
-                        {/* lunch‑round switch */}
                         {mealType === "lunch" && (
                             <div className="flex space-x-4 mb-3">
                                 <label className="flex items-center space-x-1">
@@ -178,7 +155,7 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
                                         checked={round === "first"}
                                         onChange={() => setRound("first")}
                                     />
-                                    <span>1st Round</span>
+                                    <span>1st Round</span>
                                 </label>
                                 <label className="flex items-center space-x-1">
                                     <input
@@ -186,12 +163,11 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
                                         checked={round === "second"}
                                         onChange={() => setRound("second")}
                                     />
-                                    <span>2nd Round</span>
+                                    <span>2nd Round</span>
                                 </label>
                             </div>
                         )}
 
-                        {/* time selector */}
                         <label className="block mb-1 text-sm font-medium">Time</label>
                         <select
                             className="w-full border p-2 mb-3 rounded"
@@ -210,11 +186,7 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
                 {error && <p className="text-red-600 mb-2">{error}</p>}
 
                 <div className="flex justify-end space-x-2">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-1 border rounded"
-                        disabled={saving}
-                    >
+                    <button onClick={onClose} className="px-4 py-1 border rounded" disabled={saving}>
                         Close
                     </button>
                     {!closedDay && (

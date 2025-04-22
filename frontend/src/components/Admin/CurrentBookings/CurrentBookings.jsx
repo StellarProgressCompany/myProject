@@ -2,16 +2,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import { format, addDays } from "date-fns";
 import AddBookingModal from "./AddBookingModal";
 import EditBookingModal from "./EditBookingModal";
-import DaySchedule from "../Bookings/DaySchedule";
+import DaySchedule from "../SharedBookings/DaySchedule";
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
 
-/**
- * CurrentBookings – today (+ navigate) admin panel.
- *
- * • Shows one consolidated DaySchedule (Lunch 1, Lunch 2, Dinner).
- * • “Expand floor” button reveals the graphical table usage; hidden by default.
- * • Deep‑merges lunch & dinner availability so all rounds always show.
- */
 export default function CurrentBookings({ bookings, onDataRefresh }) {
     const [offset, setOffset] = useState(0);
     const [addModal, setAdd] = useState(false);
@@ -40,11 +33,11 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
                     fetchTableAvailabilityRange(dateStr, dateStr, "dinner"),
                 ]);
                 const merged = {};
-                [lunch, dinner].forEach((src) => {
+                [lunch, dinner].forEach((src) =>
                     Object.entries(src).forEach(([d, obj]) => {
                         merged[d] = merged[d] ? { ...merged[d], ...obj } : obj;
-                    });
-                });
+                    })
+                );
                 setTA(merged);
             } catch {
                 setTA({});

@@ -1,16 +1,11 @@
 import React from "react";
-import {
-    format,
-    addDays,
-    subDays,
-    isSameDay,
-} from "date-fns";
+import { format, addDays, subDays, isSameDay } from "date-fns";
 
 /**
  * Props:
  *  • mode        – "future" | "past"
- *  • rangeDays   – number of days (7 / 30 / 90)
- *  • selectedDate, onSelectDay, bookings (unchanged)
+ *  • rangeDays   – number of days
+ *  • selectedDate, onSelectDay, bookings
  */
 export default function BookingsCompactView({
                                                 mode,
@@ -23,18 +18,11 @@ export default function BookingsCompactView({
     const days = [];
 
     if (mode === "future") {
-        // today … today + (rangeDays-1)
-        for (let i = 0; i < rangeDays; i++) {
-            days.push(addDays(today, i));
-        }
+        for (let i = 0; i < rangeDays; i++) days.push(addDays(today, i));
     } else {
-        // mode === "past": yesterday down to yesterday - (rangeDays-1)
-        for (let i = 1; i <= rangeDays; i++) {
-            days.push(subDays(today, i));
-        }
+        for (let i = 1; i <= rangeDays; i++) days.push(subDays(today, i));
     }
 
-    // stats per day
     function getDayStats(day) {
         const key = format(day, "yyyy-MM-dd");
         const dayBookings = bookings.filter((b) => {
@@ -64,19 +52,11 @@ export default function BookingsCompactView({
                         onClick={() => onSelectDay(day)}
                         className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
                     >
-            <span className="text-xs font-semibold">
-              {format(day, "E")}
-            </span>
-                        <span className="text-xl font-bold">
-              {format(day, "d")}
-            </span>
+                        <span className="text-xs font-semibold">{format(day, "E")}</span>
+                        <span className="text-xl font-bold">{format(day, "d")}</span>
                         <span className="text-xs">{format(day, "MMM")}</span>
-                        <span className="mt-1 text-xs">
-              {bookingsCount} Bkg
-            </span>
-                        <span className="text-xs">
-              {totalClients} Cl
-            </span>
+                        <span className="mt-1 text-xs">{bookingsCount} Bkg</span>
+                        <span className="text-xs">{totalClients} Cl</span>
                     </button>
                 );
             })}

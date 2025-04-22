@@ -142,7 +142,7 @@ class BookingController extends Controller
         );
 
         return response()->json([
-            'message' => 'Booking updated',
+            'message' => 'BookingWizard updated',
             'data'    => $booking->fresh('tableAvailability'),
         ]);
     }
@@ -152,6 +152,6 @@ class BookingController extends Controller
     {
         $booking->delete();
 
-        return response()->json(['message' => 'Booking deleted']);
+        return response()->json(['message' => 'BookingWizard deleted']);
     }
 }

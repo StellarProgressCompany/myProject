@@ -1,6 +1,7 @@
 import React from "react";
-import DatePicker from "../DatePicker";
-import { getDayMealTypes } from "../DatePicker/datePickerUtils";
+import PropTypes from "prop-types";
+import DatePicker from "../../DatePicker";
+import { getDayMealTypes } from "../../DatePicker/datePickerUtils";
 
 function mealInfo(mealType) {
     return mealType === "lunch"
@@ -24,8 +25,8 @@ export default function ReservationDetailsStep({
                                                    onClose,
                                                }) {
     const availableMeals = date ? getDayMealTypes(date.getDay()) : [];
-    const lunch      = mealInfo("lunch");
-    const dinner     = mealInfo("dinner");
+    const lunch  = mealInfo("lunch");
+    const dinner = mealInfo("dinner");
 
     return (
         <div>
@@ -33,33 +34,41 @@ export default function ReservationDetailsStep({
                 Choose Your Reservation
             </h2>
 
-            {/* adults */}
+            {/* Adults */}
             <div className="mb-4">
                 <p className="font-medium mb-2">Adults</p>
                 <div className="flex items-center">
-                    <button onClick={onDecrementAdults} className="bg-gray-200 px-3 py-1 rounded-l">‑</button>
+                    <button onClick={onDecrementAdults} className="bg-gray-200 px-3 py-1 rounded-l">
+                        –
+                    </button>
                     <div className="px-4 py-1 border-t border-b">{adults}</div>
-                    <button onClick={onIncrementAdults} className="bg-gray-200 px-3 py-1 rounded-r">+</button>
+                    <button onClick={onIncrementAdults} className="bg-gray-200 px-3 py-1 rounded-r">
+                        +
+                    </button>
                 </div>
             </div>
 
-            {/* kids */}
+            {/* Kids */}
             <div className="mb-6">
                 <p className="font-medium mb-2">Kids</p>
                 <div className="flex items-center">
-                    <button onClick={onDecrementKids} className="bg-gray-200 px-3 py-1 rounded-l">‑</button>
+                    <button onClick={onDecrementKids} className="bg-gray-200 px-3 py-1 rounded-l">
+                        –
+                    </button>
                     <div className="px-4 py-1 border-t border-b">{kids}</div>
-                    <button onClick={onIncrementKids} className="bg-gray-200 px-3 py-1 rounded-r">+</button>
+                    <button onClick={onIncrementKids} className="bg-gray-200 px-3 py-1 rounded-r">
+                        +
+                    </button>
                 </div>
             </div>
 
-            {/* date */}
+            {/* Date */}
             <div className="mb-6">
                 <p className="font-medium mb-2">Select Date</p>
                 <DatePicker selectedDate={date} onDateSelect={onDateSelect} />
             </div>
 
-            {/* meal */}
+            {/* Meal Type */}
             <div className="mb-6">
                 <p className="font-medium mb-2">Meal Type</p>
                 <div className="flex space-x-3">
@@ -70,7 +79,8 @@ export default function ReservationDetailsStep({
                                 mealType === "lunch" ? "bg-blue-600 text-white" : "bg-gray-100"
                             }`}
                         >
-                            {lunch.label} <br />
+                            {lunch.label}
+                            <br />
                             <span className="text-xs">{lunch.window}</span>
                         </button>
                     )}
@@ -81,7 +91,8 @@ export default function ReservationDetailsStep({
                                 mealType === "dinner" ? "bg-blue-600 text-white" : "bg-gray-100"
                             }`}
                         >
-                            {dinner.label} <br />
+                            {dinner.label}
+                            <br />
                             <span className="text-xs">{dinner.window}</span>
                         </button>
                     )}
@@ -104,3 +115,19 @@ export default function ReservationDetailsStep({
         </div>
     );
 }
+
+ReservationDetailsStep.propTypes = {
+    adults:              PropTypes.number.isRequired,
+    kids:                PropTypes.number.isRequired,
+    onIncrementAdults:   PropTypes.func.isRequired,
+    onDecrementAdults:   PropTypes.func.isRequired,
+    onIncrementKids:     PropTypes.func.isRequired,
+    onDecrementKids:     PropTypes.func.isRequired,
+    date:                PropTypes.instanceOf(Date).isRequired,
+    onDateSelect:        PropTypes.func.isRequired,
+    mealType:            PropTypes.oneOf(["lunch","dinner"]).isRequired,
+    onSetMealType:       PropTypes.func.isRequired,
+    error:               PropTypes.string,
+    onContinue:          PropTypes.func.isRequired,
+    onClose:             PropTypes.func.isRequired,
+};

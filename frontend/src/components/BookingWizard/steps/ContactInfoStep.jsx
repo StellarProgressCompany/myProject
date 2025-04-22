@@ -1,4 +1,5 @@
 import React from "react";
+import PropTypes from "prop-types";
 
 export default function ContactInfoStep({
                                             fullName,
@@ -28,9 +29,11 @@ export default function ContactInfoStep({
                                         }) {
     return (
         <div>
-            <h2 className="text-2xl font-semibold mb-6 text-center">Your Details</h2>
+            <h2 className="text-2xl font-semibold mb-6 text-center">
+                Your Details
+            </h2>
 
-            {/* name */}
+            {/* Full Name */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Full Name*</label>
                 <input
@@ -40,7 +43,7 @@ export default function ContactInfoStep({
                 />
             </div>
 
-            {/* phone */}
+            {/* Phone */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Phone (optional)</label>
                 <div className="flex space-x-2">
@@ -62,7 +65,7 @@ export default function ContactInfoStep({
                 </div>
             </div>
 
-            {/* email */}
+            {/* Email */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Email*</label>
                 <input
@@ -73,7 +76,7 @@ export default function ContactInfoStep({
                 />
             </div>
 
-            {/* long‑stay (birthday) */}
+            {/* Long‑stay */}
             <div className="mb-4 flex items-center">
                 <input
                     type="checkbox"
@@ -82,11 +85,11 @@ export default function ContactInfoStep({
                     className="mr-2"
                 />
                 <label className="text-sm">
-                    Tick for extended stay (birthday / celebration ⁠→ ⁠2 h 15 m)
+                    Extended stay (birthday / celebration)
                 </label>
             </div>
 
-            {/* special requests */}
+            {/* Special Requests */}
             <div className="mb-4">
                 <label className="block mb-1 font-medium">Special Requests</label>
                 <textarea
@@ -108,7 +111,7 @@ export default function ContactInfoStep({
                 <label className="text-sm">I consent to data processing (GDPR)*</label>
             </div>
 
-            {/* marketing */}
+            {/* Marketing */}
             <div className="mb-6 flex items-center">
                 <input
                     type="checkbox"
@@ -119,14 +122,16 @@ export default function ContactInfoStep({
                 <label className="text-sm">Send me occasional offers</label>
             </div>
 
-            {/* summary */}
+            {/* Summary */}
             <div className="mb-4 text-gray-700">
-                {adults} adult{adults !== 1 && "s"}, {kids} kid{kids !== 1 && "s"} – {selectedRound.replace("_", " ")} on{" "}
-                {date.toLocaleDateString()}
+                {adults} adult{adults!==1 && "s"}, {kids} kid{kids!==1 && "s"} –
+                {selectedRound.replace("_"," ")} on {date.toLocaleDateString()}
             </div>
 
             {error && <p className="text-red-600 mb-3">{error}</p>}
-            {confirmationMessage && <p className="text-green-600 mb-3">{confirmationMessage}</p>}
+            {confirmationMessage && (
+                <p className="text-green-600 mb-3">{confirmationMessage}</p>
+            )}
 
             <div className="flex justify-between">
                 <button onClick={onBack} className="px-4 py-2 border rounded">
@@ -142,3 +147,30 @@ export default function ContactInfoStep({
         </div>
     );
 }
+
+ContactInfoStep.propTypes = {
+    fullName:             PropTypes.string.isRequired,
+    phonePrefix:          PropTypes.string.isRequired,
+    phoneNumber:          PropTypes.string.isRequired,
+    email:                PropTypes.string.isRequired,
+    specialRequests:      PropTypes.string,
+    gdprConsent:          PropTypes.bool.isRequired,
+    marketingOptIn:       PropTypes.bool.isRequired,
+    longStay:             PropTypes.bool.isRequired,
+    onChangeFullName:     PropTypes.func.isRequired,
+    onChangePhonePrefix:  PropTypes.func.isRequired,
+    onChangePhoneNumber:  PropTypes.func.isRequired,
+    onChangeEmail:        PropTypes.func.isRequired,
+    onChangeSpecialRequests: PropTypes.func.isRequired,
+    onToggleGdpr:         PropTypes.func.isRequired,
+    onToggleMarketing:    PropTypes.func.isRequired,
+    onToggleLongStay:     PropTypes.func.isRequired,
+    adults:               PropTypes.number.isRequired,
+    kids:                 PropTypes.number.isRequired,
+    selectedRound:        PropTypes.string.isRequired,
+    date:                 PropTypes.instanceOf(Date).isRequired,
+    error:                PropTypes.string,
+    confirmationMessage:  PropTypes.string,
+    onBack:               PropTypes.func.isRequired,
+    onConfirmBooking:     PropTypes.func.isRequired,
+};

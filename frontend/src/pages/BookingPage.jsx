@@ -1,5 +1,5 @@
 import React from "react";
-import BookingWizard from "../components/Booking/BookingWizard";
+import BookingWizard from "../components/BookingWizard/BookingWizard";
 
 const BookingPage = () => {
     return (

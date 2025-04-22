@@ -1,4 +1,3 @@
-// src/components/Admin/Bookings/BookingsCalendarView.jsx
 import React, { useState } from "react";
 import {
     format,
@@ -44,17 +43,20 @@ export default function BookingsCalendarView({ selectedDate, onSelectDay, bookin
             const { bookingsCount, totalClients } = getDayStats(cloneDay);
             const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
             const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
+
+            let cellClasses = "relative p-2 h-24 border border-gray-200 flex";
             let textColor = isCurrentMonth ? "text-gray-800" : "text-gray-400";
             let bgColor = "bg-white";
             if (isSelected) {
                 bgColor = "bg-blue-600";
                 textColor = "text-white";
             }
+
             daysInRow.push(
                 <button
                     key={cloneDay.toString()}
                     onClick={() => onSelectDay(cloneDay)}
-                    className={`relative p-2 h-24 border border-gray-200 flex items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition`}
+                    className={`${cellClasses} ${bgColor} ${textColor} items-center justify-center hover:bg-blue-50 hover:border-blue-200 transition`}
                     style={{ minWidth: 50 }}
                 >
                     <div className="flex flex-col items-center">

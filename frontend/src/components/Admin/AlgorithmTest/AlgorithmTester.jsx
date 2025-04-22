@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-    format,
-    addMinutes,
-    parseISO,
-    isValid as isValidDate,
-} from "date-fns";
+import { format, parseISO, isValid, addMinutes } from "date-fns";
 import {
     IconPlayerPlay,
     IconCheck,
@@ -14,39 +9,22 @@ import {
 import {
     createBooking,
     fetchTableAvailabilityRange,
-} from "../../services/bookingService";
-import DaySchedule from "./Bookings/DaySchedule";
+} from "../../../services/bookingService";
+import DaySchedule from "../SharedBookings/DaySchedule";
 
-/**
- * AlgorithmTester
- * -----------------------------------------------------------
- * ▸ Batch‑insert comma‑separated party sizes to probe the
- *   5‑Zone algorithm.
- * ▸ After every run the booking list & table‑availability
- *   widgets refresh so you can inspect the result instantly.
- * ▸ A DaySchedule+floor‑plan (same as “Current Bookings”)
- *   is rendered beneath the form.
- */
 export default function AlgorithmTester({ bookings = [], onRefresh }) {
-    /* ───────────────────────────── form state ───────────────────────────── */
     const todayISO = format(new Date(), "yyyy-MM-dd");
-
     const [sizesRaw, setSizesRaw] = useState("");
     const [dateStr, setDateStr] = useState(todayISO);
     const [meal, setMeal] = useState("lunch");
     const [time, setTime] = useState("13:00");
-
-    /* ───────────────────────────── run result state ─────────────────────── */
     const [running, setRunning] = useState(false);
-    const [results, setResults] = useState([]); // [{size, ok, msg}]
-
-    /* ───────────────────────── table‑availability state ─────────────────── */
+    const [results, setResults] = useState([]);
     const [ta, setTA] = useState({});
     const [loadingTA, setLoadingTA] = useState(false);
 
-    const dateObj = isValidDate(parseISO(dateStr)) ? parseISO(dateStr) : null;
+    const dateObj = isValid(parseISO(dateStr)) ? parseISO(dateStr) : null;
 
-    /* ---------- helpers ---------- */
     const loadTA = async () => {
         if (!dateStr) return;
         setLoadingTA(true);
@@ -56,11 +34,11 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                 fetchTableAvailabilityRange(dateStr, dateStr, "dinner"),
             ]);
             const merged = {};
-            [lunch, dinner].forEach((src) => {
+            [lunch, dinner].forEach((src) =>
                 Object.entries(src).forEach(([d, obj]) => {
                     merged[d] = merged[d] ? { ...merged[d], ...obj } : obj;
-                });
-            });
+                })
+            );
             setTA(merged);
         } catch {
             setTA({});
@@ -69,36 +47,30 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
         }
     };
 
-    /* refresh TA every time the date changes or after inserts */
     useEffect(() => {
         loadTA();
     }, [dateStr]);
 
-    /* ---------- batch insert ---------- */
     const run = async () => {
         const parts = sizesRaw
             .split(/[,\s]+/)
             .map((t) => parseInt(t, 10))
             .filter((n) => n > 0 && Number.isFinite(n));
 
-        if (parts.length === 0)
-            return alert("Enter at least one valid integer ≥ 1.");
+        if (parts.length === 0) return alert("Enter at least one valid integer ≥ 1.");
 
         setRunning(true);
         setResults([]);
-
         let baseTime = time;
         const log = [];
 
         for (let i = 0; i < parts.length; i++) {
             const guests = parts[i];
-
             if (i > 0) {
                 const [h, m] = baseTime.split(":").map(Number);
                 const t2 = addMinutes(new Date(0, 0, 0, h, m), 2);
                 baseTime = format(t2, "HH:mm");
             }
-
             try {
                 await createBooking({
                     date: dateStr,
@@ -106,7 +78,7 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                     reserved_time: `${baseTime}:00`,
                     total_adults: guests,
                     total_kids: 0,
-                    full_name: `TEST‑${guests}-${Date.now()}`,
+                    full_name: `TEST-${guests}-${Date.now()}`,
                     phone: null,
                     email: null,
                     special_requests: null,
@@ -116,35 +88,29 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                 });
                 log.push({ size: guests, ok: true, msg: "✓ booked" });
             } catch (e) {
-                const msg = e?.response?.data?.error || "rejected";
-                log.push({ size: guests, ok: false, msg });
+                log.push({ size: guests, ok: false, msg: e?.response?.data?.error || "rejected" });
             }
         }
 
         setResults(log);
         setRunning(false);
-
-        /* reload bookings + TA so visuals update */
         if (typeof onRefresh === "function") await onRefresh();
         await loadTA();
     };
 
-    /* ---------- slice bookings for chosen day ---------- */
     const dayBookings = bookings.filter(
         (b) => (b.table_availability?.date || b.date) === dateStr
     );
 
-    /* ───────────────────────────── UI ───────────────────────────── */
     return (
         <div className="space-y-8">
-            {/* ❶ Form */}
             <div className="bg-white p-6 rounded shadow max-w-lg">
                 <h2 className="text-xl font-bold mb-4 flex items-center">
-                    <IconClock className="w-5 h-5 mr-2" /> Algorithm Tester
+                    <IconClock className="w-5 h-5 mr-2" /> Algorithm Tester
                 </h2>
 
                 <label className="block text-sm font-medium mb-1">
-                    Party sizes (comma‑separated)
+                    Party sizes (comma-separated)
                 </label>
                 <input
                     className="w-full border rounded p-2 mb-4"
@@ -176,9 +142,7 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                     </div>
                 </div>
 
-                <label className="block text-sm font-medium mb-1">
-                    Starting time (HH:MM)
-                </label>
+                <label className="block text-sm font-medium mb-1">Starting time (HH:MM)</label>
                 <input
                     type="time"
                     step={900}
@@ -193,7 +157,7 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                 >
                     <IconPlayerPlay className="w-5 h-5 mr-2" />
-                    {running ? "Running…" : "Run Test"}
+                    {running ? "Running…" : "Run Test"}
                 </button>
 
                 {results.length > 0 && (
@@ -207,12 +171,8 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                                         r.ok ? "text-green-700" : "text-red-600"
                                     }`}
                                 >
-                                    {r.ok ? (
-                                        <IconCheck className="w-4 h-4 mr-1" />
-                                    ) : (
-                                        <IconX className="w-4 h-4 mr-1" />
-                                    )}
-                                    {r.size} → {r.msg}
+                                    {r.ok ? <IconCheck className="w-4 h-4 mr-1" /> : <IconX className="w-4 h-4 mr-1" />}
+                                    {r.size} → {r.msg}
                                 </li>
                             ))}
                         </ul>
@@ -220,7 +180,6 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                 )}
             </div>
 
-            {/* ❷ Day schedule + floor plan */}
             {dateObj && (
                 <DaySchedule
                     selectedDate={dateObj}
@@ -231,9 +190,7 @@ export default function AlgorithmTester({ bookings = [], onRefresh }) {
                 />
             )}
 
-            {loadingTA && (
-                <p className="text-sm text-gray-500">Loading table availability…</p>
-            )}
+            {loadingTA && <p className="text-sm text-gray-500">Loading table availability…</p>}
         </div>
     );
 }

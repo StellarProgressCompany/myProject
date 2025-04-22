@@ -5,9 +5,7 @@ import { format, addDays } from "date-fns";
 
 import AddBookingModal from "./AddBookingModal";
 import EditBookingModal from "./EditBookingModal";
-// you had ../sharedBookings; it's actually SharedBookings
 import DaySchedule from "../SharedBookings/DaySchedule";
-// fix typo here: Availability, not Availablity
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
 
 export default function CurrentBookings({ bookings, onDataRefresh }) {

@@ -138,7 +138,7 @@ export default function StatsGrid({ bookings }) {
                             {(stat.key === "bookings" ||
                                 stat.key === "guests") && (
                                 <p className="text-xs text-gray-500 mt-2">
-                                    vs previous 30 d
+                                    vs previous 30d
                                 </p>
                             )}
                         </div>

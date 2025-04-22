@@ -5,8 +5,8 @@ import { format } from "date-fns";
 import TableUsage from "./TableUsage";
 
 const prettyRound = (key) => {
-    if (key.includes("first")) return { lbl: "Lunch – 1st Round", bg: "bg-green-50" };
-    if (key.includes("second")) return { lbl: "Lunch – 2nd Round", bg: "bg-orange-50" };
+    if (key.includes("first")) return { lbl: "Lunch–1st Round", bg: "bg-green-50" };
+    if (key.includes("second")) return { lbl: "Lunch–2nd Round", bg: "bg-orange-50" };
     return { lbl: "Dinner", bg: "bg-purple-50" };
 };
 

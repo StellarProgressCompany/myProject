@@ -1,3 +1,4 @@
+// homepage.jsx
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -6,8 +7,7 @@ const HomePage = () => {
         <div className="font-sans text-gray-800">
             {/* Hero Section */}
             <header
-                className="relative h-[400px] bg-cover bg-center flex flex-col items-center justify-center text-white"
-                style={{ backgroundImage: "url('https://via.placeholder.com/1200x400')" }}
+                className="relative h-[400px] flex flex-col items-center justify-center text-white"
             >
                 <div className="absolute inset-0 bg-black bg-opacity-50"></div>
                 <div className="z-10 text-center px-4">

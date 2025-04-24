@@ -1,4 +1,3 @@
-// src/components/Admin/SharedBookings/BookingsCalendarView.jsx
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import {
@@ -13,7 +12,7 @@ import {
 } from "date-fns";
 
 export default function BookingsCalendarView({
-                                                 selectedDate,
+                                                 selectedDate = null,       // ← default moved here
                                                  onSelectDay,
                                                  bookings,
                                              }) {
@@ -48,7 +47,11 @@ export default function BookingsCalendarView({
             const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
 
             let bg = isSelected ? "bg-blue-600" : "bg-white";
-            let txt = isSelected ? "text-white" : isCurrentMonth ? "text-gray-800" : "text-gray-400";
+            let txt = isSelected
+                ? "text-white"
+                : isCurrentMonth
+                    ? "text-gray-800"
+                    : "text-gray-400";
 
             week.push(
                 <button
@@ -59,18 +62,19 @@ export default function BookingsCalendarView({
                     title={format(cloneDay, "EEEE, MMMM d, yyyy")}
                 >
                     <div className="flex flex-col items-center">
-            <span className="text-sm font-semibold">
-              {format(cloneDay, "d")}
-            </span>
+                        <span className="text-sm font-semibold">
+                            {format(cloneDay, "d")}
+                        </span>
+
                         {bookingsCount > 0 && (
                             <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                {bookingsCount} Bkg
-              </span>
+                                {bookingsCount} Bkg
+                            </span>
                         )}
                         {totalClients > 0 && (
                             <span className="text-xs mt-1 inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                {totalClients} Cl
-              </span>
+                                {totalClients} Cl
+                            </span>
                         )}
                     </div>
                 </button>
@@ -89,7 +93,9 @@ export default function BookingsCalendarView({
             <div className="flex items-center justify-between mb-2">
                 <button
                     onClick={() =>
-                        setMonthToShow((prev) => new Date(prev.setMonth(prev.getMonth() - 1)))
+                        setMonthToShow((prev) =>
+                            new Date(prev.setMonth(prev.getMonth() - 1))
+                        )
                     }
                     className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                 >
@@ -100,18 +106,22 @@ export default function BookingsCalendarView({
                 </h3>
                 <button
                     onClick={() =>
-                        setMonthToShow((prev) => new Date(prev.setMonth(prev.getMonth() + 1)))
+                        setMonthToShow((prev) =>
+                            new Date(prev.setMonth(prev.getMonth() + 1))
+                        )
                     }
                     className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                 >
                     Next
                 </button>
             </div>
+
             <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
                 {weekdayLabels.map((lbl) => (
                     <div key={lbl}>{lbl}</div>
                 ))}
             </div>
+
             {rows}
         </div>
     );
@@ -119,10 +129,6 @@ export default function BookingsCalendarView({
 
 BookingsCalendarView.propTypes = {
     selectedDate: PropTypes.instanceOf(Date),
-    onSelectDay: PropTypes.func.isRequired,
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
-};
-
-BookingsCalendarView.defaultProps = {
-    selectedDate: null,
+    onSelectDay:  PropTypes.func.isRequired,
+    bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
 };

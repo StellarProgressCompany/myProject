@@ -1,4 +1,3 @@
-// src/components/DatePicker/index.jsx
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import axios from "axios";
@@ -16,7 +15,10 @@ import SkeletonCalendar from "./SkeletonCalendar";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
 
-export default function DatePicker({ selectedDate, onDateSelect }) {
+export default function DatePicker({
+                                       selectedDate = null,          // ← default moved here
+                                       onDateSelect,
+                                   }) {
     const [viewMode, setViewMode] = useState("compact");
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [availabilityMap, setAvailabilityMap] = useState({});
@@ -25,7 +27,7 @@ export default function DatePicker({ selectedDate, onDateSelect }) {
     const today = new Date();
     const maxDate = addDays(today, 30);
 
-    // compact → next 7 days
+    // ---------------- compact → next 7 days ----------------
     useEffect(() => {
         if (viewMode !== "compact") return;
         (async () => {
@@ -56,9 +58,10 @@ export default function DatePicker({ selectedDate, onDateSelect }) {
                 setIsFetchingRange(false);
             }
         })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode]);
 
-    // calendar → full month
+    // ---------------- calendar → full month ----------------
     useEffect(() => {
         if (viewMode !== "calendar") return;
         (async () => {
@@ -89,10 +92,12 @@ export default function DatePicker({ selectedDate, onDateSelect }) {
                 setIsFetchingRange(false);
             }
         })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode, currentMonth]);
 
     return (
         <div className="date-picker">
+            {/* view-mode toggle */}
             <div className="flex justify-end mb-2">
                 <button
                     onClick={() =>
@@ -106,8 +111,13 @@ export default function DatePicker({ selectedDate, onDateSelect }) {
                 </button>
             </div>
 
+            {/* skeletons vs. real views */}
             {isFetchingRange ? (
-                viewMode === "compact" ? <SkeletonCompact /> : <SkeletonCalendar />
+                viewMode === "compact" ? (
+                    <SkeletonCompact />
+                ) : (
+                    <SkeletonCalendar />
+                )
             ) : viewMode === "compact" ? (
                 <Compact
                     today={today}
@@ -134,8 +144,4 @@ export default function DatePicker({ selectedDate, onDateSelect }) {
 DatePicker.propTypes = {
     selectedDate: PropTypes.instanceOf(Date),
     onDateSelect: PropTypes.func.isRequired,
-};
-
-DatePicker.defaultProps = {
-    selectedDate: null,
 };

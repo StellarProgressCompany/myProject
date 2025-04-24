@@ -343,25 +343,21 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/AddBookingModal.jsx
-    // src/components/Admin/CurrentBookings/AddBookingModal.jsx
+    // frontend/src/components/admin/currentBookings/AddBookingModal.jsx
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format } from "date-fns";
     import { createBooking } from "../../../services/bookingService";
     import { getDayMealTypes } from "../../../services/datePicker";
     
-    //
-    // 15‑minute helper
-    //
+    // 15-minute helper
     const build = (start, end) => {
         const out = [];
         let [h, m] = start.split(":").map(Number);
         const [eh, em] = end.split(":").map(Number);
     
         while (h < eh || (h === eh && m <= em)) {
-            out.push(
-                `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`
-            );
+            out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
             m += 15;
             if (m === 60) {
                 h += 1;
@@ -381,7 +377,6 @@
             () => getDayMealTypes(dateObj.getDay()),
             [dateObj]
         );
-    
         const [mealType, setMealType] = useState(
             allowedMeals.includes("lunch") ? "lunch" : "dinner"
         );
@@ -415,6 +410,7 @@
         }, [timeOptions, time]);
     
         const save = async () => {
+            if (saving) return; // prevent double-click
             if (!fullName.trim() || party < 1) {
                 return setError("Name and guest count required.");
             }
@@ -561,10 +557,14 @@
                         {!closedDay && (
                             <button
                                 onClick={save}
-                                className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                                className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 flex items-center justify-center"
                                 disabled={saving}
                             >
-                                {saving ? "Saving…" : "Save"}
+                                {saving ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    "Save"
+                                )}
                             </button>
                         )}
                     </div>
@@ -581,15 +581,27 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/CurrentBookings.jsx
-    // src/components/Admin/CurrentBookings/CurrentBookings.jsx
+    // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format, addDays } from "date-fns";
     
     import AddBookingModal from "./AddBookingModal";
     import EditBookingModal from "./EditBookingModal";
-    import DaySchedule from "../SharedBookings/DaySchedule";
+    import DaySchedule from "../sharedBookings/DaySchedule";
     import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+    
+    // A simple pulse‐animation skeleton matching the DaySchedule card shape
+    function SkeletonDaySchedule() {
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+            </div>
+        );
+    }
     
     export default function CurrentBookings({ bookings, onDataRefresh }) {
         const [offset, setOffset] = useState(0);
@@ -604,12 +616,15 @@
     
         // only bookings for that day
         const todaysBookings = useMemo(
-            () => bookings.filter(b => (b.table_availability?.date || b.date) === dateStr),
+            () =>
+                bookings.filter(
+                    (b) => (b.table_availability?.date || b.date) === dateStr
+                ),
             [bookings, dateStr]
         );
     
         const totalBookings = todaysBookings.length;
-        const totalClients  = todaysBookings.reduce(
+        const totalClients = todaysBookings.reduce(
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
             0
         );
@@ -627,7 +642,7 @@
                     if (cancelled) return;
                     // merge both into a single map keyed by dateStr
                     const merged = {};
-                    [lunch, dinner].forEach(src =>
+                    [lunch, dinner].forEach((src) =>
                         Object.entries(src).forEach(([d, info]) => {
                             merged[d] = merged[d] ? { ...merged[d], ...info } : info;
                         })
@@ -647,8 +662,10 @@
         }, [dateStr]);
     
         const title =
-            offset === 0 ? "Today"
-                : offset === 1 ? "Tomorrow"
+            offset === 0
+                ? "Today"
+                : offset === 1
+                    ? "Tomorrow"
                     : format(dateObj, "EEEE, MMM d");
     
         return (
@@ -657,10 +674,16 @@
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                     <h2 className="text-xl font-bold">{title}</h2>
                     <div className="space-x-2">
-                        <button onClick={() => setOffset(o => o - 1)} className="px-2 py-1 border rounded">
+                        <button
+                            onClick={() => setOffset((o) => o - 1)}
+                            className="px-2 py-1 border rounded"
+                        >
                             ◀
                         </button>
-                        <button onClick={() => setOffset(o => o + 1)} className="px-2 py-1 border rounded">
+                        <button
+                            onClick={() => setOffset((o) => o + 1)}
+                            className="px-2 py-1 border rounded"
+                        >
                             ▶
                         </button>
                         <button
@@ -684,17 +707,17 @@
                     </div>
                 </div>
     
-                {/* day schedule */}
-                <DaySchedule
-                    selectedDate={dateObj}
-                    bookings={todaysBookings}
-                    tableAvailability={tableAvailability}
-                    onClose={() => {}}
-                    enableZoom
-                />
-    
-                {loadingTA && (
-                    <p className="text-sm text-gray-500 mt-2">Loading table availability…</p>
+                {/* day schedule or skeleton */}
+                {loadingTA ? (
+                    <SkeletonDaySchedule />
+                ) : (
+                    <DaySchedule
+                        selectedDate={dateObj}
+                        bookings={todaysBookings}
+                        tableAvailability={tableAvailability}
+                        onClose={() => {}}
+                        enableZoom
+                    />
                 )}
     
                 {/* add / edit modals */}
@@ -723,12 +746,13 @@
     }
     
     CurrentBookings.propTypes = {
-        bookings:      PropTypes.array.isRequired,
+        bookings: PropTypes.array.isRequired,
         onDataRefresh: PropTypes.func.isRequired,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/EditBookingModal.jsx
+    // frontend/src/components/admin/currentBookings/EditBookingModal.jsx
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import { updateBooking, deleteBooking } from "../../../services/bookingService";
@@ -743,14 +767,19 @@
         const [error, setError] = useState("");
     
         const handleSave = async () => {
+            if (saving) return;
             if (!fullName.trim() || adults < 1) {
                 return setError("Name and at least 1 adult required.");
             }
             setSaving(true);
             setError("");
+    
             try {
                 await updateBooking(booking.id, {
-                    full_name: booking.full_name !== fullName.trim() ? fullName.trim() : undefined,
+                    full_name:
+                        fullName.trim() !== booking.full_name
+                            ? fullName.trim()
+                            : undefined,
                     total_adults: adults,
                     total_kids: kids,
                     phone: phone || null,
@@ -768,6 +797,7 @@
         const handleDelete = async () => {
             if (!window.confirm("Delete this booking?")) return;
             setSaving(true);
+    
             try {
                 await deleteBooking(booking.id);
                 onSaved();
@@ -835,7 +865,7 @@
                     <div className="flex justify-between items-center">
                         <button
                             onClick={handleDelete}
-                            className="px-3 py-1 text-red-600 underline"
+                            className="px-3 py-1 text-red-600 underline disabled:opacity-50"
                             disabled={saving}
                         >
                             Delete
@@ -850,10 +880,14 @@
                             </button>
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                                className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
                                 disabled={saving}
                             >
-                                {saving ? "Saving…" : "Save"}
+                                {saving ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    "Save"
+                                )}
                             </button>
                         </div>
                     </div>
@@ -864,7 +898,8 @@
     
     EditBookingModal.propTypes = {
         booking: PropTypes.shape({
-            id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+            id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+                .isRequired,
             full_name: PropTypes.string,
             total_adults: PropTypes.number,
             total_kids: PropTypes.number,
@@ -1196,7 +1231,6 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
-    // src/components/Admin/SharedBookings/BookingsCalendarView.jsx
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import {
@@ -1211,7 +1245,7 @@
     } from "date-fns";
     
     export default function BookingsCalendarView({
-                                                     selectedDate,
+                                                     selectedDate = null,       // ← default moved here
                                                      onSelectDay,
                                                      bookings,
                                                  }) {
@@ -1246,7 +1280,11 @@
                 const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
     
                 let bg = isSelected ? "bg-blue-600" : "bg-white";
-                let txt = isSelected ? "text-white" : isCurrentMonth ? "text-gray-800" : "text-gray-400";
+                let txt = isSelected
+                    ? "text-white"
+                    : isCurrentMonth
+                        ? "text-gray-800"
+                        : "text-gray-400";
     
                 week.push(
                     <button
@@ -1257,18 +1295,19 @@
                         title={format(cloneDay, "EEEE, MMMM d, yyyy")}
                     >
                         <div className="flex flex-col items-center">
-                <span className="text-sm font-semibold">
-                  {format(cloneDay, "d")}
-                </span>
+                            <span className="text-sm font-semibold">
+                                {format(cloneDay, "d")}
+                            </span>
+    
                             {bookingsCount > 0 && (
                                 <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                    {bookingsCount} Bkg
-                  </span>
+                                    {bookingsCount} Bkg
+                                </span>
                             )}
                             {totalClients > 0 && (
                                 <span className="text-xs mt-1 inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                    {totalClients} Cl
-                  </span>
+                                    {totalClients} Cl
+                                </span>
                             )}
                         </div>
                     </button>
@@ -1287,7 +1326,9 @@
                 <div className="flex items-center justify-between mb-2">
                     <button
                         onClick={() =>
-                            setMonthToShow((prev) => new Date(prev.setMonth(prev.getMonth() - 1)))
+                            setMonthToShow((prev) =>
+                                new Date(prev.setMonth(prev.getMonth() - 1))
+                            )
                         }
                         className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                     >
@@ -1298,18 +1339,22 @@
                     </h3>
                     <button
                         onClick={() =>
-                            setMonthToShow((prev) => new Date(prev.setMonth(prev.getMonth() + 1)))
+                            setMonthToShow((prev) =>
+                                new Date(prev.setMonth(prev.getMonth() + 1))
+                            )
                         }
                         className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                     >
                         Next
                     </button>
                 </div>
+    
                 <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
                     {weekdayLabels.map((lbl) => (
                         <div key={lbl}>{lbl}</div>
                     ))}
                 </div>
+    
                 {rows}
             </div>
         );
@@ -1317,12 +1362,8 @@
     
     BookingsCalendarView.propTypes = {
         selectedDate: PropTypes.instanceOf(Date),
-        onSelectDay: PropTypes.func.isRequired,
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
-    };
-    
-    BookingsCalendarView.defaultProps = {
-        selectedDate: null,
+        onSelectDay:  PropTypes.func.isRequired,
+        bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
     };
 
 ––––––––––––––––––––––––
@@ -1411,7 +1452,6 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
-    // src/components/Admin/SharedBookings/BookingsCompactView.jsx
     import React from "react";
     import PropTypes from "prop-types";
     import { format, addDays, subDays, isSameDay } from "date-fns";
@@ -1419,7 +1459,7 @@
     export default function BookingsCompactView({
                                                     mode,
                                                     rangeDays,
-                                                    selectedDate,
+                                                    selectedDate = null,        // ← default moved here
                                                     onSelectDay,
                                                     bookings,
                                                 }) {
@@ -1459,9 +1499,15 @@
                             className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
                             title={format(day, "EEEE, MMMM d, yyyy")}
                         >
-                            <span className="text-xs font-semibold">{format(day, "E")}</span>
-                            <span className="text-xl font-bold">{format(day, "d")}</span>
-                            <span className="text-xs">{format(day, "MMM")}</span>
+                            <span className="text-xs font-semibold">
+                                {format(day, "E")}
+                            </span>
+                            <span className="text-xl font-bold">
+                                {format(day, "d")}
+                            </span>
+                            <span className="text-xs">
+                                {format(day, "MMM")}
+                            </span>
                             <span className="mt-1 text-xs">{bookingsCount}Bkg</span>
                             <span className="text-xs">{totalClients}Cl</span>
                         </button>
@@ -1472,15 +1518,11 @@
     }
     
     BookingsCompactView.propTypes = {
-        mode: PropTypes.oneOf(["future", "past"]).isRequired,
-        rangeDays: PropTypes.number.isRequired,
+        mode:         PropTypes.oneOf(["future", "past"]).isRequired,
+        rangeDays:    PropTypes.number.isRequired,
         selectedDate: PropTypes.instanceOf(Date),
-        onSelectDay: PropTypes.func.isRequired,
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
-    };
-    
-    BookingsCompactView.defaultProps = {
-        selectedDate: null,
+        onSelectDay:  PropTypes.func.isRequired,
+        bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
     };
 
 ––––––––––––––––––––––––
@@ -1679,7 +1721,6 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/DaySchedule.jsx
-    // src/components/Admin/SharedBookings/DaySchedule.jsx
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import { format } from "date-fns";
@@ -1696,7 +1737,7 @@
                                             bookings,
                                             tableAvailability,
                                             onClose,
-                                            enableZoom,
+                                            enableZoom = false,          // ← default moved here
                                         }) {
         const [showFloor, setShowFloor] = useState(false);
         if (!selectedDate) return null;
@@ -1704,6 +1745,9 @@
         const dateStr = format(selectedDate, "yyyy-MM-dd");
         const dayInfo = tableAvailability[dateStr];
     
+        /* ------------------------------------------------------------------
+           EARLY RETURN if we have no info or the restaurant is closed
+        ------------------------------------------------------------------ */
         if (!dayInfo || dayInfo === "closed") {
             return (
                 <div className="mt-6 border rounded bg-white p-4 shadow">
@@ -1711,7 +1755,10 @@
                         <h3 className="text-lg font-bold">
                             Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
                         </h3>
-                        <button onClick={onClose} className="text-sm text-red-500 underline">
+                        <button
+                            onClick={onClose}
+                            className="text-sm text-red-500 underline"
+                        >
                             Close
                         </button>
                     </div>
@@ -1728,6 +1775,9 @@
             );
         }
     
+        /* ------------------------------------------------------------------
+           Build booking lists for each service round
+        ------------------------------------------------------------------ */
         const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
             (rk) => rk in dayInfo
         );
@@ -1747,6 +1797,9 @@
                 .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
         });
     
+        /* ------------------------------------------------------------------
+           Create a union of table-capacity counts across all rounds
+        ------------------------------------------------------------------ */
         const fullStock = { 2: 0, 4: 0, 6: 0 };
         roundKeys.forEach((rk) => {
             const avail = dayInfo[rk]?.availability || {};
@@ -1761,6 +1814,9 @@
             });
         });
     
+        /* ------------------------------------------------------------------
+           Render
+        ------------------------------------------------------------------ */
         return (
             <div className="mt-6 border rounded bg-white p-4 shadow">
                 <div className="flex items-center justify-between mb-4">
@@ -1797,8 +1853,12 @@
                                 <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
                                     <thead>
                                     <tr className="bg-gray-50">
-                                        <th className="px-3 py-2 text-left font-semibold">Time</th>
-                                        <th className="px-3 py-2 text-left font-semibold">Name</th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            Time
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            Name
+                                        </th>
                                         <th className="px-3 py-2 text-left font-semibold">
                                             Total Clients
                                         </th>
@@ -1824,7 +1884,9 @@
                                     </tbody>
                                 </table>
                             ) : (
-                                <p className="text-gray-500 mb-3">No bookings in this round.</p>
+                                <p className="text-gray-500 mb-3">
+                                    No bookings in this round.
+                                </p>
                             )}
     
                             {showFloor && (
@@ -1842,15 +1904,11 @@
     }
     
     DaySchedule.propTypes = {
-        selectedDate: PropTypes.instanceOf(Date),
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        selectedDate:      PropTypes.instanceOf(Date),
+        bookings:          PropTypes.arrayOf(PropTypes.object).isRequired,
         tableAvailability: PropTypes.object.isRequired,
-        onClose: PropTypes.func.isRequired,
-        enableZoom: PropTypes.bool,
-    };
-    
-    DaySchedule.defaultProps = {
-        enableZoom: false,
+        onClose:           PropTypes.func.isRequired,
+        enableZoom:        PropTypes.bool,
     };
 
 ––––––––––––––––––––––––
@@ -1967,6 +2025,7 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/bookingWizard/BookingWizard.jsx
+    // frontend/src/components/bookingWizard/BookingWizard.jsx
     import React, { useState, useEffect } from "react";
     import { format } from "date-fns";
     import {
@@ -1975,43 +2034,47 @@
     } from "../../services/bookingService";
     import AnimatedBackground from "../layout/AnimatedBackground.jsx";
     import ReservationDetailsStep from "./steps/ReservationDetailsStep";
-    import TimeSlotStep            from "./steps/TimeSlotStep";
-    import ContactInfoStep         from "./steps/ContactInfoStep";
+    import TimeSlotStep from "./steps/TimeSlotStep";
+    import ContactInfoStep from "./steps/ContactInfoStep";
     
     export default function BookingWizard() {
         const [step, setStep] = useState(1);
     
-        // reservation details
-        const [adults, setAdults]       = useState(2);
-        const [kids, setKids]           = useState(0);
-        const [date, setDate]           = useState(new Date());
-        const [meal, setMeal]           = useState("lunch");
-        const [longStay, setLongStay]   = useState(false);
+        /* ─── reservation details ─── */
+        const [adults, setAdults] = useState(2);
+        const [kids, setKids] = useState(0);
+        const [date, setDate] = useState(new Date());
+        const [meal, setMeal] = useState("lunch");
+        const [longStay, setLongStay] = useState(false);
     
-        // slots
-        const [slotData, setSlotData]    = useState(null);
-        const [round, setRound]          = useState("");
-        const [time, setTime]            = useState(null);
-        const [loadingSlots, setLoading] = useState(false);
+        /* ─── slot search ─── */
+        const [slotData, setSlotData] = useState(null);
+        const [round, setRound] = useState("");
+        const [time, setTime] = useState(null);
+        const [loadingSlots, setLoadingSlots] = useState(false);
     
-        // contact
-        const [fullName, setFullName]       = useState("");
-        const [phonePref, setPhonePref]     = useState("+34");
-        const [phoneNum, setPhoneNum]       = useState("");
-        const [email, setEmail]             = useState("");
-        const [requests, setRequests]       = useState("");
-        const [gdpr, setGdpr]               = useState(false);
-        const [marketing, setMarketing]     = useState(false);
+        /* ─── contact & finalise ─── */
+        const [fullName, setFullName] = useState("");
+        const [phonePref, setPhonePref] = useState("+34");
+        const [phoneNum, setPhoneNum] = useState("");
+        const [email, setEmail] = useState("");
+        const [requests, setRequests] = useState("");
+        const [gdpr, setGdpr] = useState(false);
+        const [marketing, setMarketing] = useState(false);
     
-        const [error, setError]       = useState("");
-        const [success, setSuccess]   = useState(false);
+        /* ─── UI state ─── */
+        const [error, setError] = useState("");
+        const [saving, setSaving] = useState(false);   // ★ new
+        const [success, setSuccess] = useState(false);
     
-        // fetch slots when entering step 2
+        /* ─────────────────────────────────────────────
+           fetch available slots whenever we ENTER step 2
+           ───────────────────────────────────────────── */
         useEffect(() => {
             if (step !== 2) return;
             (async () => {
                 try {
-                    setLoading(true);
+                    setLoadingSlots(true);
                     const data = await fetchAvailableTimeSlots({
                         date: format(date, "yyyy-MM-dd"),
                         mealType: meal,
@@ -2020,7 +2083,7 @@
                 } catch {
                     setSlotData(null);
                 } finally {
-                    setLoading(false);
+                    setLoadingSlots(false);
                 }
             })();
         }, [step, date, meal]);
@@ -2029,45 +2092,53 @@
         const back  = () => setStep((s) => s - 1);
         const reset = () => window.location.reload();
     
+        /* ─── finalise ─── */
         const save = async () => {
+            if (saving) return;             // double-click guard
             setError("");
+    
             if (!fullName.trim() || !email.trim() || !gdpr) {
-                return setError("Name, e‑mail and GDPR consent are required.");
+                return setError("Name, e-mail and GDPR consent are required.");
             }
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                return setError("Invalid e‑mail.");
+                return setError("Invalid e-mail.");
             }
     
+            setSaving(true);                // ★ spinner on
             try {
                 await createBooking({
-                    date:              format(date, "yyyy-MM-dd"),
-                    meal_type:         meal,
-                    reserved_time:     time,
-                    total_adults:      adults,
-                    total_kids:        kids,
-                    full_name:         fullName,
-                    phone:             phoneNum ? `${phonePref} ${phoneNum}` : null,
+                    date:          format(date, "yyyy-MM-dd"),
+                    meal_type:     meal,
+                    reserved_time: time,
+                    total_adults:  adults,
+                    total_kids:    kids,
+                    full_name:     fullName,
+                    phone:         phoneNum ? `${phonePref} ${phoneNum}` : null,
                     email,
-                    special_requests:  requests,
-                    gdpr_consent:      gdpr,
-                    marketing_opt_in:  marketing,
-                    long_stay:         longStay,
+                    special_requests: requests,
+                    gdpr_consent:     gdpr,
+                    marketing_opt_in: marketing,
+                    long_stay:        longStay,
                 });
                 setSuccess(true);
                 setTimeout(reset, 2000);
             } catch (e) {
                 setError(e.response?.data?.error || "Booking failed.");
+            } finally {
+                setSaving(false);           // ★ spinner off
             }
         };
     
         return (
             <div className="relative min-h-screen">
                 <AnimatedBackground />
+    
                 <div className="relative flex items-center justify-center p-4">
-                    <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+                    <div className="relative bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+    
                         {/* step indicators */}
                         <div className="flex justify-center space-x-2 mb-6">
-                            {[1,2,3].map((i) => (
+                            {[1, 2, 3].map((i) => (
                                 <div
                                     key={i}
                                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -2079,14 +2150,15 @@
                             ))}
                         </div>
     
+                        {/* step 1 */}
                         {step === 1 && (
                             <ReservationDetailsStep
                                 adults={adults}
                                 kids={kids}
-                                onIncrementAdults={() => setAdults((v) => Math.min(v+1,20))}
-                                onDecrementAdults={() => setAdults((v) => Math.max(v-1,1))}
-                                onIncrementKids={() => setKids((v) => Math.min(v+1,20))}
-                                onDecrementKids={() => setKids((v) => Math.max(v-1,0))}
+                                onIncrementAdults={() => setAdults((v) => Math.min(v + 1, 20))}
+                                onDecrementAdults={() => setAdults((v) => Math.max(v - 1, 1))}
+                                onIncrementKids={() => setKids((v) => Math.min(v + 1, 20))}
+                                onDecrementKids={() => setKids((v) => Math.max(v - 1, 0))}
                                 date={date}
                                 onDateSelect={setDate}
                                 mealType={meal}
@@ -2101,6 +2173,7 @@
                             />
                         )}
     
+                        {/* step 2 */}
                         {step === 2 && (
                             <TimeSlotStep
                                 mealType={meal}
@@ -2118,6 +2191,7 @@
                             />
                         )}
     
+                        {/* step 3 */}
                         {step === 3 && (
                             <ContactInfoStep
                                 fullName={fullName}
@@ -2147,12 +2221,18 @@
                             />
                         )}
     
+                        {/* ★ thinking spinner overlay */}
+                        {saving && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+                                <div className="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin" />
+                            </div>
+                        )}
+    
+                        {/* confirmation overlay */}
                         {success && (
-                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30">
                                 <div className="bg-white p-6 rounded shadow-lg">
-                                    <p className="text-lg font-bold mb-2">
-                                        Booking confirmed🎉
-                                    </p>
+                                    <p className="text-lg font-bold mb-2">Booking confirmed 🎉</p>
                                     <p>Returning…</p>
                                 </div>
                             </div>
@@ -2860,7 +2940,6 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/datePicker/DatePicker.jsx
-    // src/components/DatePicker/index.jsx
     import React, { useState, useEffect } from "react";
     import PropTypes from "prop-types";
     import axios from "axios";
@@ -2878,7 +2957,10 @@
     
     const API_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
     
-    export default function DatePicker({ selectedDate, onDateSelect }) {
+    export default function DatePicker({
+                                           selectedDate = null,          // ← default moved here
+                                           onDateSelect,
+                                       }) {
         const [viewMode, setViewMode] = useState("compact");
         const [currentMonth, setCurrentMonth] = useState(new Date());
         const [availabilityMap, setAvailabilityMap] = useState({});
@@ -2887,7 +2969,7 @@
         const today = new Date();
         const maxDate = addDays(today, 30);
     
-        // compact → next 7 days
+        // ---------------- compact → next 7 days ----------------
         useEffect(() => {
             if (viewMode !== "compact") return;
             (async () => {
@@ -2918,9 +3000,10 @@
                     setIsFetchingRange(false);
                 }
             })();
+            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [viewMode]);
     
-        // calendar → full month
+        // ---------------- calendar → full month ----------------
         useEffect(() => {
             if (viewMode !== "calendar") return;
             (async () => {
@@ -2951,10 +3034,12 @@
                     setIsFetchingRange(false);
                 }
             })();
+            // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [viewMode, currentMonth]);
     
         return (
             <div className="date-picker">
+                {/* view-mode toggle */}
                 <div className="flex justify-end mb-2">
                     <button
                         onClick={() =>
@@ -2968,8 +3053,13 @@
                     </button>
                 </div>
     
+                {/* skeletons vs. real views */}
                 {isFetchingRange ? (
-                    viewMode === "compact" ? <SkeletonCompact /> : <SkeletonCalendar />
+                    viewMode === "compact" ? (
+                        <SkeletonCompact />
+                    ) : (
+                        <SkeletonCalendar />
+                    )
                 ) : viewMode === "compact" ? (
                     <Compact
                         today={today}
@@ -2996,10 +3086,6 @@
     DatePicker.propTypes = {
         selectedDate: PropTypes.instanceOf(Date),
         onDateSelect: PropTypes.func.isRequired,
-    };
-    
-    DatePicker.defaultProps = {
-        selectedDate: null,
     };
 
 ––––––––––––––––––––––––
@@ -3287,6 +3373,7 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/pages/HomePage.jsx
+    // homepage.jsx
     import React from "react";
     import { Link } from "react-router-dom";
     
@@ -3295,8 +3382,7 @@
             <div className="font-sans text-gray-800">
                 {/* Hero Section */}
                 <header
-                    className="relative h-[400px] bg-cover bg-center flex flex-col items-center justify-center text-white"
-                    style={{ backgroundImage: "url('https://via.placeholder.com/1200x400')" }}
+                    className="relative h-[400px] flex flex-col items-center justify-center text-white"
                 >
                     <div className="absolute inset-0 bg-black bg-opacity-50"></div>
                     <div className="z-10 text-center px-4">

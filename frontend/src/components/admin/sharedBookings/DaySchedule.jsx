@@ -1,4 +1,3 @@
-// src/components/Admin/SharedBookings/DaySchedule.jsx
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { format } from "date-fns";
@@ -15,7 +14,7 @@ export default function DaySchedule({
                                         bookings,
                                         tableAvailability,
                                         onClose,
-                                        enableZoom,
+                                        enableZoom = false,          // ← default moved here
                                     }) {
     const [showFloor, setShowFloor] = useState(false);
     if (!selectedDate) return null;
@@ -23,6 +22,9 @@ export default function DaySchedule({
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     const dayInfo = tableAvailability[dateStr];
 
+    /* ------------------------------------------------------------------
+       EARLY RETURN if we have no info or the restaurant is closed
+    ------------------------------------------------------------------ */
     if (!dayInfo || dayInfo === "closed") {
         return (
             <div className="mt-6 border rounded bg-white p-4 shadow">
@@ -30,7 +32,10 @@ export default function DaySchedule({
                     <h3 className="text-lg font-bold">
                         Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
                     </h3>
-                    <button onClick={onClose} className="text-sm text-red-500 underline">
+                    <button
+                        onClick={onClose}
+                        className="text-sm text-red-500 underline"
+                    >
                         Close
                     </button>
                 </div>
@@ -47,6 +52,9 @@ export default function DaySchedule({
         );
     }
 
+    /* ------------------------------------------------------------------
+       Build booking lists for each service round
+    ------------------------------------------------------------------ */
     const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
         (rk) => rk in dayInfo
     );
@@ -66,6 +74,9 @@ export default function DaySchedule({
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
     });
 
+    /* ------------------------------------------------------------------
+       Create a union of table-capacity counts across all rounds
+    ------------------------------------------------------------------ */
     const fullStock = { 2: 0, 4: 0, 6: 0 };
     roundKeys.forEach((rk) => {
         const avail = dayInfo[rk]?.availability || {};
@@ -80,6 +91,9 @@ export default function DaySchedule({
         });
     });
 
+    /* ------------------------------------------------------------------
+       Render
+    ------------------------------------------------------------------ */
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow">
             <div className="flex items-center justify-between mb-4">
@@ -116,8 +130,12 @@ export default function DaySchedule({
                             <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
                                 <thead>
                                 <tr className="bg-gray-50">
-                                    <th className="px-3 py-2 text-left font-semibold">Time</th>
-                                    <th className="px-3 py-2 text-left font-semibold">Name</th>
+                                    <th className="px-3 py-2 text-left font-semibold">
+                                        Time
+                                    </th>
+                                    <th className="px-3 py-2 text-left font-semibold">
+                                        Name
+                                    </th>
                                     <th className="px-3 py-2 text-left font-semibold">
                                         Total Clients
                                     </th>
@@ -143,7 +161,9 @@ export default function DaySchedule({
                                 </tbody>
                             </table>
                         ) : (
-                            <p className="text-gray-500 mb-3">No bookings in this round.</p>
+                            <p className="text-gray-500 mb-3">
+                                No bookings in this round.
+                            </p>
                         )}
 
                         {showFloor && (
@@ -161,13 +181,9 @@ export default function DaySchedule({
 }
 
 DaySchedule.propTypes = {
-    selectedDate: PropTypes.instanceOf(Date),
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    selectedDate:      PropTypes.instanceOf(Date),
+    bookings:          PropTypes.arrayOf(PropTypes.object).isRequired,
     tableAvailability: PropTypes.object.isRequired,
-    onClose: PropTypes.func.isRequired,
-    enableZoom: PropTypes.bool,
-};
-
-DaySchedule.defaultProps = {
-    enableZoom: false,
+    onClose:           PropTypes.func.isRequired,
+    enableZoom:        PropTypes.bool,
 };

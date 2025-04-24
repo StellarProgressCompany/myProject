@@ -1,4 +1,3 @@
-// src/components/Admin/SharedBookings/BookingsCompactView.jsx
 import React from "react";
 import PropTypes from "prop-types";
 import { format, addDays, subDays, isSameDay } from "date-fns";
@@ -6,7 +5,7 @@ import { format, addDays, subDays, isSameDay } from "date-fns";
 export default function BookingsCompactView({
                                                 mode,
                                                 rangeDays,
-                                                selectedDate,
+                                                selectedDate = null,        // ← default moved here
                                                 onSelectDay,
                                                 bookings,
                                             }) {
@@ -46,9 +45,15 @@ export default function BookingsCompactView({
                         className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
                         title={format(day, "EEEE, MMMM d, yyyy")}
                     >
-                        <span className="text-xs font-semibold">{format(day, "E")}</span>
-                        <span className="text-xl font-bold">{format(day, "d")}</span>
-                        <span className="text-xs">{format(day, "MMM")}</span>
+                        <span className="text-xs font-semibold">
+                            {format(day, "E")}
+                        </span>
+                        <span className="text-xl font-bold">
+                            {format(day, "d")}
+                        </span>
+                        <span className="text-xs">
+                            {format(day, "MMM")}
+                        </span>
                         <span className="mt-1 text-xs">{bookingsCount}Bkg</span>
                         <span className="text-xs">{totalClients}Cl</span>
                     </button>
@@ -59,13 +64,9 @@ export default function BookingsCompactView({
 }
 
 BookingsCompactView.propTypes = {
-    mode: PropTypes.oneOf(["future", "past"]).isRequired,
-    rangeDays: PropTypes.number.isRequired,
+    mode:         PropTypes.oneOf(["future", "past"]).isRequired,
+    rangeDays:    PropTypes.number.isRequired,
     selectedDate: PropTypes.instanceOf(Date),
-    onSelectDay: PropTypes.func.isRequired,
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
-};
-
-BookingsCompactView.defaultProps = {
-    selectedDate: null,
+    onSelectDay:  PropTypes.func.isRequired,
+    bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
 };

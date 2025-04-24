@@ -115,7 +115,11 @@ class BookingController extends Controller
 
                 if ($remind->isFuture()) {
                     Mail::to($master->email)->later($remind, new BookingReminderMail($master));
+                } else {
+                    // si es menos de 24 h, envía el recordatorio de inmediato
+                    Mail::to($master->email)->send(new BookingReminderMail($master));
                 }
+
                 if ($survey->isFuture()) {
                     Mail::to($master->email)->later($survey, new BookingFeedbackMail($master));
                 }

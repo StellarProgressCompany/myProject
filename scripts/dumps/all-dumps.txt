@@ -199,7 +199,11 @@ backend/app/Http/Controllers/BookingController.php
     
                     if ($remind->isFuture()) {
                         Mail::to($master->email)->later($remind, new BookingReminderMail($master));
+                    } else {
+                        // si es menos de 24 h, envía el recordatorio de inmediato
+                        Mail::to($master->email)->send(new BookingReminderMail($master));
                     }
+    
                     if ($survey->isFuture()) {
                         Mail::to($master->email)->later($survey, new BookingFeedbackMail($master));
                     }
@@ -622,22 +626,53 @@ backend/app/Mail/BookingConfirmationMail.php
         }
     
         /**
-         * Build the message (No Blade, using inline HTML).
+         * Build the message (no Blade view, inline HTML).
          */
         public function build()
         {
+            $meal = $this->booking->tableAvailability->meal_type === 'lunch'
+                ? 'Comida'
+                : 'Cena';
+    
             return $this
-                ->subject('Your bookingWizard is Confirmed!')
+                ->subject('Reserva confirmada – ¡gracias por elegirnos!')
                 ->html("
-                    <h1>Thank you for your booking, {$this->booking->full_name}!</h1>
-                    <p>Your reservation details:</p>
-                    <ul>
-                        <li>Date: {$this->booking->tableAvailability->date}</li>
-                        <li>Meal Type: {$this->booking->tableAvailability->meal_type}</li>
-                        <li>Time: {$this->booking->reserved_time}</li>
-                        <li>Guests: " . ($this->booking->total_adults + $this->booking->total_kids) . "</li>
-                    </ul>
-                    <p>We look forward to seeing you!</p>
+                    <style>
+                        body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:0}
+                        .box{max-width:600px;margin:0 auto;padding:24px}
+                        h1{margin-top:0;color:#d97706;font-size:22px}
+                        ul{padding-left:18px}
+                        li{margin:4px 0}
+                    </style>
+    
+                    <div class='box'>
+                        <h1>Estimado/a {$this->booking->full_name},</h1>
+    
+                        <p>
+                            Nos complace confirmar su reserva. A continuación encontrará
+                            los detalles:
+                        </p>
+    
+                        <ul>
+                            <li><strong>Fecha:</strong> {$this->booking->tableAvailability->date}</li>
+                            <li><strong>Servicio:</strong> {$meal}</li>
+                            <li><strong>Hora:</strong> {$this->booking->reserved_time}</li>
+                            <li><strong>N.º de comensales:</strong> " .
+                    ($this->booking->total_adults + $this->booking->total_kids) . "</li>
+                        </ul>
+    
+                        <p>
+                            Le rogamos que llegue con puntualidad. Si necesita modificar o
+                            cancelar la reserva, responda a este correo o llámenos al teléfono
+                            del restaurante.
+                        </p>
+    
+                        <p>¡Le esperamos!</p>
+    
+                        <p style='margin-top:32px;font-size:14px;color:#555'>
+                            — Equipo de Atención al Cliente
+                        </p>
+                    </div>
                 ");
         }
     }
@@ -667,12 +702,32 @@ backend/app/Mail/BookingFeedbackMail.php
         public function build()
         {
             return $this
-                ->subject('We Value Your Feedback!')
+                ->subject('¿Cómo fue su experiencia con nosotros?')
                 ->html("
-                    <h1>We hope you enjoyed your meal, {$this->booking->full_name}!</h1>
-                    <p>We would appreciate any feedback you have about your experience.</p>
-                    <p>Please click the link below to let us know how we did:</p>
-                    <p><a href='#'>Give Feedback</a></p>
+                    <style>
+                        body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:0}
+                        .box{max-width:600px;margin:0 auto;padding:24px}
+                        h1{margin-top:0;color:#2563eb;font-size:22px}
+                    </style>
+    
+                    <div class='box'>
+                        <h1>Gracias por su visita, {$this->booking->full_name}.</h1>
+    
+                        <p>
+                            Su opinión es muy valiosa para nosotros. Le agradeceríamos que
+                            dedicara un minuto a contarnos cómo fue todo.
+                        </p>
+    
+                        <p>
+                            <a href='#' style='background:#2563eb;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none'>
+                                Enviar valoración
+                            </a>
+                        </p>
+    
+                        <p style='margin-top:32px;font-size:14px;color:#555'>
+                            — Equipo de Atención al Cliente
+                        </p>
+                    </div>
                 ");
         }
     }
@@ -701,17 +756,43 @@ backend/app/Mail/BookingReminderMail.php
     
         public function build()
         {
+            $meal = $this->booking->tableAvailability->meal_type === 'lunch'
+                ? 'Comida'
+                : 'Cena';
+    
             return $this
-                ->subject('Reminder: Your bookingWizard is Tomorrow')
+                ->subject('Recordatorio: su reserva es mañana')
                 ->html("
-                    <h1>Don't forget your reservation!</h1>
-                    <p>Dear {$this->booking->full_name}, this is a friendly reminder that you have a reservation tomorrow.</p>
-                    <ul>
-                        <li>Date: {$this->booking->tableAvailability->date}</li>
-                        <li>Meal Type: {$this->booking->tableAvailability->meal_type}</li>
-                        <li>Time: {$this->booking->reserved_time}</li>
-                    </ul>
-                    <p>We look forward to serving you!</p>
+                    <style>
+                        body{font-family:Arial,Helvetica,sans-serif;color:#222;margin:0;padding:0}
+                        .box{max-width:600px;margin:0 auto;padding:24px}
+                        h1{margin-top:0;color:#0f766e;font-size:22px}
+                        ul{padding-left:18px}
+                        li{margin:4px 0}
+                    </style>
+    
+                    <div class='box'>
+                        <h1>¡Mañana es el gran día!</h1>
+    
+                        <p>
+                            {$this->booking->full_name}, le recordamos su reserva confirmada:
+                        </p>
+    
+                        <ul>
+                            <li><strong>Fecha:</strong> {$this->booking->tableAvailability->date}</li>
+                            <li><strong>Servicio:</strong> {$meal}</li>
+                            <li><strong>Hora:</strong> {$this->booking->reserved_time}</li>
+                        </ul>
+    
+                        <p>
+                            Si necesita realizar cambios, por favor conteste a este correo
+                            o llámenos. ¡Hasta pronto!
+                        </p>
+    
+                        <p style='margin-top:32px;font-size:14px;color:#555'>
+                            — Equipo de Atención al Cliente
+                        </p>
+                    </div>
                 ");
         }
     }

@@ -20,8 +20,8 @@ class TableAvailabilitySeeder extends Seeder
         // Define the available table types (capacities) and counts
         $tableTypes = [
             ['capacity' => 2, 'available_count' => 4],
-            ['capacity' => 4, 'available_count' => 3],
-            ['capacity' => 6, 'available_count' => 3],
+            ['capacity' => 4, 'available_count' => 7],
+            ['capacity' => 6, 'available_count' => 7],
         ];
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {

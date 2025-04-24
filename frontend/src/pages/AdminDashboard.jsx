@@ -78,7 +78,7 @@ export default function AdminDashboard() {
                 <div className="flex-1">
                     <div className="flex items-center justify-between p-4 border-b">
                         <span className="text-xl font-semibold">My Admin</span>
-                        <code className="text-sm text-gray-500">v0.1.8</code>
+                        <code className="text-sm text-gray-500">v1.0.3</code>
                     </div>
                     <div className="p-4 space-y-1">
                         {navData.map(({ key, label, icon: IconCmp }) => (

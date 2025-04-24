@@ -2,33 +2,35 @@
 /**
  * BookingAlgorithmService
  *
- * Five‑zone capacity‑control with round‑aware utilisation.
+ * Five-zone capacity-control with round-aware utilisation.
  */
 
 namespace App\Services;
 
 use App\Models\TableAvailability;
 use App\Models\Booking;
+use Illuminate\Support\Facades\Config;
 
 class BookingAlgorithmService
 {
-    /* ─────────────────────────────────────────────── */
-    /* public entry                                    */
-    /* ─────────────────────────────────────────────── */
+    /* ------------------------------------------------------------------
+     | Public entry point
+     * -----------------------------------------------------------------*/
     public function tryAllocate(
         string $date,
         string $mealType,
         string $time,
         int    $partySize,
-        bool   $longStay
+        bool   $longStay,
     ): array {
 
-        /* online cap */
-        if ($partySize > 14) {
-            return ['error' => 'Groups >14 must book by phone'];
+        // online party-size guardrail (now configurable)
+        $maxOnline = Config::get('restaurant.online_max_group_size', 14);
+        if ($partySize > $maxOnline) {
+            return ['error' => "Groups >$maxOnline must book by phone"];
         }
 
-        /* load table stock */
+        /* ---------- load static stock for that service ---------- */
         $stockRows = TableAvailability::where('date', $date)
             ->where('meal_type', $mealType)
             ->get();
@@ -38,12 +40,12 @@ class BookingAlgorithmService
         }
 
         $tableMix = $stockRows->pluck('available_count', 'capacity')->toArray();
-        $m        = array_sum($tableMix);          // # tables in that session
+        $m        = array_sum($tableMix);                       // tables in session
 
-        /* φ‑cut‑offs */
+        /* φ cut-offs */
         $phi = $this->computeCutOffs($m);
 
-        /* bookings that clash with *this* round only  */
+        /* overlapping bookings → same round only */
         $bookedRound = $this->overlappingBookings($date, $mealType, $time);
 
         $seatsNow = $bookedRound->sum(fn ($b) => $b->total_adults + $b->total_kids);
@@ -56,8 +58,11 @@ class BookingAlgorithmService
             return ['error' => 'Online widget closed – please phone the restaurant'];
         }
 
-        /* run SAA greedy */
-        $partySizes = $bookedRound->map(fn ($b) => $b->total_adults + $b->total_kids)->toArray();
+        /* -------------------- SAA greedy -------------------- */
+        $partySizes   = $bookedRound->pluck('total_adults', null)
+            ->zip($bookedRound->pluck('total_kids'))
+            ->map(fn ($pair) => $pair[0] + $pair[1])
+            ->toArray();
         $partySizes[] = $partySize;
 
         $assignment = $this->greedyAssign($partySizes, $tableMix, $eps);
@@ -68,46 +73,54 @@ class BookingAlgorithmService
         return $this->diffAgainstExisting($assignment, $bookedRound);
     }
 
-    /* ─────────────────────────────────────────────── */
-    /* helpers                                         */
-    /* ─────────────────────────────────────────────── */
+    /* ------------------------------------------------------------------
+     | Helpers
+     * -----------------------------------------------------------------*/
 
     private function detectRound(string $mealType, string $time): string
     {
+        $lunchSecond = Config::get('restaurant.rounds.lunch.second_round.start', '15:00');
+        $dinnerStart = Config::get('restaurant.rounds.dinner.dinner_round.start', '20:00');
+
         if ($mealType === 'lunch') {
-            return $time < '15:00:00' ? 'lunch_first' : 'lunch_second';
+            return $time < "$lunchSecond:00" ? 'lunch_first' : 'lunch_second';
         }
         return 'dinner';
     }
 
-    /** only bookings that overlap the candidate’s round */
+    /** Only bookings that overlap the candidate’s round */
     private function overlappingBookings(string $date, string $mealType, string $time)
     {
+        $lunchSecond = Config::get('restaurant.rounds.lunch.second_round.start', '15:00');
+        $dinnerStart = Config::get('restaurant.rounds.dinner.dinner_round.start', '20:00');
+
         $round = $this->detectRound($mealType, $time);
 
         return Booking::whereHas('tableAvailability', function ($q) use ($date, $mealType) {
             $q->where('date', $date)->where('meal_type', $mealType);
         })
-            ->where(function ($q) use ($round) {
+            ->where(function ($q) use ($round, $lunchSecond, $dinnerStart) {
                 if ($round === 'lunch_first') {
-                    $q->where('reserved_time', '<', '15:00:00');
+                    $q->where('reserved_time', '<', "$lunchSecond:00");
                 } elseif ($round === 'lunch_second') {
-                    $q->whereBetween('reserved_time', ['15:00:00', '19:59:59'])
-                        ->orWhere(function ($q2) {
-                            $q2->where('reserved_time', '<', '15:00:00')
-                                ->where('long_stay', true);          // spill‑over
+                    $q->whereBetween('reserved_time', ["$lunchSecond:00", '19:59:59'])
+                        ->orWhere(function ($q2) use ($lunchSecond) {
+                            $q2->where('reserved_time', '<', "$lunchSecond:00")
+                                ->where('long_stay', true); // spill-over
                         });
                 } else { // dinner
-                    $q->where('reserved_time', '>=', '20:00:00');
+                    $q->where('reserved_time', '>=', "$dinnerStart:00");
                 }
             })
             ->get();
     }
 
+    /* ---- the rest of the file (cut-off maths, Erlang helpers, etc.) is unchanged ---- */
+    /*  ▼▼▼ keep everything below exactly as it was ▼▼▼                                     */
+
     private function computeCutOffs(int $m): array
     {
-        /* waste curve */
-        $F = [1 => 0.028, 2 => 0.040, 3 => 0.052];
+        $F    = [1 => 0.028, 2 => 0.040, 3 => 0.052];
         $beta = 0.05;
         $eta  = 0.10;
         $alpha= 0.01;
@@ -130,7 +143,6 @@ class BookingAlgorithmService
         return [5, null];
     }
 
-    /** descending‑first‑fit greedy */
     private function greedyAssign(array $partySizes, array $tableMix, int $eps)
     {
         rsort($partySizes);
@@ -138,7 +150,7 @@ class BookingAlgorithmService
         foreach ($tableMix as $cap => $cnt) {
             $tables = array_merge($tables, array_fill(0, $cnt, $cap));
         }
-        sort($tables);                        // ascending capacity
+        sort($tables); // ascending capacity
 
         $used = [];
         foreach ($partySizes as $s) {
@@ -159,7 +171,6 @@ class BookingAlgorithmService
         return $used;
     }
 
-    /** keep only the tables newly reserved by the candidate */
     private function diffAgainstExisting(array $usedCaps, $bookedRound): array
     {
         $prevCounts = array_count_values(

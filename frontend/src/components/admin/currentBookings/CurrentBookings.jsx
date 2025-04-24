@@ -1,12 +1,24 @@
-// src/components/Admin/CurrentBookings/CurrentBookings.jsx
+// frontend/src/components/admin/currentBookings/CurrentBookings.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays } from "date-fns";
 
 import AddBookingModal from "./AddBookingModal";
 import EditBookingModal from "./EditBookingModal";
-import DaySchedule from "../SharedBookings/DaySchedule";
+import DaySchedule from "../sharedBookings/DaySchedule";
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+
+// A simple pulse‐animation skeleton matching the DaySchedule card shape
+function SkeletonDaySchedule() {
+    return (
+        <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
+            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+        </div>
+    );
+}
 
 export default function CurrentBookings({ bookings, onDataRefresh }) {
     const [offset, setOffset] = useState(0);
@@ -21,12 +33,15 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
 
     // only bookings for that day
     const todaysBookings = useMemo(
-        () => bookings.filter(b => (b.table_availability?.date || b.date) === dateStr),
+        () =>
+            bookings.filter(
+                (b) => (b.table_availability?.date || b.date) === dateStr
+            ),
         [bookings, dateStr]
     );
 
     const totalBookings = todaysBookings.length;
-    const totalClients  = todaysBookings.reduce(
+    const totalClients = todaysBookings.reduce(
         (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
@@ -44,7 +59,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
                 if (cancelled) return;
                 // merge both into a single map keyed by dateStr
                 const merged = {};
-                [lunch, dinner].forEach(src =>
+                [lunch, dinner].forEach((src) =>
                     Object.entries(src).forEach(([d, info]) => {
                         merged[d] = merged[d] ? { ...merged[d], ...info } : info;
                     })
@@ -64,8 +79,10 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     }, [dateStr]);
 
     const title =
-        offset === 0 ? "Today"
-            : offset === 1 ? "Tomorrow"
+        offset === 0
+            ? "Today"
+            : offset === 1
+                ? "Tomorrow"
                 : format(dateObj, "EEEE, MMM d");
 
     return (
@@ -74,10 +91,16 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
             <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                 <h2 className="text-xl font-bold">{title}</h2>
                 <div className="space-x-2">
-                    <button onClick={() => setOffset(o => o - 1)} className="px-2 py-1 border rounded">
+                    <button
+                        onClick={() => setOffset((o) => o - 1)}
+                        className="px-2 py-1 border rounded"
+                    >
                         ◀
                     </button>
-                    <button onClick={() => setOffset(o => o + 1)} className="px-2 py-1 border rounded">
+                    <button
+                        onClick={() => setOffset((o) => o + 1)}
+                        className="px-2 py-1 border rounded"
+                    >
                         ▶
                     </button>
                     <button
@@ -101,17 +124,17 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
                 </div>
             </div>
 
-            {/* day schedule */}
-            <DaySchedule
-                selectedDate={dateObj}
-                bookings={todaysBookings}
-                tableAvailability={tableAvailability}
-                onClose={() => {}}
-                enableZoom
-            />
-
-            {loadingTA && (
-                <p className="text-sm text-gray-500 mt-2">Loading table availability…</p>
+            {/* day schedule or skeleton */}
+            {loadingTA ? (
+                <SkeletonDaySchedule />
+            ) : (
+                <DaySchedule
+                    selectedDate={dateObj}
+                    bookings={todaysBookings}
+                    tableAvailability={tableAvailability}
+                    onClose={() => {}}
+                    enableZoom
+                />
             )}
 
             {/* add / edit modals */}
@@ -140,6 +163,6 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
 }
 
 CurrentBookings.propTypes = {
-    bookings:      PropTypes.array.isRequired,
+    bookings: PropTypes.array.isRequired,
     onDataRefresh: PropTypes.func.isRequired,
 };

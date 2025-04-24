@@ -1,22 +1,18 @@
-// src/components/Admin/CurrentBookings/AddBookingModal.jsx
+// frontend/src/components/admin/currentBookings/AddBookingModal.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format } from "date-fns";
 import { createBooking } from "../../../services/bookingService";
 import { getDayMealTypes } from "../../../services/datePicker";
 
-//
-// 15‑minute helper
-//
+// 15-minute helper
 const build = (start, end) => {
     const out = [];
     let [h, m] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
 
     while (h < eh || (h === eh && m <= em)) {
-        out.push(
-            `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`
-        );
+        out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
         m += 15;
         if (m === 60) {
             h += 1;
@@ -36,7 +32,6 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
         () => getDayMealTypes(dateObj.getDay()),
         [dateObj]
     );
-
     const [mealType, setMealType] = useState(
         allowedMeals.includes("lunch") ? "lunch" : "dinner"
     );
@@ -70,6 +65,7 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
     }, [timeOptions, time]);
 
     const save = async () => {
+        if (saving) return; // prevent double-click
         if (!fullName.trim() || party < 1) {
             return setError("Name and guest count required.");
         }
@@ -216,10 +212,14 @@ export default function AddBookingModal({ dateObj, onClose, onSaved }) {
                     {!closedDay && (
                         <button
                             onClick={save}
-                            className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                            className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 flex items-center justify-center"
                             disabled={saving}
                         >
-                            {saving ? "Saving…" : "Save"}
+                            {saving ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                "Save"
+                            )}
                         </button>
                     )}
                 </div>

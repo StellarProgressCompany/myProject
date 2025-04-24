@@ -1,0 +1,1412 @@
+└── backend
+    ├── config/restaurant.php
+    ├── app/Http/Controllers/BookingController.php
+    ├── app/Http/Controllers/Controller.php
+    ├── app/Http/Controllers/TableAvailabilityController.php
+    ├── app/Http/Resources/BookingDetailResource.php
+    ├── app/Http/Resources/BookingResource.php
+    ├── app/Http/Resources/TableAvailabilityResource.php
+    ├── app/Http/Kernel.php
+    ├── app/Mail/BookingConfirmationMail.php
+    ├── app/Mail/BookingFeedbackMail.php
+    ├── app/Mail/BookingReminderMail.php
+    ├── app/Models/Booking.php
+    ├── app/Models/BookingDetail.php
+    ├── app/Models/TableAvailability.php
+    ├── app/Models/User.php
+    ├── app/Services/BookingAlgorithmService.php
+    ├── database/migrations/2025_02_03_191203_create_table_availabilities_table.php
+    ├── database/migrations/2025_02_04_115733_create_bookings_table.php
+    ├── database/migrations/2025_02_26_163537_create_booking_details_table.php
+    ├── database/migrations/2025_02_27_174815_create_jobs_table.php
+    ├── database/migrations/2025_04_20_143322_add_long_stay_to_bookings_table.php
+    ├── database/seeders/BookingSeeder.php
+    ├── database/seeders/DatabaseSeeder.php
+    ├── database/seeders/TableAvailabilitySeeder.php
+    ├── routes/api.php
+
+––––––––––––––––––––––––
+backend/config/restaurant.php
+    <?php
+    /**
+     * Restaurant-wide configuration.
+     *
+     * Keep every operational value that you might tweak per venue / season
+     * in ONE place instead of hard-coding them throughout the codebase.
+     */
+    
+    return [
+    
+        /* -----------------------------------------------------------------
+         | Seating & stock
+         * -----------------------------------------------------------------*/
+        'capacities'              => [2, 4, 6],   // table sizes offered
+        'online_max_group_size'   => 14,          // cap for self-service widget
+    
+        /* minutes between two successive slots when we build a time grid */
+        'slot_step'               => 15,
+    
+        /* -----------------------------------------------------------------
+         | Service rounds
+         |   └──  format HH:MM (24 h)
+         * -----------------------------------------------------------------*/
+        'rounds' => [
+    
+            'lunch' => [
+                'first_round' => [
+                    'start'      => '13:00',
+                    'end'        => '14:00',
+                    'must_leave' => '15:00',
+                    'note'       => 'Must leave by 15:00',
+                ],
+                'second_round' => [
+                    'start'      => '15:00',
+                    'end'        => '16:00',
+                    'must_leave' => '17:30',
+                    'note'       => 'Must leave by 17:30',
+                ],
+            ],
+    
+            'dinner' => [
+                'dinner_round' => [
+                    'start'      => '20:00',
+                    'end'        => '22:00',
+                    'must_leave' => null,
+                    'note'       => 'Dinner booking',
+                ],
+            ],
+        ],
+    ];
+
+––––––––––––––––––––––––
+backend/app/Http/Controllers/BookingController.php
+    <?php
+    
+    namespace App\Http\Controllers;
+    
+    use App\Models\Booking;
+    use App\Models\BookingDetail;
+    use App\Models\TableAvailability;
+    use Illuminate\Http\Request;
+    use Illuminate\Support\Facades\DB;
+    use Illuminate\Support\Facades\Mail;
+    use App\Mail\BookingConfirmationMail;
+    use App\Mail\BookingReminderMail;
+    use App\Mail\BookingFeedbackMail;
+    use Carbon\Carbon;
+    use App\Services\BookingAlgorithmService;
+    
+    class BookingController extends Controller
+    {
+        /* ───────────────────────────────────────────────────── */
+        /* Return every booking (admin list)                    */
+        /* ───────────────────────────────────────────────────── */
+        public function index()
+        {
+            $bookings = Booking::with('tableAvailability')
+                ->orderBy('created_at', 'desc')
+                ->get();
+    
+            return response()->json(['data' => $bookings]);
+        }
+    
+        /* ───────────────────────────────────────────────────── */
+        /* Create a new booking                                 */
+        /* ───────────────────────────────────────────────────── */
+        public function store(Request $request)
+        {
+            $validated = $request->validate([
+                'date'             => 'required|date_format:Y-m-d',
+                'meal_type'        => 'required|in:lunch,dinner',
+                'reserved_time'    => 'required|date_format:H:i:s',
+                'total_adults'     => 'required|integer|min:1',
+                'total_kids'       => 'required|integer|min:0',
+                'full_name'        => 'required|string',
+                'phone'            => 'nullable|string',
+                'email'            => 'nullable|email',
+                'special_requests' => 'nullable|string',
+                'gdpr_consent'     => 'boolean',
+                'marketing_opt_in' => 'boolean',
+                'long_stay'        => 'boolean',
+            ]);
+    
+            $partySize = $validated['total_adults'] + $validated['total_kids'];
+            $longStay  = $validated['long_stay'] ?? false;
+    
+            /* five‑zone / SAA allocation */
+            $algo   = new BookingAlgorithmService();
+            $assign = $algo->tryAllocate(
+                $validated['date'],
+                $validated['meal_type'],
+                $validated['reserved_time'],
+                $partySize,
+                $longStay,
+            );
+    
+            if (isset($assign['error'])) {
+                return response()->json(['error' => $assign['error']], 400);
+            }
+    
+            /* ───── persist – ONE master row + N‑1 details ───── */
+            return DB::transaction(function () use ($validated, $assign, $longStay) {
+    
+                $master = null;   // main booking row (first table)
+                foreach ($assign as $i => $slot) {
+    
+                    /* fetch the static TableAvailability row (no stock mutation) */
+                    $ta = TableAvailability::where('date', $validated['date'])
+                        ->where('meal_type', $validated['meal_type'])
+                        ->where('capacity', $slot['capacity'])
+                        ->firstOrFail();
+    
+                    /* first table = master booking row */
+                    if ($i === 0) {
+                        $master = Booking::create([
+                            'table_availability_id' => $ta->id,
+                            'reserved_time'         => $validated['reserved_time'],
+                            'total_adults'          => $validated['total_adults'],
+                            'total_kids'            => $validated['total_kids'],
+                            'full_name'             => $validated['full_name'],
+                            'phone'                 => $validated['phone'] ?? null,
+                            'email'                 => $validated['email'] ?? null,
+                            'special_requests'      => $validated['special_requests'] ?? null,
+                            'gdpr_consent'          => $validated['gdpr_consent'] ?? false,
+                            'marketing_opt_in'      => $validated['marketing_opt_in'] ?? false,
+                            'long_stay'             => $longStay,
+                        ]);
+                    }
+                    /* extra tables = BookingDetail rows */
+                    else {
+                        BookingDetail::create([
+                            'booking_id'             => $master->id,
+                            'table_availability_id'  => $ta->id,
+                            'capacity'               => $slot['capacity'],
+                            'extra_chair'            => (bool) ($slot['extra_chair'] ?? false),
+                        ]);
+                    }
+                }
+    
+                /* ── e‑mails (only once – master booking) ── */
+                if ($master->email) {
+                    Mail::to($master->email)
+                        ->send(new BookingConfirmationMail($master));
+    
+                    $mealDT  = Carbon::parse("{$master->tableAvailability->date} {$master->reserved_time}");
+                    $remind  = $mealDT->copy()->subHours(24);
+                    $survey  = $mealDT->copy()->addHours(3);
+    
+                    if ($remind->isFuture()) {
+                        Mail::to($master->email)->later($remind, new BookingReminderMail($master));
+                    }
+                    if ($survey->isFuture()) {
+                        Mail::to($master->email)->later($survey, new BookingFeedbackMail($master));
+                    }
+                }
+    
+                return response()->json([
+                    'message' => 'Booked successfully!',
+                    'data'    => $master->load(['tableAvailability', 'details']),
+                ], 201);
+            });
+        }
+    
+        /* PATCH /api/bookings/{id} */
+        public function update(Request $request, Booking $booking)
+        {
+            $booking->update(
+                $request->validate([
+                    'reserved_time' => 'sometimes|date_format:H:i:s',
+                    'total_adults'  => 'sometimes|integer|min:1',
+                    'total_kids'    => 'sometimes|integer|min:0',
+                    'full_name'     => 'sometimes|string',
+                    'phone'         => 'sometimes|nullable|string',
+                ])
+            );
+    
+            return response()->json([
+                'message' => 'bookingWizard updated',
+                'data'    => $booking->fresh('tableAvailability'),
+            ]);
+        }
+    
+        /* DELETE /api/bookings/{id} */
+        public function destroy(Booking $booking)
+        {
+            $booking->delete();
+    
+            return response()->json(['message' => 'bookingWizard deleted']);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Controllers/Controller.php
+    <?php
+    
+    namespace App\Http\Controllers;
+    
+    use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+    use Illuminate\Foundation\Validation\ValidatesRequests;
+    use Illuminate\Routing\Controller as BaseController;
+    
+    class Controller extends BaseController
+    {
+        use AuthorizesRequests, ValidatesRequests;
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Controllers/TableAvailabilityController.php
+    <?php
+    
+    namespace App\Http\Controllers;
+    
+    use App\Models\TableAvailability;
+    use App\Models\Booking;
+    use Illuminate\Http\Request;
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Config;
+    
+    /**
+     * Table-availability endpoints
+     */
+    class TableAvailabilityController extends Controller
+    {
+        /* ------------------------------------------------------------
+         | Helpers
+         * -----------------------------------------------------------*/
+        private function minutesStep(): int
+        {
+            return (int) Config::get('restaurant.slot_step', 15);
+        }
+    
+        /** Return an array of HH:MM strings between $start and $end (inclusive) */
+        private function buildTimeGrid(string $start, string $end): array
+        {
+            [$sh, $sm] = array_map('intval', explode(':', $start));
+            [$eh, $em] = array_map('intval', explode(':', $end));
+    
+            $slots = [];
+            for ($m = $sh * 60 + $sm; $m <= $eh * 60 + $em; $m += $this->minutesStep()) {
+                $slots[] = sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
+            }
+            return $slots;
+        }
+    
+        /** Generic round-availability computer */
+        private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings = null)
+        {
+            if ($allBookings === null) {
+                $ids         = $tableAvailabilities->pluck('id');
+                $allBookings = Booking::whereIn('table_availability_id', $ids)->get();
+            }
+    
+            $caps      = Config::get('restaurant.capacities', [2, 4, 6]);
+            $isSecond  = in_array(Config::get('restaurant.rounds.lunch.second_round.start'), $roundTimes, true);
+    
+            $availability = [];
+            foreach ($caps as $cap) {
+                $taRow = $tableAvailabilities->firstWhere('capacity', $cap);
+    
+                $seeded = $taRow?->available_count ?? 0;
+    
+                $booked = $allBookings
+                    ->where('table_availability_id', $taRow?->id)
+                    ->filter(function ($b) use ($roundTimes, $isSecond) {
+                        if (in_array($b->reserved_time, $roundTimes, true)) {
+                            return true;
+                        }
+                        // spill-over from 1st → 2nd lunch (if long-stay)
+                        return $isSecond && $b->long_stay && $b->reserved_time < $roundTimes[0];
+                    })
+                    ->count();
+    
+                $availability["$cap"] = max($seeded - $booked, 0);
+            }
+    
+            return $availability;
+        }
+    
+        /* ------------------------------------------------------------
+         | /api/table-availability?date=YYYY-MM-DD&mealType=lunch|dinner
+         * -----------------------------------------------------------*/
+        public function index(Request $request)
+        {
+            $date     = trim($request->query('date', ''));
+            $mealType = trim($request->query('mealType', ''));
+    
+            if (!$date || !in_array($mealType, ['lunch', 'dinner'], true)) {
+                return response()->json([], 400);
+            }
+    
+            $rows = TableAvailability::where('date', $date)
+                ->where('meal_type', $mealType)
+                ->get()
+                ->keyBy('capacity');
+    
+            if ($rows->isEmpty()) {
+                return response()->json([]);
+            }
+    
+            $roundCfg = Config::get("restaurant.rounds.$mealType");
+            $payload  = [];
+    
+            foreach ($roundCfg as $key => $def) {
+                $times             = $this->buildTimeGrid($def['start'], $def['end']);
+                $payload[$key]     = [
+                    'time'         => $def['start'],
+                    'availability' => $this->computeRoundAvailability($rows, $times),
+                    'note'         => $def['note'],
+                ];
+            }
+    
+            return response()->json($payload);
+        }
+    
+        /* ------------------------------------------------------------
+         | /api/table-availability-range?start=YYYY-MM-DD&end=YYYY-MM-DD...
+         * -----------------------------------------------------------*/
+        public function range(Request $request): \Illuminate\Http\JsonResponse
+        {
+            $start    = $request->query('start');
+            $end      = $request->query('end');
+            $mealType = $request->query('mealType');
+    
+            if (!$start || !$end || !in_array($mealType, ['lunch', 'dinner'], true)) {
+                return response()->json(['error' => 'Missing parameters (start,end,mealType)'], 400);
+            }
+    
+            $startDate = Carbon::parse($start);
+            $endDate   = Carbon::parse($end);
+            if ($endDate->lt($startDate)) {
+                return response()->json(['error' => 'end must be after start'], 400);
+            }
+    
+            $rows = TableAvailability::whereBetween('date', [$start, $end])
+                ->where('meal_type', $mealType)
+                ->get();
+    
+            $availabilityIds = $rows->pluck('id');
+            $bookings        = Booking::whereIn('table_availability_id', $availabilityIds)->get();
+    
+            $roundCfg = Config::get("restaurant.rounds.$mealType");
+            $results  = [];
+    
+            $cursor = $startDate->copy();
+            while ($cursor->lte($endDate)) {
+                $dateStr = $cursor->format('Y-m-d');
+    
+                // Monday & Tuesday → closed
+                if (in_array($cursor->dayOfWeek, [1, 2], true)) {
+                    $results[$dateStr] = 'closed';
+                    $cursor->addDay();
+                    continue;
+                }
+    
+                $dayRows = $rows->where('date', $dateStr);
+                if ($dayRows->isEmpty()) {
+                    $results[$dateStr] = [];
+                    $cursor->addDay();
+                    continue;
+                }
+    
+                $payload = [];
+                foreach ($roundCfg as $key => $def) {
+                    $grid        = $this->buildTimeGrid($def['start'], $def['end']);
+                    $payload[$key] = [
+                        'time'         => $def['start'],
+                        'availability' => $this->computeRoundAvailability($dayRows, $grid, $bookings),
+                        'note'         => $def['note'],
+                    ];
+                }
+                $results[$dateStr] = $payload;
+    
+                $cursor->addDay();
+            }
+    
+            return response()->json($results);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Resources/BookingDetailResource.php
+    <?php
+    
+    namespace App\Http\Resources;
+    
+    use Illuminate\Http\Resources\Json\JsonResource;
+    
+    class BookingDetailResource extends JsonResource
+    {
+        /**
+         * Transform the resource into an array.
+         *
+         * @param  \Illuminate\Http\Request  $request
+         * @return array
+         */
+        public function toArray($request)
+        {
+            return [
+                'id'                     => $this->id,
+                'capacity'              => $this->capacity,
+                'extra_chair'           => (bool) $this->extra_chair,
+                'table_availability_id' => $this->table_availability_id,
+                // Optional: You could nest further details about TableAvailability here.
+                'table_availability'    => $this->whenLoaded('tableAvailability', [
+                    'date'       => $this->tableAvailability->date,
+                    'meal_type'  => $this->tableAvailability->meal_type,
+                    'capacity'   => $this->tableAvailability->capacity,
+                ]),
+            ];
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Resources/BookingResource.php
+    <?php
+    
+    namespace App\Http\Resources;
+    
+    use Illuminate\Http\Resources\Json\JsonResource;
+    
+    class BookingResource extends JsonResource
+    {
+        /**
+         * Transform the resource into an array.
+         *
+         * @param  \Illuminate\Http\Request  $request
+         * @return array
+         */
+        public function toArray($request)
+        {
+            return [
+                'id'            => $this->id,
+                'date'          => $this->date,
+                'time'          => $this->time,
+                'customer_name' => $this->customer_name,
+                'guest_count'   => $this->guest_count,
+                'details'       => BookingDetailResource::collection($this->whenLoaded('details')),
+                'created_at'    => $this->created_at,
+                'updated_at'    => $this->updated_at,
+            ];
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Resources/TableAvailabilityResource.php
+    <?php
+    
+    namespace App\Http\Resources;
+    
+    use Illuminate\Http\Resources\Json\JsonResource;
+    
+    /**
+     * A flexible resource to wrap availability data.
+     * Since we're computing availability arrays on-the-fly,
+     * this resource can simply return the array structure.
+     */
+    class TableAvailabilityResource extends JsonResource
+    {
+        /**
+         * Transform the resource into an array.
+         *
+         * Because this resource is sometimes used to return a single-day
+         * structure and other times used for a multi-day structure (range),
+         * we simply return $this->resource as-is.
+         *
+         * @param \Illuminate\Http\Request $request
+         * @return array
+         */
+        public function toArray($request)
+        {
+            // $this->resource is the array from the controller
+            return $this->resource;
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Kernel.php
+    <?php
+    
+    namespace App\Http;
+    
+    use Illuminate\Foundation\Http\Kernel as HttpKernel;
+    
+    class Kernel extends HttpKernel
+    {
+        /**
+         * The application's global HTTP middleware stack.
+         *
+         * These middleware are run during every request to your application.
+         *
+         * @var array<int, class-string|string>
+         */
+        protected $middleware = [
+            // \App\Http\Middleware\TrustHosts::class,
+            \App\Http\Middleware\TrustProxies::class,
+            \Illuminate\Http\Middleware\HandleCors::class,
+            \App\Http\Middleware\PreventRequestsDuringMaintenance::class,
+            \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
+            \App\Http\Middleware\TrimStrings::class,
+            \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+            \App\Http\Middleware\HandleCors::class,
+        ];
+    
+        /**
+         * The application's route middleware groups.
+         *
+         * @var array<string, array<int, class-string|string>>
+         */
+        protected $middlewareGroups = [
+            'web' => [
+                \App\Http\Middleware\EncryptCookies::class,
+                \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
+                \Illuminate\Session\Middleware\StartSession::class,
+                \Illuminate\View\Middleware\ShareErrorsFromSession::class,
+                \App\Http\Middleware\VerifyCsrfToken::class,
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ],
+    
+            'api' => [
+                // \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+                \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+                \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            ],
+        ];
+    
+        /**
+         * The application's middleware aliases.
+         *
+         * Aliases may be used instead of class names to conveniently assign middleware to routes and groups.
+         *
+         * @var array<string, class-string|string>
+         */
+        protected $middlewareAliases = [
+            'auth' => \App\Http\Middleware\Authenticate::class,
+            'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+            'auth.session' => \Illuminate\Session\Middleware\AuthenticateSession::class,
+            'cache.headers' => \Illuminate\Http\Middleware\SetCacheHeaders::class,
+            'can' => \Illuminate\Auth\Middleware\Authorize::class,
+            'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+            'password.confirm' => \Illuminate\Auth\Middleware\RequirePassword::class,
+            'precognitive' => \Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests::class,
+            'signed' => \App\Http\Middleware\ValidateSignature::class,
+            'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+            'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
+        ];
+    }
+
+––––––––––––––––––––––––
+backend/app/Mail/BookingConfirmationMail.php
+    <?php
+    
+    namespace App\Mail;
+    
+    use App\Models\Booking;
+    use Illuminate\Bus\Queueable;
+    use Illuminate\Mail\Mailable;
+    use Illuminate\Queue\SerializesModels;
+    
+    class BookingConfirmationMail extends Mailable
+    {
+        use Queueable, SerializesModels;
+    
+        public Booking $booking;
+    
+        /**
+         * Create a new message instance.
+         */
+        public function __construct(Booking $booking)
+        {
+            $this->booking = $booking;
+        }
+    
+        /**
+         * Build the message (No Blade, using inline HTML).
+         */
+        public function build()
+        {
+            return $this
+                ->subject('Your bookingWizard is Confirmed!')
+                ->html("
+                    <h1>Thank you for your booking, {$this->booking->full_name}!</h1>
+                    <p>Your reservation details:</p>
+                    <ul>
+                        <li>Date: {$this->booking->tableAvailability->date}</li>
+                        <li>Meal Type: {$this->booking->tableAvailability->meal_type}</li>
+                        <li>Time: {$this->booking->reserved_time}</li>
+                        <li>Guests: " . ($this->booking->total_adults + $this->booking->total_kids) . "</li>
+                    </ul>
+                    <p>We look forward to seeing you!</p>
+                ");
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Mail/BookingFeedbackMail.php
+    <?php
+    
+    namespace App\Mail;
+    
+    use App\Models\Booking;
+    use Illuminate\Bus\Queueable;
+    use Illuminate\Mail\Mailable;
+    use Illuminate\Queue\SerializesModels;
+    
+    class BookingFeedbackMail extends Mailable
+    {
+        use Queueable, SerializesModels;
+    
+        public Booking $booking;
+    
+        public function __construct(Booking $booking)
+        {
+            $this->booking = $booking;
+        }
+    
+        public function build()
+        {
+            return $this
+                ->subject('We Value Your Feedback!')
+                ->html("
+                    <h1>We hope you enjoyed your meal, {$this->booking->full_name}!</h1>
+                    <p>We would appreciate any feedback you have about your experience.</p>
+                    <p>Please click the link below to let us know how we did:</p>
+                    <p><a href='#'>Give Feedback</a></p>
+                ");
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Mail/BookingReminderMail.php
+    <?php
+    
+    namespace App\Mail;
+    
+    use App\Models\Booking;
+    use Illuminate\Bus\Queueable;
+    use Illuminate\Mail\Mailable;
+    use Illuminate\Queue\SerializesModels;
+    
+    class BookingReminderMail extends Mailable
+    {
+        use Queueable, SerializesModels;
+    
+        public Booking $booking;
+    
+        public function __construct(Booking $booking)
+        {
+            $this->booking = $booking;
+        }
+    
+        public function build()
+        {
+            return $this
+                ->subject('Reminder: Your bookingWizard is Tomorrow')
+                ->html("
+                    <h1>Don't forget your reservation!</h1>
+                    <p>Dear {$this->booking->full_name}, this is a friendly reminder that you have a reservation tomorrow.</p>
+                    <ul>
+                        <li>Date: {$this->booking->tableAvailability->date}</li>
+                        <li>Meal Type: {$this->booking->tableAvailability->meal_type}</li>
+                        <li>Time: {$this->booking->reserved_time}</li>
+                    </ul>
+                    <p>We look forward to serving you!</p>
+                ");
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Models/Booking.php
+    <?php
+    
+    namespace App\Models;
+    
+    use Illuminate\Database\Eloquent\Factories\HasFactory;
+    use Illuminate\Database\Eloquent\Model;
+    
+    class Booking extends Model
+    {
+        use HasFactory;
+    
+        protected $fillable = [
+            'table_availability_id',
+            'reserved_time',
+            'total_adults',
+            'total_kids',
+            'full_name',
+            'phone',
+            'email',
+            'special_requests',
+            'gdpr_consent',
+            'marketing_opt_in',
+            'long_stay',
+        ];
+    
+        /* ──────────── relations ──────────── */
+    
+        public function tableAvailability()
+        {
+            return $this->belongsTo(TableAvailability::class);
+        }
+    
+        /** extra tables when one party spans several tables */
+        public function details()
+        {
+            return $this->hasMany(BookingDetail::class);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Models/BookingDetail.php
+    <?php
+    
+    namespace App\Models;
+    
+    use Illuminate\Database\Eloquent\Factories\HasFactory;
+    use Illuminate\Database\Eloquent\Model;
+    
+    class BookingDetail extends Model
+    {
+        use HasFactory;
+    
+        protected $fillable = [
+            'booking_id',
+            'table_availability_id',
+            'capacity',
+            'extra_chair',
+        ];
+    
+        /**
+         * BookingDetail belongs to a master booking.
+         */
+        public function booking()
+        {
+            return $this->belongsTo(Booking::class);
+        }
+    
+        /**
+         * BookingDetail references a TableAvailability record.
+         */
+        public function tableAvailability()
+        {
+            return $this->belongsTo(TableAvailability::class);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Models/TableAvailability.php
+    <?php
+    
+    namespace App\Models;
+    
+    use Illuminate\Database\Eloquent\Factories\HasFactory;
+    use Illuminate\Database\Eloquent\Model;
+    
+    class TableAvailability extends Model
+    {
+        use HasFactory;
+    
+        protected $fillable = [
+            'date',
+            'meal_type',
+            'capacity',
+            'available_count',
+        ];
+    
+        public function bookings()
+        {
+            return $this->hasMany(Booking::class);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Models/User.php
+    <?php
+    
+    namespace App\Models;
+    
+    // use Illuminate\Contracts\Auth\MustVerifyEmail;
+    use Illuminate\Database\Eloquent\Factories\HasFactory;
+    use Illuminate\Foundation\Auth\User as Authenticatable;
+    use Illuminate\Notifications\Notifiable;
+    use Laravel\Sanctum\HasApiTokens;
+    
+    class User extends Authenticatable
+    {
+        use HasApiTokens, HasFactory, Notifiable;
+    
+        /**
+         * The attributes that are mass assignable.
+         *
+         * @var array<int, string>
+         */
+        protected $fillable = [
+            'name',
+            'email',
+            'password',
+        ];
+    
+        /**
+         * The attributes that should be hidden for serialization.
+         *
+         * @var array<int, string>
+         */
+        protected $hidden = [
+            'password',
+            'remember_token',
+        ];
+    
+        /**
+         * The attributes that should be cast.
+         *
+         * @var array<string, string>
+         */
+        protected $casts = [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+
+––––––––––––––––––––––––
+backend/app/Services/BookingAlgorithmService.php
+    <?php
+    /**
+     * BookingAlgorithmService
+     *
+     * Five-zone capacity-control with round-aware utilisation.
+     */
+    
+    namespace App\Services;
+    
+    use App\Models\TableAvailability;
+    use App\Models\Booking;
+    use Illuminate\Support\Facades\Config;
+    
+    class BookingAlgorithmService
+    {
+        /* ------------------------------------------------------------------
+         | Public entry point
+         * -----------------------------------------------------------------*/
+        public function tryAllocate(
+            string $date,
+            string $mealType,
+            string $time,
+            int    $partySize,
+            bool   $longStay,
+        ): array {
+    
+            // online party-size guardrail (now configurable)
+            $maxOnline = Config::get('restaurant.online_max_group_size', 14);
+            if ($partySize > $maxOnline) {
+                return ['error' => "Groups >$maxOnline must book by phone"];
+            }
+    
+            /* ---------- load static stock for that service ---------- */
+            $stockRows = TableAvailability::where('date', $date)
+                ->where('meal_type', $mealType)
+                ->get();
+    
+            if ($stockRows->isEmpty()) {
+                return ['error' => 'Restaurant closed for that service'];
+            }
+    
+            $tableMix = $stockRows->pluck('available_count', 'capacity')->toArray();
+            $m        = array_sum($tableMix);                       // tables in session
+    
+            /* φ cut-offs */
+            $phi = $this->computeCutOffs($m);
+    
+            /* overlapping bookings → same round only */
+            $bookedRound = $this->overlappingBookings($date, $mealType, $time);
+    
+            $seatsNow = $bookedRound->sum(fn ($b) => $b->total_adults + $b->total_kids);
+            $seatCap  = collect($tableMix)->map(fn ($cnt, $cap) => $cap * $cnt)->sum();
+            $U_after  = ($seatsNow + $partySize) / $seatCap;
+    
+            /* zone / ε */
+            [$zone, $eps] = $this->zoneAndEps($U_after, $phi);
+            if ($zone === 5) {
+                return ['error' => 'Online widget closed – please phone the restaurant'];
+            }
+    
+            /* -------------------- SAA greedy -------------------- */
+            $partySizes   = $bookedRound->pluck('total_adults', null)
+                ->zip($bookedRound->pluck('total_kids'))
+                ->map(fn ($pair) => $pair[0] + $pair[1])
+                ->toArray();
+            $partySizes[] = $partySize;
+    
+            $assignment = $this->greedyAssign($partySizes, $tableMix, $eps);
+            if (isset($assignment['error'])) {
+                return $assignment;
+            }
+    
+            return $this->diffAgainstExisting($assignment, $bookedRound);
+        }
+    
+        /* ------------------------------------------------------------------
+         | Helpers
+         * -----------------------------------------------------------------*/
+    
+        private function detectRound(string $mealType, string $time): string
+        {
+            $lunchSecond = Config::get('restaurant.rounds.lunch.second_round.start', '15:00');
+            $dinnerStart = Config::get('restaurant.rounds.dinner.dinner_round.start', '20:00');
+    
+            if ($mealType === 'lunch') {
+                return $time < "$lunchSecond:00" ? 'lunch_first' : 'lunch_second';
+            }
+            return 'dinner';
+        }
+    
+        /** Only bookings that overlap the candidate’s round */
+        private function overlappingBookings(string $date, string $mealType, string $time)
+        {
+            $lunchSecond = Config::get('restaurant.rounds.lunch.second_round.start', '15:00');
+            $dinnerStart = Config::get('restaurant.rounds.dinner.dinner_round.start', '20:00');
+    
+            $round = $this->detectRound($mealType, $time);
+    
+            return Booking::whereHas('tableAvailability', function ($q) use ($date, $mealType) {
+                $q->where('date', $date)->where('meal_type', $mealType);
+            })
+                ->where(function ($q) use ($round, $lunchSecond, $dinnerStart) {
+                    if ($round === 'lunch_first') {
+                        $q->where('reserved_time', '<', "$lunchSecond:00");
+                    } elseif ($round === 'lunch_second') {
+                        $q->whereBetween('reserved_time', ["$lunchSecond:00", '19:59:59'])
+                            ->orWhere(function ($q2) use ($lunchSecond) {
+                                $q2->where('reserved_time', '<', "$lunchSecond:00")
+                                    ->where('long_stay', true); // spill-over
+                            });
+                    } else { // dinner
+                        $q->where('reserved_time', '>=', "$dinnerStart:00");
+                    }
+                })
+                ->get();
+        }
+    
+        /* ---- the rest of the file (cut-off maths, Erlang helpers, etc.) is unchanged ---- */
+        /*  ▼▼▼ keep everything below exactly as it was ▼▼▼                                     */
+    
+        private function computeCutOffs(int $m): array
+        {
+            $F    = [1 => 0.028, 2 => 0.040, 3 => 0.052];
+            $beta = 0.05;
+            $eta  = 0.10;
+            $alpha= 0.01;
+    
+            $phi4 = $this->calcPhi4($m, $alpha);
+            $phi3 = ($eta - $beta) / $F[1];
+            $phi2 = $phi3 - ($eta - $beta - $phi3 * $F[2]) / ($F[1] - $F[2]);
+            $phi1 = $phi2 - ($eta - $beta - $phi2 * $F[3]) / ($F[2] - $F[3]);
+    
+            return [$phi1, $phi2, $phi3, $phi4];
+        }
+    
+        private function zoneAndEps(float $U, array $phi): array
+        {
+            [$p1, $p2, $p3, $p4] = $phi;
+            if ($U < $p1) return [1, 0];
+            if ($U < $p2) return [2, 3];
+            if ($U < $p3) return [3, 2];
+            if ($U < $p4) return [4, 1];
+            return [5, null];
+        }
+    
+        private function greedyAssign(array $partySizes, array $tableMix, int $eps)
+        {
+            rsort($partySizes);
+            $tables = [];
+            foreach ($tableMix as $cap => $cnt) {
+                $tables = array_merge($tables, array_fill(0, $cnt, $cap));
+            }
+            sort($tables); // ascending capacity
+    
+            $used = [];
+            foreach ($partySizes as $s) {
+                $idx = null;
+                foreach ($tables as $k => $cap) {
+                    if ($cap >= $s - $eps) {
+                        $idx = $k;
+                        break;
+                    }
+                }
+                if ($idx === null) {
+                    return ['error' => 'Cannot fit party without breaching limits'];
+                }
+                $used[] = $tables[$idx];
+                unset($tables[$idx]);
+                $tables = array_values($tables);
+            }
+            return $used;
+        }
+    
+        private function diffAgainstExisting(array $usedCaps, $bookedRound): array
+        {
+            $prevCounts = array_count_values(
+                $bookedRound->map(fn ($b) => $b->tableAvailability->capacity)->toArray()
+            );
+    
+            $new = [];
+            foreach ($usedCaps as $cap) {
+                if (($prevCounts[$cap] ?? 0) > 0) {
+                    $prevCounts[$cap]--;
+                } else {
+                    $new[] = ['capacity' => $cap, 'extra_chair' => false];
+                }
+            }
+            return $new;
+        }
+    
+        /* ───── Erlang helpers (unchanged) ──── */
+        private function calcPhi4(int $m, float $alpha): float
+        {
+            if ($m === 0) return 0.80;
+            if ($m <= 12) {
+                $Astar = $m * (1 - pow($alpha * $this->factorial($m), 1 / $m));
+                return $Astar / $m;
+            }
+            $A = 0.8 * $m;
+            for ($i = 0; $i < 5; $i++) {
+                $B  = $this->erlangB($A, $m);
+                $dB = $B * (1 + $B - ($m + 1) / $A);
+                $A  = max(0.01, $A - ($B - $alpha) / $dB);
+            }
+            return $A / $m;
+        }
+        private function erlangB(float $A, int $m): float
+        {
+            $B = 1.0;
+            for ($k = 1; $k <= $m; $k++) {
+                $B = ($A * $B) / ($k + $A * $B);
+            }
+            return $B;
+        }
+        private function factorial(int $n): float
+        {
+            return array_product(range(1, $n));
+        }
+    }
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_02_03_191203_create_table_availabilities_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        public function up(): void
+        {
+            Schema::create('table_availabilities', function (Blueprint $table) {
+                $table->id();
+                $table->date('date');
+                $table->string('meal_type');        // lunch or dinner
+                $table->integer('capacity');        // e.g. 2, 4, or 6
+                $table->integer('available_count'); // number of available tables for that capacity
+                $table->timestamps();
+    
+                // each date+meal_type+capacity is unique
+                $table->unique(['date', 'meal_type', 'capacity']);
+            });
+        }
+    
+        public function down(): void
+        {
+            Schema::dropIfExists('table_availabilities');
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_02_04_115733_create_bookings_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        public function up(): void
+        {
+            Schema::create('bookings', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('table_availability_id')->constrained()->onDelete('cascade');
+    
+                // Instead of storing date/time, we only store the chosen time.
+                // (The date is in table_availability.)
+                $table->time('reserved_time');
+    
+                // Breakdown of guests
+                $table->unsignedInteger('total_adults')->default(1);
+                $table->unsignedInteger('total_kids')->default(0);
+    
+                // Contact & personal info
+                $table->string('full_name');
+                $table->string('phone')->nullable();
+                $table->string('email')->nullable();
+                $table->text('special_requests')->nullable();
+    
+                // Consents
+                $table->boolean('gdpr_consent')->default(false);
+                $table->boolean('marketing_opt_in')->default(false);
+    
+                $table->timestamps();
+            });
+        }
+    
+        public function down(): void
+        {
+            Schema::dropIfExists('bookings');
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_02_26_163537_create_booking_details_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        /**
+         * Run the migrations.
+         */
+        public function up(): void
+        {
+            Schema::create('booking_details', function (Blueprint $table) {
+                $table->id();
+                $table->foreignId('booking_id')->constrained()->onDelete('cascade');
+                $table->foreignId('table_availability_id')->constrained()->onDelete('cascade');
+                $table->integer('capacity');
+                $table->boolean('extra_chair')->default(false);
+                $table->timestamps();
+            });
+        }
+    
+        /**
+         * Reverse the migrations.
+         */
+        public function down(): void
+        {
+            Schema::dropIfExists('booking_details');
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_02_27_174815_create_jobs_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        /**
+         * Run the migrations.
+         */
+        public function up(): void
+        {
+            Schema::create('jobs', function (Blueprint $table) {
+                $table->bigIncrements('id');
+                $table->string('queue')->index();
+                $table->longText('payload');
+                $table->unsignedTinyInteger('attempts');
+                $table->unsignedInteger('reserved_at')->nullable();
+                $table->unsignedInteger('available_at');
+                $table->unsignedInteger('created_at');
+            });
+        }
+    
+        /**
+         * Reverse the migrations.
+         */
+        public function down(): void
+        {
+            Schema::dropIfExists('jobs');
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_04_20_143322_add_long_stay_to_bookings_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration {
+        public function up(): void
+        {
+            Schema::table('bookings', function (Blueprint $table) {
+                $table->boolean('long_stay')->default(false)->after('marketing_opt_in');
+            });
+        }
+    
+        public function down(): void
+        {
+            Schema::table('bookings', function (Blueprint $table) {
+                $table->dropColumn('long_stay');
+            });
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/seeders/BookingSeeder.php
+    <?php
+    
+    namespace Database\Seeders;
+    
+    use Illuminate\Database\Seeder;
+    use App\Models\Booking;
+    use App\Models\TableAvailability;
+    use Carbon\Carbon;
+    
+    class BookingSeeder extends Seeder
+    {
+        /**
+         * Seed the bookings table with sample bookings.
+         */
+        public function run(): void
+        {
+            // For demonstration, create a sample booking for each available TableAvailability row
+            // on today's lunch (adjust as needed for testing)
+            $today = Carbon::today()->toDateString();
+            $availabilities = TableAvailability::where('date', $today)
+                ->where('meal_type', 'lunch')
+                ->get();
+    
+            foreach ($availabilities as $availability) {
+                // Only create a booking if there is available capacity
+                if ($availability->available_count > 0) {
+                    Booking::create([
+                        'table_availability_id' => $availability->id,
+                        'reserved_time'         => '12:30:00',
+                        'total_adults'          => 2,
+                        'total_kids'            => 0,
+                        'full_name'             => 'Test User',
+                        'phone'                 => '+34 600000000',
+                        'email'                 => 'test@example.com',
+                        'special_requests'      => 'No special requests',
+                        'gdpr_consent'          => true,
+                        'marketing_opt_in'      => false,
+                    ]);
+                }
+            }
+        }
+    }
+
+––––––––––––––––––––––––
+backend/database/seeders/DatabaseSeeder.php
+    <?php
+    
+    namespace Database\Seeders;
+    
+    use Illuminate\Database\Seeder;
+    
+    class DatabaseSeeder extends Seeder
+    {
+        /**
+         * Seed the application's database.
+         */
+        public function run(): void
+        {
+            $this->call([
+                TableAvailabilitySeeder::class,
+                // Uncomment the following line if you want to seed sample bookings:
+                // BookingSeeder::class,
+            ]);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/database/seeders/TableAvailabilitySeeder.php
+    <?php
+    
+    namespace Database\Seeders;
+    
+    use Illuminate\Database\Seeder;
+    use App\Models\TableAvailability;
+    use Carbon\Carbon;
+    
+    class TableAvailabilitySeeder extends Seeder
+    {
+        /**
+         * Run the database seeds for table availabilities.
+         */
+        public function run(): void
+        {
+            // Generate data for the next 30 days
+            $startDate = Carbon::today();
+            $endDate   = Carbon::today()->addDays(29);
+    
+            // Define the available table types (capacities) and counts
+            $tableTypes = [
+                ['capacity' => 2, 'available_count' => 4],
+                ['capacity' => 4, 'available_count' => 3],
+                ['capacity' => 6, 'available_count' => 3],
+            ];
+    
+            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+                // dayOfWeek: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.
+                $dayOfWeek = $date->dayOfWeek;
+    
+                // Determine which meal types apply:
+                // - Monday (1) & Tuesday (2) => restaurant is closed (skip)
+                // - Wednesday (3) & Thursday (4) => lunch only
+                // - Friday (5), Saturday (6), Sunday (0) => lunch & dinner
+                $mealTypes = [];
+                if ($dayOfWeek === 3 || $dayOfWeek === 4) {
+                    $mealTypes = ['lunch'];
+                } elseif (in_array($dayOfWeek, [5, 6, 0])) {
+                    $mealTypes = ['lunch', 'dinner'];
+                } else {
+                    // Skip Monday & Tuesday
+                    continue;
+                }
+    
+                // Create a record for each meal type and table capacity
+                foreach ($mealTypes as $mealType) {
+                    foreach ($tableTypes as $type) {
+                        TableAvailability::create([
+                            'date'            => $date->toDateString(),
+                            'meal_type'       => $mealType,
+                            'capacity'        => $type['capacity'],
+                            'available_count' => $type['available_count'],
+                        ]);
+                    }
+                }
+            }
+        }
+    }
+
+––––––––––––––––––––––––
+backend/routes/api.php
+    <?php
+    
+    use Illuminate\Http\Request;
+    use Illuminate\Support\Facades\Route;
+    use App\Http\Controllers\BookingController;
+    use App\Http\Controllers\TableAvailabilityController;
+    
+    /* Root */
+    Route::get('/', fn () => response()->json(['message' => 'API root']));
+    
+    /* Auth stub */
+    Route::middleware('auth:sanctum')->get('/user', fn (Request $r) => $r->user());
+    
+    /* Availability */
+    Route::get('/table-availability',        [TableAvailabilityController::class, 'index']);
+    Route::get('/table-availability-range',  [TableAvailabilityController::class, 'range']);
+    
+    /* currentBookings */
+    Route::get   ('/bookings',          [BookingController::class, 'index']);
+    Route::post  ('/bookings',          [BookingController::class, 'store']);
+    Route::patch ('/bookings/{booking}',[BookingController::class, 'update']);
+    Route::delete('/bookings/{booking}',[BookingController::class, 'destroy']);
+

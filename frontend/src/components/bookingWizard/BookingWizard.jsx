@@ -1,3 +1,4 @@
+// frontend/src/components/bookingWizard/BookingWizard.jsx
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import {
@@ -6,43 +7,47 @@ import {
 } from "../../services/bookingService";
 import AnimatedBackground from "../layout/AnimatedBackground.jsx";
 import ReservationDetailsStep from "./steps/ReservationDetailsStep";
-import TimeSlotStep            from "./steps/TimeSlotStep";
-import ContactInfoStep         from "./steps/ContactInfoStep";
+import TimeSlotStep from "./steps/TimeSlotStep";
+import ContactInfoStep from "./steps/ContactInfoStep";
 
 export default function BookingWizard() {
     const [step, setStep] = useState(1);
 
-    // reservation details
-    const [adults, setAdults]       = useState(2);
-    const [kids, setKids]           = useState(0);
-    const [date, setDate]           = useState(new Date());
-    const [meal, setMeal]           = useState("lunch");
-    const [longStay, setLongStay]   = useState(false);
+    /* ─── reservation details ─── */
+    const [adults, setAdults] = useState(2);
+    const [kids, setKids] = useState(0);
+    const [date, setDate] = useState(new Date());
+    const [meal, setMeal] = useState("lunch");
+    const [longStay, setLongStay] = useState(false);
 
-    // slots
-    const [slotData, setSlotData]    = useState(null);
-    const [round, setRound]          = useState("");
-    const [time, setTime]            = useState(null);
-    const [loadingSlots, setLoading] = useState(false);
+    /* ─── slot search ─── */
+    const [slotData, setSlotData] = useState(null);
+    const [round, setRound] = useState("");
+    const [time, setTime] = useState(null);
+    const [loadingSlots, setLoadingSlots] = useState(false);
 
-    // contact
-    const [fullName, setFullName]       = useState("");
-    const [phonePref, setPhonePref]     = useState("+34");
-    const [phoneNum, setPhoneNum]       = useState("");
-    const [email, setEmail]             = useState("");
-    const [requests, setRequests]       = useState("");
-    const [gdpr, setGdpr]               = useState(false);
-    const [marketing, setMarketing]     = useState(false);
+    /* ─── contact & finalise ─── */
+    const [fullName, setFullName] = useState("");
+    const [phonePref, setPhonePref] = useState("+34");
+    const [phoneNum, setPhoneNum] = useState("");
+    const [email, setEmail] = useState("");
+    const [requests, setRequests] = useState("");
+    const [gdpr, setGdpr] = useState(false);
+    const [marketing, setMarketing] = useState(false);
 
-    const [error, setError]       = useState("");
-    const [success, setSuccess]   = useState(false);
+    /* ─── UI state ─── */
+    const [error, setError] = useState("");
+    const [saving, setSaving] = useState(false);   // ★ new
+    const [success, setSuccess] = useState(false);
 
-    // fetch slots when entering step 2
+    /* ─────────────────────────────────────────────
+       fetch available slots whenever we ENTER step 2
+       ───────────────────────────────────────────── */
     useEffect(() => {
         if (step !== 2) return;
         (async () => {
             try {
-                setLoading(true);
+                setLoadingSlots(true);
                 const data = await fetchAvailableTimeSlots({
                     date: format(date, "yyyy-MM-dd"),
                     mealType: meal,
@@ -51,7 +56,7 @@ export default function BookingWizard() {
             } catch {
                 setSlotData(null);
             } finally {
-                setLoading(false);
+                setLoadingSlots(false);
             }
         })();
     }, [step, date, meal]);
@@ -60,45 +65,53 @@ export default function BookingWizard() {
     const back  = () => setStep((s) => s - 1);
     const reset = () => window.location.reload();
 
+    /* ─── finalise ─── */
     const save = async () => {
+        if (saving) return;             // double-click guard
         setError("");
+
         if (!fullName.trim() || !email.trim() || !gdpr) {
-            return setError("Name, e‑mail and GDPR consent are required.");
+            return setError("Name, e-mail and GDPR consent are required.");
         }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-            return setError("Invalid e‑mail.");
+            return setError("Invalid e-mail.");
         }
 
+        setSaving(true);                // ★ spinner on
         try {
             await createBooking({
-                date:              format(date, "yyyy-MM-dd"),
-                meal_type:         meal,
-                reserved_time:     time,
-                total_adults:      adults,
-                total_kids:        kids,
-                full_name:         fullName,
-                phone:             phoneNum ? `${phonePref} ${phoneNum}` : null,
+                date:          format(date, "yyyy-MM-dd"),
+                meal_type:     meal,
+                reserved_time: time,
+                total_adults:  adults,
+                total_kids:    kids,
+                full_name:     fullName,
+                phone:         phoneNum ? `${phonePref} ${phoneNum}` : null,
                 email,
-                special_requests:  requests,
-                gdpr_consent:      gdpr,
-                marketing_opt_in:  marketing,
-                long_stay:         longStay,
+                special_requests: requests,
+                gdpr_consent:     gdpr,
+                marketing_opt_in: marketing,
+                long_stay:        longStay,
             });
             setSuccess(true);
             setTimeout(reset, 2000);
         } catch (e) {
             setError(e.response?.data?.error || "Booking failed.");
+        } finally {
+            setSaving(false);           // ★ spinner off
         }
     };
 
     return (
         <div className="relative min-h-screen">
             <AnimatedBackground />
+
             <div className="relative flex items-center justify-center p-4">
-                <div className="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+                <div className="relative bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+
                     {/* step indicators */}
                     <div className="flex justify-center space-x-2 mb-6">
-                        {[1,2,3].map((i) => (
+                        {[1, 2, 3].map((i) => (
                             <div
                                 key={i}
                                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -110,14 +123,15 @@ export default function BookingWizard() {
                         ))}
                     </div>
 
+                    {/* step 1 */}
                     {step === 1 && (
                         <ReservationDetailsStep
                             adults={adults}
                             kids={kids}
-                            onIncrementAdults={() => setAdults((v) => Math.min(v+1,20))}
-                            onDecrementAdults={() => setAdults((v) => Math.max(v-1,1))}
-                            onIncrementKids={() => setKids((v) => Math.min(v+1,20))}
-                            onDecrementKids={() => setKids((v) => Math.max(v-1,0))}
+                            onIncrementAdults={() => setAdults((v) => Math.min(v + 1, 20))}
+                            onDecrementAdults={() => setAdults((v) => Math.max(v - 1, 1))}
+                            onIncrementKids={() => setKids((v) => Math.min(v + 1, 20))}
+                            onDecrementKids={() => setKids((v) => Math.max(v - 1, 0))}
                             date={date}
                             onDateSelect={setDate}
                             mealType={meal}
@@ -132,6 +146,7 @@ export default function BookingWizard() {
                         />
                     )}
 
+                    {/* step 2 */}
                     {step === 2 && (
                         <TimeSlotStep
                             mealType={meal}
@@ -149,6 +164,7 @@ export default function BookingWizard() {
                         />
                     )}
 
+                    {/* step 3 */}
                     {step === 3 && (
                         <ContactInfoStep
                             fullName={fullName}
@@ -178,12 +194,18 @@ export default function BookingWizard() {
                         />
                     )}
 
+                    {/* ★ thinking spinner overlay */}
+                    {saving && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20">
+                            <div className="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin" />
+                        </div>
+                    )}
+
+                    {/* confirmation overlay */}
                     {success && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-30">
                             <div className="bg-white p-6 rounded shadow-lg">
-                                <p className="text-lg font-bold mb-2">
-                                    Booking confirmed🎉
-                                </p>
+                                <p className="text-lg font-bold mb-2">Booking confirmed 🎉</p>
                                 <p>Returning…</p>
                             </div>
                         </div>

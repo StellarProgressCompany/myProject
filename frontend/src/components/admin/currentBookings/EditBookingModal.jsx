@@ -1,3 +1,4 @@
+// frontend/src/components/admin/currentBookings/EditBookingModal.jsx
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { updateBooking, deleteBooking } from "../../../services/bookingService";
@@ -12,14 +13,19 @@ export default function EditBookingModal({ booking, onClose, onSaved }) {
     const [error, setError] = useState("");
 
     const handleSave = async () => {
+        if (saving) return;
         if (!fullName.trim() || adults < 1) {
             return setError("Name and at least 1 adult required.");
         }
         setSaving(true);
         setError("");
+
         try {
             await updateBooking(booking.id, {
-                full_name: booking.full_name !== fullName.trim() ? fullName.trim() : undefined,
+                full_name:
+                    fullName.trim() !== booking.full_name
+                        ? fullName.trim()
+                        : undefined,
                 total_adults: adults,
                 total_kids: kids,
                 phone: phone || null,
@@ -37,6 +43,7 @@ export default function EditBookingModal({ booking, onClose, onSaved }) {
     const handleDelete = async () => {
         if (!window.confirm("Delete this booking?")) return;
         setSaving(true);
+
         try {
             await deleteBooking(booking.id);
             onSaved();
@@ -104,7 +111,7 @@ export default function EditBookingModal({ booking, onClose, onSaved }) {
                 <div className="flex justify-between items-center">
                     <button
                         onClick={handleDelete}
-                        className="px-3 py-1 text-red-600 underline"
+                        className="px-3 py-1 text-red-600 underline disabled:opacity-50"
                         disabled={saving}
                     >
                         Delete
@@ -119,10 +126,14 @@ export default function EditBookingModal({ booking, onClose, onSaved }) {
                         </button>
                         <button
                             onClick={handleSave}
-                            className="px-4 py-1 bg-blue-600 text-white rounded disabled:opacity-50"
+                            className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
                             disabled={saving}
                         >
-                            {saving ? "Saving…" : "Save"}
+                            {saving ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                "Save"
+                            )}
                         </button>
                     </div>
                 </div>
@@ -133,7 +144,8 @@ export default function EditBookingModal({ booking, onClose, onSaved }) {
 
 EditBookingModal.propTypes = {
     booking: PropTypes.shape({
-        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+        id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+            .isRequired,
         full_name: PropTypes.string,
         total_adults: PropTypes.number,
         total_kids: PropTypes.number,

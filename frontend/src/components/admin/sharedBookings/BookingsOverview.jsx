@@ -1,7 +1,13 @@
 // src/components/Admin/SharedBookings/BookingsOverview.jsx
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-import { format, addDays, subDays, parseISO, differenceInCalendarDays } from "date-fns";
+import {
+    format,
+    addDays,
+    subDays,
+    parseISO,
+    differenceInCalendarDays,
+} from "date-fns";
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
 import BookingsCompactView from "./BookingsCompactView";
 import BookingsCalendarView from "./BookingsCalendarView";
@@ -12,38 +18,46 @@ import AddBookingModal from "../CurrentBookings/AddBookingModal";
 const ymd = (d) => format(d, "yyyy-MM-dd");
 
 export default function BookingsOverview({ mode, bookings }) {
+    /* ------------------------------------------------------------------
+       Local state
+    ------------------------------------------------------------------*/
     const today = new Date();
-
-    const [rangeDays, setRangeDays] = useState(7);
-    const [view, setView] = useState("compact");
+    const [rangeDays, setRangeDays] = useState(7); // CHART window only
+    const [view, setView] = useState("compact");  // calendar | compact
     const [selDay, setSelDay] = useState(null);
     const [ta, setTA] = useState({});
     const [loadingTA, setLoadingTA] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
+    /* ------------------------------------------------------------------
+       Derived start / end for fetch + chart filtering
+    ------------------------------------------------------------------*/
     const start = mode === "future" ? today : subDays(today, rangeDays);
     const end = mode === "future" ? addDays(today, rangeDays) : today;
 
+    /* compact allowed only on 7‑day window */
+    useEffect(() => {
+        if (view === "compact" && rangeDays !== 7) setView("calendar");
+    }, [view, rangeDays]);
+
+    /* Fetch table availability for [start,end] whenever window changes */
     useEffect(() => {
         (async () => {
             setLoadingTA(true);
             try {
-                const [lunchData, dinnerData] = await Promise.all([
+                const [lunch, dinner] = await Promise.all([
                     fetchTableAvailabilityRange(ymd(start), ymd(end), "lunch"),
                     fetchTableAvailabilityRange(ymd(start), ymd(end), "dinner"),
                 ]);
-
                 const merged = {};
-                [lunchData, dinnerData].forEach((src) =>
-                    Object.entries(src).forEach(([date, info]) => {
-                        merged[date] = merged[date]
-                            ? { ...merged[date], ...info }
-                            : info;
+                [lunch, dinner].forEach((src) =>
+                    Object.entries(src).forEach(([d, info]) => {
+                        merged[d] = merged[d] ? { ...merged[d], ...info } : info;
                     })
                 );
                 setTA(merged);
             } catch (e) {
-                console.error("Error fetching table availability", e);
+                console.error(e);
                 setTA({});
             } finally {
                 setLoadingTA(false);
@@ -51,6 +65,7 @@ export default function BookingsOverview({ mode, bookings }) {
         })();
     }, [mode, rangeDays]);
 
+    /* Filter bookings according to MODE + WINDOW */
     const filtered = bookings.filter((b) => {
         const dateStr = b.table_availability?.date || b.date;
         const d = parseISO(dateStr);
@@ -70,52 +85,36 @@ export default function BookingsOverview({ mode, bookings }) {
         window.location.reload();
     };
 
+    /* ------------------------------------------------------------------
+       Render
+    ------------------------------------------------------------------*/
     return (
-        <div className="p-6 bg-white rounded shadow">
-            {/* Header */}
+        <div className="p-6 bg-white rounded shadow space-y-6">
+            {/* Header -----------------------------------------------------------*/}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold">
                         {mode === "future" ? "Future" : "Past"} Bookings
                     </h2>
                     <p className="text-sm text-gray-500">
-                        Window: {ymd(start)} → {ymd(end)}
+                        Data window for chart: {ymd(start)} → {ymd(end)}
                     </p>
                 </div>
-                <div className="flex space-x-2">
-                    <select
-                        className="border rounded p-1"
-                        value={rangeDays}
-                        onChange={(e) => setRangeDays(Number(e.target.value))}
-                    >
-                        {mode === "future" ? (
-                            <>
-                                <option value={7}>Upcoming7d</option>
-                                <option value={30}>Upcoming1mo</option>
-                                <option value={90}>Upcoming3mo</option>
-                            </>
-                        ) : (
-                            <>
-                                <option value={7}>Past7d</option>
-                                <option value={30}>Past1mo</option>
-                                <option value={90}>Past3mo</option>
-                            </>
-                        )}
-                    </select>
+                {/* Only list-view selector stays here */}
+                <div>
                     <select
                         className="border rounded p-1"
                         value={view}
                         onChange={(e) => setView(e.target.value)}
                     >
-                        <option value="compact">Compact</option>
+                        {rangeDays === 7 && <option value="compact">Compact</option>}
                         <option value="calendar">Calendar</option>
-                        <option value="chart">Chart</option>
                     </select>
                 </div>
             </div>
 
             {/* Totals */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 my-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-3 rounded text-center">
                     <p className="text-xs text-gray-600">Bookings</p>
                     <p className="text-xl font-bold">{totalBookings}</p>
@@ -126,11 +125,11 @@ export default function BookingsOverview({ mode, bookings }) {
                 </div>
             </div>
 
-            {/* Views */}
+            {/* List view (Calendar / Compact) */}
             {view === "compact" && (
                 <BookingsCompactView
                     mode={mode}
-                    rangeDays={rangeDays}
+                    rangeDays={7}
                     selectedDate={selDay}
                     onSelectDay={setSelDay}
                     bookings={filtered}
@@ -143,14 +142,37 @@ export default function BookingsOverview({ mode, bookings }) {
                     bookings={filtered}
                 />
             )}
-            {view === "chart" && (
-                <BookingsChart
-                    key={`${mode}-${rangeDays}`}
-                    bookings={filtered}
-                    startDate={start}
-                    days={rangeDays}
-                />
-            )}
+
+            {/* Chart controls ----------------------------------------------------*/}
+            <div className="flex justify-end mt-6 mb-2">
+                <select
+                    className="border rounded p-1"
+                    value={rangeDays}
+                    onChange={(e) => setRangeDays(Number(e.target.value))}
+                >
+                    {mode === "future" ? (
+                        <>
+                            <option value={7}>Upcoming 7 d</option>
+                            <option value={30}>Upcoming 1 mo</option>
+                            <option value={90}>Upcoming 3 mo</option>
+                        </>
+                    ) : (
+                        <>
+                            <option value={7}>Past 7 d</option>
+                            <option value={30}>Past 1 mo</option>
+                            <option value={90}>Past 3 mo</option>
+                        </>
+                    )}
+                </select>
+            </div>
+
+            {/* Chart */}
+            <BookingsChart
+                key={`${mode}-${rangeDays}`}
+                bookings={filtered}
+                startDate={start}
+                days={rangeDays}
+            />
 
             {/* Day drill‑in */}
             {selDay && (
@@ -168,7 +190,7 @@ export default function BookingsOverview({ mode, bookings }) {
                         bookings={filtered}
                         tableAvailability={ta}
                         onClose={() => setSelDay(null)}
-                        enableZoom={false}
+                        enableZoom
                     />
                 </div>
             )}

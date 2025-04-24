@@ -1,4 +1,4 @@
-// src/components/Admin/AlgorithmTest/AlgorithmTester.jsx
+// src/components/admin/algorithmTest/AlgorithmTester.jsx
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, parseISO, isValid, addMinutes } from "date-fns";
@@ -12,9 +12,23 @@ import {
     createBooking,
     fetchTableAvailabilityRange,
 } from "../../../services/bookingService";
-import DaySchedule from "../SharedBookings/DaySchedule";
+import DaySchedule from "../sharedBookings/DaySchedule";
 
-export default function AlgorithmTester({ bookings, onRefresh }) {
+/* ------------------------------------------------------------------
+   Re-usable loading skeleton (same look&feel as Current/Future views)
+------------------------------------------------------------------- */
+function SkeletonDaySchedule() {
+    return (
+        <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
+            <div className="h-6 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded" />
+            <div className="h-4 bg-gray-200 rounded" />
+            <div className="h-4 bg-gray-200 rounded" />
+        </div>
+    );
+}
+
+export default function AlgorithmTester({ bookings = [], onRefresh = () => {} }) {
     const todayISO = format(new Date(), "yyyy-MM-dd");
     const [sizesRaw, setSizesRaw] = useState("");
     const [dateStr, setDateStr] = useState(todayISO);
@@ -27,6 +41,7 @@ export default function AlgorithmTester({ bookings, onRefresh }) {
 
     const dateObj = isValid(parseISO(dateStr)) ? parseISO(dateStr) : null;
 
+    /* -------- fetch table-availability (lunch + dinner) ------------ */
     const loadTA = async () => {
         if (!dateStr) return;
         setLoadingTA(true);
@@ -53,6 +68,7 @@ export default function AlgorithmTester({ bookings, onRefresh }) {
         loadTA();
     }, [dateStr]);
 
+    /* ----------------------- run stress test ----------------------- */
     const run = async () => {
         const parts = sizesRaw
             .split(/[,\s]+/)
@@ -113,6 +129,7 @@ export default function AlgorithmTester({ bookings, onRefresh }) {
 
     return (
         <div className="space-y-8">
+            {/* Control panel ------------------------------------------------ */}
             <div className="bg-white p-6 rounded shadow max-w-lg">
                 <h2 className="text-xl font-bold mb-4 flex items-center">
                     <IconClock className="w-5 h-5 mr-2" /> Algorithm Tester
@@ -171,6 +188,7 @@ export default function AlgorithmTester({ bookings, onRefresh }) {
                     {running ? "Running…" : "Run Test"}
                 </button>
 
+                {/* Results list ------------------------------------------------ */}
                 {results.length > 0 && (
                     <div className="mt-6">
                         <h4 className="font-semibold mb-2">Results</h4>
@@ -195,16 +213,21 @@ export default function AlgorithmTester({ bookings, onRefresh }) {
                 )}
             </div>
 
-            {dateObj && (
-                <DaySchedule
-                    selectedDate={dateObj}
-                    bookings={dayBookings}
-                    tableAvailability={ta}
-                    onClose={() => {}}
-                    enableZoom
-                />
-            )}
+            {/* Day schedule ------------------------------------------------- */}
+            {dateObj &&
+                (loadingTA ? (
+                    <SkeletonDaySchedule />
+                ) : (
+                    <DaySchedule
+                        selectedDate={dateObj}
+                        bookings={dayBookings}
+                        tableAvailability={ta}
+                        onClose={() => {}}
+                        enableZoom
+                    />
+                ))}
 
+            {/* tiny status line -------------------------------------------- */}
             {loadingTA && (
                 <p className="text-sm text-gray-500">Loading table availability…</p>
             )}
@@ -215,9 +238,4 @@ export default function AlgorithmTester({ bookings, onRefresh }) {
 AlgorithmTester.propTypes = {
     bookings: PropTypes.arrayOf(PropTypes.object),
     onRefresh: PropTypes.func,
-};
-
-AlgorithmTester.defaultProps = {
-    bookings: [],
-    onRefresh: () => {},
 };

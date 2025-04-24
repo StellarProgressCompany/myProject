@@ -35,7 +35,7 @@ class BookingController extends Controller
     {
         $validated = $request->validate([
             'date'             => 'required|date_format:Y-m-d',
-            'meal_type'        => 'required|in:lunch,dinner',
+            'meal_type'        => 'required|in:lunch,dinner',   // ★ new – was missing
             'reserved_time'    => 'required|date_format:H:i:s',
             'total_adults'     => 'required|integer|min:1',
             'total_kids'       => 'required|integer|min:0',
@@ -51,7 +51,7 @@ class BookingController extends Controller
         $partySize = $validated['total_adults'] + $validated['total_kids'];
         $longStay  = $validated['long_stay'] ?? false;
 
-        /* five‑zone / SAA allocation */
+        /* five-zone / SAA allocation */
         $algo   = new BookingAlgorithmService();
         $assign = $algo->tryAllocate(
             $validated['date'],
@@ -65,7 +65,7 @@ class BookingController extends Controller
             return response()->json(['error' => $assign['error']], 400);
         }
 
-        /* ───── persist – ONE master row + N‑1 details ───── */
+        /* ───── persist – ONE master row + N-1 details ───── */
         return DB::transaction(function () use ($validated, $assign, $longStay) {
 
             $master = null;   // main booking row (first table)
@@ -104,14 +104,14 @@ class BookingController extends Controller
                 }
             }
 
-            /* ── e‑mails (only once – master booking) ── */
+            /* ── e-mails (only once – master booking) ── */
             if ($master->email) {
                 Mail::to($master->email)
                     ->send(new BookingConfirmationMail($master));
 
-                $mealDT  = Carbon::parse("{$master->tableAvailability->date} {$master->reserved_time}");
-                $remind  = $mealDT->copy()->subHours(24);
-                $survey  = $mealDT->copy()->addHours(3);
+                $mealDT = Carbon::parse("{$master->tableAvailability->date} {$master->reserved_time}");
+                $remind = $mealDT->copy()->subHours(24);
+                $survey = $mealDT->copy()->addHours(3);
 
                 if ($remind->isFuture()) {
                     Mail::to($master->email)->later($remind, new BookingReminderMail($master));
@@ -142,7 +142,7 @@ class BookingController extends Controller
         );
 
         return response()->json([
-            'message' => 'bookingWizard updated',
+            'message' => 'booking updated',
             'data'    => $booking->fresh('tableAvailability'),
         ]);
     }
@@ -152,6 +152,6 @@ class BookingController extends Controller
     {
         $booking->delete();
 
-        return response()->json(['message' => 'bookingWizard deleted']);
+        return response()->json(['message' => 'booking deleted']);
     }
 }

@@ -1,4 +1,4 @@
-// src/components/Admin/Metrics/StatsGrid.jsx
+// src/components/admin/metrics/StatsGrid.jsx
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@tabler/icons-react";
 import { parseISO, subDays } from "date-fns";
 
+/* ---------- helper to crunch the last-30-days stats --------------- */
 function computeMetrics(bookings) {
     const today = new Date();
     const startCurr = subDays(today, 30);
@@ -38,20 +39,15 @@ function computeMetrics(bookings) {
     });
 
     const bookingDiff =
-        prevBookings === 0
-            ? 100
-            : ((currBookings - prevBookings) / prevBookings) * 100;
+        prevBookings === 0 ? 100 : ((currBookings - prevBookings) / prevBookings) * 100;
     const guestDiff =
-        prevGuests === 0
-            ? 100
-            : ((currGuests - prevGuests) / prevGuests) * 100;
+        prevGuests === 0 ? 100 : ((currGuests - prevGuests) / prevGuests) * 100;
 
     return {
         currBookings,
         currGuests,
         uniqueGuests: uniqueGuests.size,
-        avgGuests:
-            currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
+        avgGuests: currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
         bookingDiff: bookingDiff.toFixed(0),
         guestDiff: guestDiff.toFixed(0),
     };
@@ -64,20 +60,20 @@ const icons = {
     trend: IconTrendingUp,
 };
 
-export default function StatsGrid({ bookings }) {
+export default function StatsGrid({ bookings = [] }) {
     const m = useMemo(() => computeMetrics(bookings), [bookings]);
 
     const data = [
         {
             key: "bookings",
-            title: "Bookings (30 d)",
+            title: "Bookings (30 d)",
             icon: "calendar",
             value: m.currBookings,
             diff: m.bookingDiff,
         },
         {
             key: "guests",
-            title: "Guests (30 d)",
+            title: "Guests (30 d)",
             icon: "users",
             value: m.currGuests,
             diff: m.guestDiff,
@@ -104,12 +100,8 @@ export default function StatsGrid({ bookings }) {
                 {data.map((stat) => {
                     const StatIcon = icons[stat.icon];
                     const positive = Number(stat.diff) >= 0;
-                    const DiffIcon = positive
-                        ? IconArrowUpRight
-                        : IconArrowDownRight;
-                    const diffColor = positive
-                        ? "text-teal-500"
-                        : "text-red-500";
+                    const DiffIcon = positive ? IconArrowUpRight : IconArrowDownRight;
+                    const diffColor = positive ? "text-teal-500" : "text-red-500";
 
                     return (
                         <div
@@ -123,23 +115,17 @@ export default function StatsGrid({ bookings }) {
                                 <StatIcon className="w-5 h-5 text-gray-400" />
                             </div>
                             <div className="flex items-end space-x-2 mt-4">
-                <span className="text-2xl font-bold">
-                  {stat.value}
-                </span>
+                                <span className="text-2xl font-bold">{stat.value}</span>
                                 {stat.diff !== 0 && (
                                     <span
                                         className={`flex items-center text-sm font-semibold ${diffColor}`}
                                     >
-                    {stat.diff}%{" "}
-                                        <DiffIcon className="w-4 h-4 ml-1" />
+                    {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
                   </span>
                                 )}
                             </div>
-                            {(stat.key === "bookings" ||
-                                stat.key === "guests") && (
-                                <p className="text-xs text-gray-500 mt-2">
-                                    vs previous 30d
-                                </p>
+                            {(stat.key === "bookings" || stat.key === "guests") && (
+                                <p className="text-xs text-gray-500 mt-2">vs previous 30 d</p>
                             )}
                         </div>
                     );
@@ -151,8 +137,4 @@ export default function StatsGrid({ bookings }) {
 
 StatsGrid.propTypes = {
     bookings: PropTypes.arrayOf(PropTypes.object),
-};
-
-StatsGrid.defaultProps = {
-    bookings: [],
 };

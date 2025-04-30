@@ -57,6 +57,10 @@ FILES=(
 
   # routes
   "backend/routes/api.php"
+
+  # config-important directory (all .php in it)
+  "backend/config/important/mail.php"
+  "backend/config/important/restaurant.php"
 )
 
 # 4) sanity check

@@ -16,6 +16,7 @@
     ├── /frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
     ├── /frontend/src/components/admin/sharedBookings/DaySchedule.jsx
     ├── /frontend/src/components/admin/sharedBookings/TableUsage.jsx
+    ├── /frontend/src/components/admin/utils/LanguagePicker.jsx
     ├── /frontend/src/components/bookingWizard/BookingWizard.jsx
     ├── /frontend/src/components/bookingWizard/steps/ContactInfoStep.jsx
     ├── /frontend/src/components/bookingWizard/steps/ReservationDetailsStep.jsx
@@ -2233,6 +2234,70 @@
     };
 
 ––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/utils/LanguagePicker.jsx
+    // frontend/src/components/admin/utils/LanguagePicker.jsx
+    
+    import { useState, Fragment } from "react";
+    import { Listbox, Transition } from "@headlessui/react";
+    import { ChevronDownIcon } from "@heroicons/react/20/solid";
+    
+    const options = [
+        { label: "Català",   code: "ca" },
+        { label: "Español",  code: "es" },
+        { label: "English",  code: "en" },
+    ];
+    
+    export default function LanguagePicker({ onChange, selectedCode }) {
+        const initial = options.find((opt) => opt.code === selectedCode) || options[0];
+        const [selected, setSelected] = useState(initial);
+    
+        const handleChange = (opt) => {
+            setSelected(opt);
+            onChange(opt.code);
+        };
+    
+        return (
+            <div className="w-48 relative">
+                <Listbox value={selected} onChange={handleChange}>
+                    <div className="relative">
+                        <Listbox.Button className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 flex items-center justify-between text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <span>{selected.label}</span>
+                            <ChevronDownIcon className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                        </Listbox.Button>
+    
+                        <Transition
+                            as={Fragment}
+                            leave="transition ease-in duration-100"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            <Listbox.Options className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+                                {options.map((opt) => (
+                                    <Listbox.Option
+                                        key={opt.code}
+                                        value={opt}
+                                        className={({ active }) =>
+                                            `cursor-pointer select-none relative px-3 py-2 text-sm ${
+                                                active ? "bg-indigo-100 text-indigo-900" : "text-gray-700"
+                                            }`
+                                        }
+                                    >
+                                        {({ selected: isSel }) => (
+                                            <span className={`${isSel ? "font-semibold" : "font-normal"}`}>
+                          {opt.label}
+                        </span>
+                                        )}
+                                    </Listbox.Option>
+                                ))}
+                            </Listbox.Options>
+                        </Transition>
+                    </div>
+                </Listbox>
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/bookingWizard/BookingWizard.jsx
     // frontend/src/components/bookingWizard/BookingWizard.jsx
     import React, { useState, useEffect } from "react";
@@ -3447,6 +3512,7 @@
     
     import React, { useState, useEffect, useCallback } from "react";
     import { useNavigate } from "react-router-dom";
+    
     import {
         IconCalendarClock,
         IconClock,
@@ -3454,23 +3520,22 @@
         IconChartBar,
         IconLogout,
         IconRefresh,
-        IconFlask,
-        IconLanguage,
     } from "@tabler/icons-react";
     
+    import LanguagePicker      from "../components/admin/utils/LanguagePicker.jsx";
     import { fetchAllBookings } from "../services/bookingService";
-    import CurrentBookings from "../components/admin/currentBookings/CurrentBookings";
-    import BookingsOverview from "../components/admin/sharedBookings/BookingsOverview";
-    import StatsGrid from "../components/admin/metrics/StatsGrid";
-    import AlgorithmTester from "../components/admin/algorithmTest/AlgorithmTester";
-    import { translate } from "../services/i18n";
+    import CurrentBookings     from "../components/admin/currentBookings/CurrentBookings";
+    import BookingsOverview    from "../components/admin/sharedBookings/BookingsOverview";
+    import StatsGrid           from "../components/admin/metrics/StatsGrid";
+    import AlgorithmTester     from "../components/admin/algorithmTest/AlgorithmTester";
+    import { translate, setLanguage } from "../services/i18n";
     
     const navMeta = [
         { key: "current", icon: IconClock },
         { key: "future",  icon: IconCalendarClock },
         { key: "past",    icon: IconHistory },
         { key: "metrics", icon: IconChartBar },
-        { key: "tester",  icon: IconFlask },
+        { key: "tester",  icon: IconChartBar },
     ];
     
     export default function AdminDashboard() {
@@ -3483,14 +3548,14 @@
         const t = (key, vars) => translate(lang, key, vars);
     
         const changeLang = (lng) => {
-            localStorage.setItem("adminLang", lng);
+            setLanguage(lng);
             setLang(lng);
         };
     
         // ─── Bookings state ───
-        const [active, setActive]     = useState("current");
+        const [active,   setActive]   = useState("current");
         const [bookings, setBookings] = useState([]);
-        const [loading, setLoading]   = useState(true);
+        const [loading,  setLoading]  = useState(true);
     
         const loadBookings = useCallback(async () => {
             setLoading(true);
@@ -3546,7 +3611,12 @@
                 case "metrics":
                     return <StatsGrid bookings={bookings} />;
                 case "tester":
-                    return <AlgorithmTester bookings={bookings} onRefresh={loadBookings} />;
+                    return (
+                        <AlgorithmTester
+                            bookings={bookings}
+                            onRefresh={loadBookings}
+                        />
+                    );
                 default:
                     return null;
             }
@@ -3561,25 +3631,15 @@
                 <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                     <div className="border-b">
                         <div className="flex items-center justify-between p-4">
-                            <span className="text-xl font-semibold">{t("admin.title")}</span>
+                <span className="text-xl font-semibold">
+                  {t("admin.title")}
+                </span>
                             <code className="text-sm text-gray-500">
                                 {t("admin.versionPrefix")}{version}
                             </code>
                         </div>
                         <div className="px-4 pb-4">
-                            <label className="flex items-center text-xs font-medium text-gray-600 mb-1">
-                                <IconLanguage className="w-4 h-4 mr-2" />
-                                {t("admin.language")}
-                            </label>
-                            <select
-                                value={lang}
-                                onChange={(e) => changeLang(e.target.value)}
-                                className="w-full border rounded p-2 text-sm"
-                            >
-                                <option value="ca">Català</option>
-                                <option value="es">Español</option>
-                                <option value="en">English</option>
-                            </select>
+                            <LanguagePicker onChange={changeLang} />
                         </div>
                     </div>
     

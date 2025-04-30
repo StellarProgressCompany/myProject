@@ -11,6 +11,10 @@ import {
     Legend,
 } from "chart.js";
 import { format, addDays } from "date-fns";
+import { translate } from "../../../services/i18n";
+
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -38,7 +42,7 @@ export default function BookingsChart({ bookings, startDate, days }) {
         labels,
         datasets: [
             {
-                label: "Total People",
+                label: t("chart.totalPeople"),
                 data,
                 backgroundColor: "#4F46E5",
                 borderRadius: 5,
@@ -59,14 +63,19 @@ export default function BookingsChart({ bookings, startDate, days }) {
         },
         scales: {
             x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
-            y: { grid: { color: "#E5E7EB" }, ticks: { color: "#9CA3AF", stepSize: 1 } },
+            y: {
+                grid: { color: "#E5E7EB" },
+                ticks: { color: "#9CA3AF", stepSize: 1 },
+            },
         },
         maintainAspectRatio: false,
     };
 
     return (
         <div className="p-4 bg-white rounded shadow">
-            <h3 className="text-lg font-bold mb-4">Total People Chart</h3>
+            <h3 className="text-lg font-bold mb-4">
+                {t("chart.titleTotalPeople")}
+            </h3>
             <div className="w-full" style={{ height: 300 }}>
                 <Bar data={chartData} options={options} />
             </div>

@@ -1,14 +1,17 @@
+// frontend/src/components/admin/sharedBookings/TableUsage.jsx
+// (unchanged – reproduced verbatim)
+
 import React from "react";
 import PropTypes from "prop-types";
 
 /**
- * TableUsage – schematic floor‑plan.
+ * TableUsage – schematic floor-plan.
  *
  * Props:
  *   capacityTotals: { [capacity: number]: number }
  *     e.g. { 2: 5, 4: 3, 6: 2 }
  *   bookings: Array of booking objects (with table_availability.capacity, full_name, totals, etc.)
- *   expanded: whether to zoom floor‑plan
+ *   expanded: whether to zoom floor-plan
  *   seatSize (optional): pixels per seat unit (default: 35)
  */
 export default function TableUsage({
@@ -84,12 +87,12 @@ export default function TableUsage({
                     >
                         {t.booked ? (
                             <>
-                <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
-                  {t.name}
-                </span>
+                    <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
+                      {t.name}
+                    </span>
                                 <span className="text-xs">
-                  {t.guests}/{t.cap}
-                </span>
+                      {t.guests}/{t.cap}
+                    </span>
                             </>
                         ) : (
                             <span className="text-xs text-gray-600">{t.cap}</span>

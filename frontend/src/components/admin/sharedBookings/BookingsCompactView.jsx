@@ -1,11 +1,15 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { format, addDays, subDays, isSameDay } from "date-fns";
+import { translate } from "../../../services/i18n";
+
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
 
 export default function BookingsCompactView({
                                                 mode,
                                                 rangeDays,
-                                                selectedDate = null,        // ← default moved here
+                                                selectedDate = null,
                                                 onSelectDay,
                                                 bookings,
                                             }) {
@@ -51,11 +55,15 @@ export default function BookingsCompactView({
                         <span className="text-xl font-bold">
                             {format(day, "d")}
                         </span>
-                        <span className="text-xs">
-                            {format(day, "MMM")}
+                        <span className="text-xs">{format(day, "MMM")}</span>
+                        <span className="mt-1 text-xs">
+                            {bookingsCount}
+                            {t("calendar.badgeBookings")}
                         </span>
-                        <span className="mt-1 text-xs">{bookingsCount}Bkg</span>
-                        <span className="text-xs">{totalClients}Cl</span>
+                        <span className="text-xs">
+                            {totalClients}
+                            {t("calendar.badgeClients")}
+                        </span>
                     </button>
                 );
             })}
@@ -64,9 +72,9 @@ export default function BookingsCompactView({
 }
 
 BookingsCompactView.propTypes = {
-    mode:         PropTypes.oneOf(["future", "past"]).isRequired,
-    rangeDays:    PropTypes.number.isRequired,
+    mode: PropTypes.oneOf(["future", "past"]).isRequired,
+    rangeDays: PropTypes.number.isRequired,
     selectedDate: PropTypes.instanceOf(Date),
-    onSelectDay:  PropTypes.func.isRequired,
-    bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
+    onSelectDay: PropTypes.func.isRequired,
+    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
 };

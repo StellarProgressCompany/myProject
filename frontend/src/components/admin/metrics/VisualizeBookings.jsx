@@ -1,11 +1,19 @@
+// frontend/src/components/admin/metrics/VisualizeBookings.jsx
+
 import React, { useState } from "react";
 import { format } from "date-fns";
 import TableUsage from "./TableUsage";
+import { translate } from "../../../services/i18n";
+
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
 
 const prettyRound = (key) => {
-    if (key.includes("first")) return { lbl: "Lunch – 1st Round", bg: "bg-green-50" };
-    if (key.includes("second")) return { lbl: "Lunch – 2nd Round", bg: "bg-orange-50" };
-    return { lbl: "Dinner", bg: "bg-purple-50" };
+    if (key.includes("first"))
+        return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+    if (key.includes("second"))
+        return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+    return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
 };
 
 /**
@@ -29,21 +37,36 @@ export default function DaySchedule({
             <div className="mt-6 border rounded bg-white p-4 shadow">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold">
-                        Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                        {t("schedule.header", {
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                        })}
                     </h3>
-                    <button onClick={onClose} className="text-sm text-red-500 underline">
-                        Close
+                    <button
+                        onClick={onClose}
+                        className="text-sm text-red-500 underline"
+                    >
+                        {t("admin.close")}
                     </button>
                 </div>
-                <p className={dayInfo === "closed" ? "text-red-600 font-semibold" : "text-gray-700"}>
-                    {dayInfo === "closed" ? "CLOSED" : "No availability data."}
+                <p
+                    className={
+                        dayInfo === "closed"
+                            ? "text-red-600 font-semibold"
+                            : "text-gray-700"
+                    }
+                >
+                    {dayInfo === "closed"
+                        ? "CLOSED"
+                        : t("schedule.noBookings")}
                 </p>
             </div>
         );
     }
 
     /* ---- group bookings per round ---- */
-    const roundKeys = ["first_round", "second_round", "dinner_round"].filter((rk) => rk in dayInfo);
+    const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
+        (rk) => rk in dayInfo
+    );
     const roundBookings = {};
     roundKeys.forEach((rk) => {
         const rows = bookings
@@ -52,7 +75,10 @@ export default function DaySchedule({
                 if (d !== dateStr) return false;
                 if (rk.includes("first")) return b.reserved_time < "15:00:00";
                 if (rk.includes("second"))
-                    return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
+                    return (
+                        b.reserved_time >= "15:00:00" &&
+                        b.reserved_time < "20:00:00"
+                    );
                 return b.reserved_time >= "20:00:00"; // dinner
             })
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
@@ -78,7 +104,9 @@ export default function DaySchedule({
         <div className="mt-6 border rounded bg-white p-4 shadow">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">
-                    Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                    {t("schedule.header", {
+                        date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                    })}
                 </h3>
                 <div className="space-x-3">
                     {enableZoom && (
@@ -86,11 +114,16 @@ export default function DaySchedule({
                             onClick={() => setShowFloor((v) => !v)}
                             className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
                         >
-                            {showFloor ? "Hide floor" : "Expand floor"}
+                            {showFloor
+                                ? t("admin.hideFloor")
+                                : t("admin.expandFloor")}
                         </button>
                     )}
-                    <button onClick={onClose} className="text-sm text-red-500 underline hover:text-red-700">
-                        Close
+                    <button
+                        onClick={onClose}
+                        className="text-sm text-red-500 underline hover:text-red-700"
+                    >
+                        {t("admin.close")}
                     </button>
                 </div>
             </div>
@@ -107,26 +140,50 @@ export default function DaySchedule({
                             <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
                                 <thead>
                                 <tr className="bg-gray-50">
-                                    <th className="px-3 py-2 text-left font-semibold">Time</th>
-                                    <th className="px-3 py-2 text-left font-semibold">Name</th>
-                                    <th className="px-3 py-2 text-left font-semibold">Total Clients</th>
+                                    <th className="px-3 py-2 text-left font-semibold">
+                                        {t("schedule.table.time")}
+                                    </th>
+                                    <th className="px-3 py-2 text-left font-semibold">
+                                        {t("schedule.table.name")}
+                                    </th>
+                                    <th className="px-3 py-2 text-left font-semibold">
+                                        {t("schedule.table.totalClients")}
+                                    </th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {rows.map((bk) => (
-                                    <tr key={bk.id} className={`${bg} hover:bg-yellow-50 transition`}>
-                                        <td className="px-3 py-2">{bk.reserved_time.slice(0, 5)}</td>
-                                        <td className="px-3 py-2 truncate max-w-[160px]">{bk.full_name}</td>
-                                        <td className="px-3 py-2">{bk.total_adults + bk.total_kids}</td>
+                                    <tr
+                                        key={bk.id}
+                                        className={`${bg} hover:bg-yellow-50 transition`}
+                                    >
+                                        <td className="px-3 py-2">
+                                            {bk.reserved_time.slice(0, 5)}
+                                        </td>
+                                        <td className="px-3 py-2 truncate max-w-[160px]">
+                                            {bk.full_name}
+                                        </td>
+                                        <td className="px-3 py-2">
+                                            {bk.total_adults +
+                                                bk.total_kids}
+                                        </td>
                                     </tr>
                                 ))}
                                 </tbody>
                             </table>
                         ) : (
-                            <p className="text-gray-500 mb-3">No bookings in this round.</p>
+                            <p className="text-gray-500 mb-3">
+                                {t("schedule.noBookings")}
+                            </p>
                         )}
 
-                        {showFloor && <TableUsage capacityTotals={fullStock} bookings={rows} expanded />}
+                        {showFloor && (
+                            <TableUsage
+                                capacityTotals={fullStock}
+                                bookings={rows}
+                                expanded
+                            />
+                        )}
                     </div>
                 );
             })}

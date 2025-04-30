@@ -1,3 +1,5 @@
+// frontend/src/pages/AdminDashboard.jsx
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,47 +14,46 @@ import {
 } from "@tabler/icons-react";
 
 import { fetchAllBookings } from "../services/bookingService";
+import CurrentBookings from "../components/admin/currentBookings/CurrentBookings";
 import BookingsOverview from "../components/admin/sharedBookings/BookingsOverview";
-import CurrentBookings from "../components/admin/currentBookings/CurrentBookings.jsx";
-import StatsGrid from "../components/admin/metrics/StatsGrid.jsx";
-import AlgorithmTester from "../components/admin/algorithmTest/AlgorithmTester.jsx";
+import StatsGrid from "../components/admin/metrics/StatsGrid";
+import AlgorithmTester from "../components/admin/algorithmTest/AlgorithmTester";
 import { translate } from "../services/i18n";
 
-/* top-level nav map (labels come from i18n) */
 const navMeta = [
     { key: "current", icon: IconClock },
-    { key: "future", icon: IconCalendarClock },
-    { key: "past", icon: IconHistory },
+    { key: "future",  icon: IconCalendarClock },
+    { key: "past",    icon: IconHistory },
     { key: "metrics", icon: IconChartBar },
-    { key: "tester", icon: IconFlask },
+    { key: "tester",  icon: IconFlask },
 ];
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
 
-    /* ───────────── language (default = Catalan) ───────────── */
+    // ─── Language state ───
     const [lang, setLang] = useState(
         () => localStorage.getItem("adminLang") || "ca"
     );
-    const t = (path) => translate(lang, path);
+    const t = (key, vars) => translate(lang, key, vars);
 
     const changeLang = (lng) => {
         localStorage.setItem("adminLang", lng);
         setLang(lng);
     };
 
-    /* ───────────── bookings & active panel ───────────── */
-    const [active, setActive] = useState("current");
+    // ─── Bookings state ───
+    const [active, setActive]     = useState("current");
     const [bookings, setBookings] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading]   = useState(true);
 
     const loadBookings = useCallback(async () => {
         setLoading(true);
         try {
             const data = await fetchAllBookings();
             setBookings(Array.isArray(data) ? data : []);
-        } catch (e) {
-            console.error(e);
+        } catch (err) {
+            console.error(err);
             setBookings([]);
         } finally {
             setLoading(false);
@@ -63,15 +64,15 @@ export default function AdminDashboard() {
         loadBookings();
     }, [loadBookings]);
 
-    /* ───────────── auth ───────────── */
+    // ─── Auth ───
     const logout = () => {
         localStorage.removeItem("isAuthenticated");
         navigate("/login");
     };
 
-    /* choose panel */
+    // ─── Render panels ───
     const renderPanel = () => {
-        if (loading) return <p>{t("wizard.loading")}</p>;
+        if (loading) return <p>{t("tester.loadingTA")}</p>;
 
         switch (active) {
             case "current":
@@ -100,31 +101,26 @@ export default function AdminDashboard() {
             case "metrics":
                 return <StatsGrid bookings={bookings} />;
             case "tester":
-                return (
-                    <AlgorithmTester
-                        bookings={bookings}
-                        onRefresh={loadBookings}
-                    />
-                );
+                return <AlgorithmTester bookings={bookings} onRefresh={loadBookings} />;
             default:
                 return null;
         }
     };
 
+    // ─── version from Vite env (instead of process.env) ───
+    const version = import.meta.env.VITE_APP_VERSION || "1.0.3";
+
     return (
         <div className="flex min-h-screen bg-gray-100">
-            {/* ───────────── Sidebar ───────────── */}
+            {/* ───────── Sidebar ───────── */}
             <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
-                {/* header */}
                 <div className="border-b">
                     <div className="flex items-center justify-between p-4">
-                        <span className="text-xl font-semibold">
-                            {t("admin.title")}
-                        </span>
-                        <code className="text-sm text-gray-500">v1.0.3</code>
+                        <span className="text-xl font-semibold">{t("admin.title")}</span>
+                        <code className="text-sm text-gray-500">
+                            {t("admin.versionPrefix")}{version}
+                        </code>
                     </div>
-
-                    {/* language selector */}
                     <div className="px-4 pb-4">
                         <label className="flex items-center text-xs font-medium text-gray-600 mb-1">
                             <IconLanguage className="w-4 h-4 mr-2" />
@@ -142,7 +138,6 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* nav buttons */}
                 <div className="flex-1 p-4 space-y-1">
                     {navMeta.map(({ key, icon: IconCmp }) => (
                         <button
@@ -160,7 +155,6 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* sticky bottom zone */}
                 <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t space-y-2">
                     <button
                         onClick={loadBookings}
@@ -169,8 +163,6 @@ export default function AdminDashboard() {
                         <IconRefresh className="mr-3 h-5 w-5 text-gray-400" />
                         {t("admin.refresh")}
                     </button>
-
-                    {/* LOGOUT always bottom-left */}
                     <button
                         onClick={logout}
                         className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
@@ -181,8 +173,10 @@ export default function AdminDashboard() {
                 </div>
             </aside>
 
-            {/* main */}
-            <main className="flex-1 p-6 overflow-auto">{renderPanel()}</main>
+            {/* ───────── Main ───────── */}
+            <main className="flex-1 p-6 overflow-auto">
+                {renderPanel()}
+            </main>
         </div>
     );
 }

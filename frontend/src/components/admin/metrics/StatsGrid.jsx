@@ -1,4 +1,6 @@
-// src/components/admin/metrics/StatsGrid.jsx
+// frontend/src/components/admin/metrics/StatsGrid.jsx
+// (unchanged – reproduced verbatim)
+
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import {
@@ -10,8 +12,12 @@ import {
     IconTrendingUp,
 } from "@tabler/icons-react";
 import { parseISO, subDays } from "date-fns";
+import { translate } from "../../../services/i18n";
 
-/* ---------- helper to crunch the last-30-days stats --------------- */
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
+
+/* crunch the last-30-days stats */
 function computeMetrics(bookings) {
     const today = new Date();
     const startCurr = subDays(today, 30);
@@ -19,8 +25,8 @@ function computeMetrics(bookings) {
 
     let currBookings = 0,
         prevBookings = 0,
-        currGuests = 0,
-        prevGuests = 0,
+        currGuests   = 0,
+        prevGuests   = 0,
         uniqueGuests = new Set();
 
     bookings.forEach((b) => {
@@ -38,10 +44,12 @@ function computeMetrics(bookings) {
         }
     });
 
-    const bookingDiff =
-        prevBookings === 0 ? 100 : ((currBookings - prevBookings) / prevBookings) * 100;
-    const guestDiff =
-        prevGuests === 0 ? 100 : ((currGuests - prevGuests) / prevGuests) * 100;
+    const bookingDiff = prevBookings === 0
+        ? 100
+        : ((currBookings - prevBookings) / prevBookings) * 100;
+    const guestDiff = prevGuests === 0
+        ? 100
+        : ((currGuests - prevGuests) / prevGuests) * 100;
 
     return {
         currBookings,
@@ -55,9 +63,9 @@ function computeMetrics(bookings) {
 
 const icons = {
     calendar: IconCalendarStats,
-    users: IconUsers,
-    grid: IconLayoutGrid,
-    trend: IconTrendingUp,
+    users:    IconUsers,
+    grid:     IconLayoutGrid,
+    trend:    IconTrendingUp,
 };
 
 export default function StatsGrid({ bookings = [] }) {
@@ -65,32 +73,32 @@ export default function StatsGrid({ bookings = [] }) {
 
     const data = [
         {
-            key: "bookings",
-            title: "Bookings (30 d)",
-            icon: "calendar",
+            key:   "bookings",
+            title: t("overview.bookings30d"),
+            icon:  icons.calendar,
             value: m.currBookings,
-            diff: m.bookingDiff,
+            diff:  m.bookingDiff,
         },
         {
-            key: "guests",
-            title: "Guests (30 d)",
-            icon: "users",
+            key:   "guests",
+            title: t("overview.guests30d"),
+            icon:  icons.users,
             value: m.currGuests,
-            diff: m.guestDiff,
+            diff:  m.guestDiff,
         },
         {
-            key: "avg",
-            title: "Avg Guests / booking",
-            icon: "grid",
+            key:   "avg",
+            title: t("overview.avgGuests"),
+            icon:  icons.grid,
             value: m.avgGuests,
-            diff: 0,
+            diff:  0,
         },
         {
-            key: "unique",
-            title: "Unique Names",
-            icon: "trend",
+            key:   "unique",
+            title: t("overview.uniqueNames"),
+            icon:  icons.trend,
             value: m.uniqueGuests,
-            diff: 0,
+            diff:  0,
         },
     ];
 
@@ -98,7 +106,7 @@ export default function StatsGrid({ bookings = [] }) {
         <div className="p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {data.map((stat) => {
-                    const StatIcon = icons[stat.icon];
+                    const StatIcon = stat.icon;
                     const positive = Number(stat.diff) >= 0;
                     const DiffIcon = positive ? IconArrowUpRight : IconArrowDownRight;
                     const diffColor = positive ? "text-teal-500" : "text-red-500";
@@ -117,15 +125,15 @@ export default function StatsGrid({ bookings = [] }) {
                             <div className="flex items-end space-x-2 mt-4">
                                 <span className="text-2xl font-bold">{stat.value}</span>
                                 {stat.diff !== 0 && (
-                                    <span
-                                        className={`flex items-center text-sm font-semibold ${diffColor}`}
-                                    >
-                    {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
-                  </span>
+                                    <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
+                        {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
+                      </span>
                                 )}
                             </div>
                             {(stat.key === "bookings" || stat.key === "guests") && (
-                                <p className="text-xs text-gray-500 mt-2">vs previous 30 d</p>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    {t("overview.vsPrevious")}
+                                </p>
                             )}
                         </div>
                     );

@@ -1,4 +1,6 @@
 // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
+// (unchanged – reproduced verbatim)
+
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays } from "date-fns";
@@ -7,8 +9,11 @@ import AddBookingModal from "./AddBookingModal";
 import EditBookingModal from "./EditBookingModal";
 import DaySchedule from "../sharedBookings/DaySchedule";
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+import { translate } from "../../../services/i18n";
 
-// A simple pulse‐animation skeleton matching the DaySchedule card shape
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
+
 function SkeletonDaySchedule() {
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
@@ -31,7 +36,6 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
     const dateStr = format(dateObj, "yyyy-MM-dd");
 
-    // only bookings for that day
     const todaysBookings = useMemo(
         () =>
             bookings.filter(
@@ -46,7 +50,6 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
         0
     );
 
-    // fetch table availability (lunch + dinner) whenever date changes
     useEffect(() => {
         let cancelled = false;
         setLoadingTA(true);
@@ -57,11 +60,12 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
         ])
             .then(([lunch, dinner]) => {
                 if (cancelled) return;
-                // merge both into a single map keyed by dateStr
                 const merged = {};
                 [lunch, dinner].forEach((src) =>
                     Object.entries(src).forEach(([d, info]) => {
-                        merged[d] = merged[d] ? { ...merged[d], ...info } : info;
+                        merged[d] = merged[d]
+                            ? { ...merged[d], ...info }
+                            : info;
                     })
                 );
                 setTableAvailability(merged);
@@ -80,9 +84,9 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
 
     const title =
         offset === 0
-            ? "Today"
+            ? t("admin.today")
             : offset === 1
-                ? "Tomorrow"
+                ? format(addDays(new Date(), 1), "EEEE, MMM d")
                 : format(dateObj, "EEEE, MMM d");
 
     return (
@@ -107,7 +111,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
                         onClick={() => setIsAdding(true)}
                         className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                        + Manual Booking
+                        {t("admin.manualBooking")}
                     </button>
                 </div>
             </div>
@@ -115,11 +119,11 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
             {/* metrics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                 <div className="bg-blue-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">Bookings</p>
+                    <p className="text-xs text-gray-600">{t("admin.bookings")}</p>
                     <p className="text-xl font-bold">{totalBookings}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">Total Clients</p>
+                    <p className="text-xs text-gray-600">{t("admin.totalClients")}</p>
                     <p className="text-xl font-bold">{totalClients}</p>
                 </div>
             </div>

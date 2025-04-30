@@ -1,4 +1,6 @@
-// src/components/admin/algorithmTest/AlgorithmTester.jsx
+// frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
+// (unchanged – reproduced verbatim)
+
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, parseISO, isValid, addMinutes } from "date-fns";
@@ -13,10 +15,11 @@ import {
     fetchTableAvailabilityRange,
 } from "../../../services/bookingService";
 import DaySchedule from "../sharedBookings/DaySchedule";
+import { translate } from "../../../services/i18n";
 
-/* ------------------------------------------------------------------
-   Re-usable loading skeleton (same look&feel as Current/Future views)
-------------------------------------------------------------------- */
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
+
 function SkeletonDaySchedule() {
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
@@ -30,18 +33,17 @@ function SkeletonDaySchedule() {
 
 export default function AlgorithmTester({ bookings = [], onRefresh = () => {} }) {
     const todayISO = format(new Date(), "yyyy-MM-dd");
-    const [sizesRaw, setSizesRaw] = useState("");
-    const [dateStr, setDateStr] = useState(todayISO);
-    const [meal, setMeal] = useState("lunch");
-    const [time, setTime] = useState("13:00");
-    const [running, setRunning] = useState(false);
-    const [results, setResults] = useState([]);
-    const [ta, setTA] = useState({});
-    const [loadingTA, setLoadingTA] = useState(false);
+    const [sizesRaw, setSizesRaw]     = useState("");
+    const [dateStr, setDateStr]       = useState(todayISO);
+    const [meal, setMeal]             = useState("lunch");
+    const [time, setTime]             = useState("13:00");
+    const [running, setRunning]       = useState(false);
+    const [results, setResults]       = useState([]);
+    const [ta, setTA]                 = useState({});
+    const [loadingTA, setLoadingTA]   = useState(false);
 
     const dateObj = isValid(parseISO(dateStr)) ? parseISO(dateStr) : null;
 
-    /* -------- fetch table-availability (lunch + dinner) ------------ */
     const loadTA = async () => {
         if (!dateStr) return;
         setLoadingTA(true);
@@ -53,7 +55,9 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
             const merged = {};
             [lunch, dinner].forEach((src) =>
                 Object.entries(src).forEach(([d, obj]) => {
-                    merged[d] = merged[d] ? { ...merged[d], ...obj } : obj;
+                    merged[d] = merged[d]
+                        ? { ...merged[d], ...obj }
+                        : obj;
                 })
             );
             setTA(merged);
@@ -68,7 +72,6 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
         loadTA();
     }, [dateStr]);
 
-    /* ----------------------- run stress test ----------------------- */
     const run = async () => {
         const parts = sizesRaw
             .split(/[,\s]+/)
@@ -76,7 +79,7 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
             .filter((n) => n > 0 && Number.isFinite(n));
 
         if (parts.length === 0) {
-            alert("Enter at least one valid integer ≥ 1.");
+            alert(t("tester.partySizes"));
             return;
         }
 
@@ -94,25 +97,25 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
             }
             try {
                 await createBooking({
-                    date: dateStr,
-                    meal_type: meal,
-                    reserved_time: `${baseTime}:00`,
-                    total_adults: guests,
-                    total_kids: 0,
-                    full_name: `TEST-${guests}-${Date.now()}`,
-                    phone: null,
-                    email: null,
+                    date:           dateStr,
+                    meal_type:      meal,
+                    reserved_time:  `${baseTime}:00`,
+                    total_adults:   guests,
+                    total_kids:     0,
+                    full_name:      `TEST-${guests}-${Date.now()}`,
+                    phone:          null,
+                    email:          null,
                     special_requests: null,
-                    gdpr_consent: false,
+                    gdpr_consent:     false,
                     marketing_opt_in: false,
-                    long_stay: false,
+                    long_stay:        false,
                 });
-                log.push({ size: guests, ok: true, msg: "✓ booked" });
+                log.push({ size: guests, ok: true, msg: t("tester.ok") });
             } catch (e) {
                 log.push({
                     size: guests,
-                    ok: false,
-                    msg: e?.response?.data?.error || "rejected",
+                    ok:   false,
+                    msg:  e?.response?.data?.error || t("tester.rejected"),
                 });
             }
         }
@@ -129,25 +132,28 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
 
     return (
         <div className="space-y-8">
-            {/* Control panel ------------------------------------------------ */}
+            {/* Control panel */}
             <div className="bg-white p-6 rounded shadow max-w-lg">
                 <h2 className="text-xl font-bold mb-4 flex items-center">
-                    <IconClock className="w-5 h-5 mr-2" /> Algorithm Tester
+                    <IconClock className="w-5 h-5 mr-2" />
+                    {t("tester.title")}
                 </h2>
 
                 <label className="block text-sm font-medium mb-1">
-                    Party sizes (comma-separated)
+                    {t("tester.partySizes")}
                 </label>
                 <input
                     className="w-full border rounded p-2 mb-4"
-                    placeholder="e.g. 4,5,2,5"
+                    placeholder={t("tester.partySizes")}
                     value={sizesRaw}
                     onChange={(e) => setSizesRaw(e.target.value)}
                 />
 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                     <div>
-                        <label className="block text-sm font-medium mb-1">Date</label>
+                        <label className="block text-sm font-medium mb-1">
+                            {t("tester.date")}
+                        </label>
                         <input
                             type="date"
                             className="w-full border rounded p-2"
@@ -156,7 +162,9 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium mb-1">Meal</label>
+                        <label className="block text-sm font-medium mb-1">
+                            {t("tester.meal")}
+                        </label>
                         <select
                             className="w-full border rounded p-2"
                             value={meal}
@@ -169,7 +177,7 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
                 </div>
 
                 <label className="block text-sm font-medium mb-1">
-                    Starting time (HH:MM)
+                    {t("tester.startingTime")}
                 </label>
                 <input
                     type="time"
@@ -185,13 +193,12 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
                     className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                 >
                     <IconPlayerPlay className="w-5 h-5 mr-2" />
-                    {running ? "Running…" : "Run Test"}
+                    {running ? `${t("tester.runTest")}…` : t("tester.runTest")}
                 </button>
 
-                {/* Results list ------------------------------------------------ */}
                 {results.length > 0 && (
                     <div className="mt-6">
-                        <h4 className="font-semibold mb-2">Results</h4>
+                        <h4 className="font-semibold mb-2">{t("tester.results")}</h4>
                         <ul className="space-y-1 text-sm">
                             {results.map((r, i) => (
                                 <li
@@ -213,9 +220,9 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
                 )}
             </div>
 
-            {/* Day schedule ------------------------------------------------- */}
-            {dateObj &&
-                (loadingTA ? (
+            {/* Day schedule */}
+            {dateObj && (
+                loadingTA ? (
                     <SkeletonDaySchedule />
                 ) : (
                     <DaySchedule
@@ -225,11 +232,11 @@ export default function AlgorithmTester({ bookings = [], onRefresh = () => {} })
                         onClose={() => {}}
                         enableZoom
                     />
-                ))}
+                )
+            )}
 
-            {/* tiny status line -------------------------------------------- */}
             {loadingTA && (
-                <p className="text-sm text-gray-500">Loading table availability…</p>
+                <p className="text-sm text-gray-500">{t("tester.loadingTA")}</p>
             )}
         </div>
     );

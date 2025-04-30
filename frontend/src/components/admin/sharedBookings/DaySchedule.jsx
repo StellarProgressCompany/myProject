@@ -1,12 +1,20 @@
+// frontend/src/components/admin/sharedBookings/DaySchedule.jsx
+
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { format } from "date-fns";
 import TableUsage from "./TableUsage";
+import { translate } from "../../../services/i18n";
+
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
 
 const prettyRound = (key) => {
-    if (key.includes("first")) return { lbl: "Lunch–1st Round", bg: "bg-green-50" };
-    if (key.includes("second")) return { lbl: "Lunch–2nd Round", bg: "bg-orange-50" };
-    return { lbl: "Dinner", bg: "bg-purple-50" };
+    if (key.includes("first"))
+        return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+    if (key.includes("second"))
+        return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+    return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
 };
 
 export default function DaySchedule({
@@ -14,7 +22,7 @@ export default function DaySchedule({
                                         bookings,
                                         tableAvailability,
                                         onClose,
-                                        enableZoom = false,          // ← default moved here
+                                        enableZoom = false,
                                     }) {
     const [showFloor, setShowFloor] = useState(false);
     if (!selectedDate) return null;
@@ -22,21 +30,21 @@ export default function DaySchedule({
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     const dayInfo = tableAvailability[dateStr];
 
-    /* ------------------------------------------------------------------
-       EARLY RETURN if we have no info or the restaurant is closed
-    ------------------------------------------------------------------ */
+    /* --------------------------------------------------  early exit */
     if (!dayInfo || dayInfo === "closed") {
         return (
             <div className="mt-6 border rounded bg-white p-4 shadow">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold">
-                        Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                        {t("schedule.header", {
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                        })}
                     </h3>
                     <button
                         onClick={onClose}
                         className="text-sm text-red-500 underline"
                     >
-                        Close
+                        {t("admin.close")}
                     </button>
                 </div>
                 <p
@@ -46,15 +54,15 @@ export default function DaySchedule({
                             : "text-gray-700"
                     }
                 >
-                    {dayInfo === "closed" ? "CLOSED" : "No availability data."}
+                    {dayInfo === "closed"
+                        ? "CLOSED"
+                        : t("schedule.noBookings")}
                 </p>
             </div>
         );
     }
 
-    /* ------------------------------------------------------------------
-       Build booking lists for each service round
-    ------------------------------------------------------------------ */
+    /* --------------------- build per-round booking arrays */
     const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
         (rk) => rk in dayInfo
     );
@@ -67,16 +75,15 @@ export default function DaySchedule({
                 if (rk.includes("first")) return b.reserved_time < "15:00:00";
                 if (rk.includes("second"))
                     return (
-                        b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00"
+                        b.reserved_time >= "15:00:00" &&
+                        b.reserved_time < "20:00:00"
                     );
                 return b.reserved_time >= "20:00:00";
             })
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
     });
 
-    /* ------------------------------------------------------------------
-       Create a union of table-capacity counts across all rounds
-    ------------------------------------------------------------------ */
+    /* --------------------- union table-capacity counts */
     const fullStock = { 2: 0, 4: 0, 6: 0 };
     roundKeys.forEach((rk) => {
         const avail = dayInfo[rk]?.availability || {};
@@ -91,14 +98,14 @@ export default function DaySchedule({
         });
     });
 
-    /* ------------------------------------------------------------------
-       Render
-    ------------------------------------------------------------------ */
+    /* --------------------- render */
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">
-                    Schedule for {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                    {t("schedule.header", {
+                        date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                    })}
                 </h3>
                 <div className="space-x-3">
                     {enableZoom && (
@@ -106,14 +113,16 @@ export default function DaySchedule({
                             onClick={() => setShowFloor((v) => !v)}
                             className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
                         >
-                            {showFloor ? "Hide floor" : "Expand floor"}
+                            {showFloor
+                                ? t("admin.hideFloor")
+                                : t("admin.expandFloor")}
                         </button>
                     )}
                     <button
                         onClick={onClose}
                         className="text-sm text-red-500 underline hover:text-red-700"
                     >
-                        Close
+                        {t("admin.close")}
                     </button>
                 </div>
             </div>
@@ -131,13 +140,13 @@ export default function DaySchedule({
                                 <thead>
                                 <tr className="bg-gray-50">
                                     <th className="px-3 py-2 text-left font-semibold">
-                                        Time
+                                        {t("schedule.table.time")}
                                     </th>
                                     <th className="px-3 py-2 text-left font-semibold">
-                                        Name
+                                        {t("schedule.table.name")}
                                     </th>
                                     <th className="px-3 py-2 text-left font-semibold">
-                                        Total Clients
+                                        {t("schedule.table.totalClients")}
                                     </th>
                                 </tr>
                                 </thead>
@@ -154,7 +163,8 @@ export default function DaySchedule({
                                             {bk.full_name}
                                         </td>
                                         <td className="px-3 py-2">
-                                            {bk.total_adults + bk.total_kids}
+                                            {bk.total_adults +
+                                                bk.total_kids}
                                         </td>
                                     </tr>
                                 ))}
@@ -162,7 +172,7 @@ export default function DaySchedule({
                             </table>
                         ) : (
                             <p className="text-gray-500 mb-3">
-                                No bookings in this round.
+                                {t("schedule.noBookings")}
                             </p>
                         )}
 
@@ -181,9 +191,9 @@ export default function DaySchedule({
 }
 
 DaySchedule.propTypes = {
-    selectedDate:      PropTypes.instanceOf(Date),
-    bookings:          PropTypes.arrayOf(PropTypes.object).isRequired,
+    selectedDate: PropTypes.instanceOf(Date),
+    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
     tableAvailability: PropTypes.object.isRequired,
-    onClose:           PropTypes.func.isRequired,
-    enableZoom:        PropTypes.bool,
+    onClose: PropTypes.func.isRequired,
+    enableZoom: PropTypes.bool,
 };

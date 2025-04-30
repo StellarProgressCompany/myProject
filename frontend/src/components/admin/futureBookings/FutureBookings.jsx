@@ -1,3 +1,6 @@
+// frontend/src/components/admin/futureBookings/FutureBookings.jsx
+// (unchanged – reproduced verbatim)
+
 import React from "react";
 import BookingsOverview from "../sharedBookings/BookingsOverview";
 

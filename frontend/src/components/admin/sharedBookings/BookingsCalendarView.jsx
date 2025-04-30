@@ -10,9 +10,13 @@ import {
     isSameMonth,
     isSameDay,
 } from "date-fns";
+import { translate } from "../../../services/i18n";
+
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
 
 export default function BookingsCalendarView({
-                                                 selectedDate = null,       // ← default moved here
+                                                 selectedDate = null,
                                                  onSelectDay,
                                                  bookings,
                                              }) {
@@ -68,12 +72,12 @@ export default function BookingsCalendarView({
 
                         {bookingsCount > 0 && (
                             <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                                {bookingsCount} Bkg
+                                {bookingsCount} {t("calendar.badgeBookings")}
                             </span>
                         )}
                         {totalClients > 0 && (
                             <span className="text-xs mt-1 inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                {totalClients} Cl
+                                {totalClients} {t("calendar.badgeClients")}
                             </span>
                         )}
                     </div>
@@ -99,7 +103,7 @@ export default function BookingsCalendarView({
                     }
                     className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                 >
-                    Prev
+                    {t("calendar.prev")}
                 </button>
                 <h3 className="font-semibold">
                     {format(monthToShow, "MMMM yyyy")}
@@ -112,7 +116,7 @@ export default function BookingsCalendarView({
                     }
                     className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                 >
-                    Next
+                    {t("calendar.next")}
                 </button>
             </div>
 
@@ -129,6 +133,6 @@ export default function BookingsCalendarView({
 
 BookingsCalendarView.propTypes = {
     selectedDate: PropTypes.instanceOf(Date),
-    onSelectDay:  PropTypes.func.isRequired,
-    bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
+    onSelectDay: PropTypes.func.isRequired,
+    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
 };

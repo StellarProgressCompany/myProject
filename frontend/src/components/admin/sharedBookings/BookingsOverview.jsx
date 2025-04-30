@@ -1,4 +1,8 @@
-// src/components/Admin/SharedBookings/BookingsOverview.jsx
+// frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
+// (unchanged – reproduced verbatim)
+
+// frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
+
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import {
@@ -8,39 +12,36 @@ import {
     parseISO,
     differenceInCalendarDays,
 } from "date-fns";
+
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
 import BookingsCompactView from "./BookingsCompactView";
 import BookingsCalendarView from "./BookingsCalendarView";
 import BookingsChart from "./BookingsChart";
 import DaySchedule from "./DaySchedule";
-import AddBookingModal from "../CurrentBookings/AddBookingModal";
+import AddBookingModal from "../currentBookings/AddBookingModal";
+import { translate } from "../../../services/i18n";
+
+const lang = localStorage.getItem("adminLang") || "ca";
+const t = (key, vars) => translate(lang, key, vars);
 
 const ymd = (d) => format(d, "yyyy-MM-dd");
 
 export default function BookingsOverview({ mode, bookings }) {
-    /* ------------------------------------------------------------------
-       Local state
-    ------------------------------------------------------------------*/
     const today = new Date();
-    const [rangeDays, setRangeDays] = useState(7); // CHART window only
-    const [view, setView] = useState("compact");  // calendar | compact
+    const [rangeDays, setRangeDays] = useState(7);
+    const [view, setView] = useState("compact");
     const [selDay, setSelDay] = useState(null);
     const [ta, setTA] = useState({});
     const [loadingTA, setLoadingTA] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
-    /* ------------------------------------------------------------------
-       Derived start / end for fetch + chart filtering
-    ------------------------------------------------------------------*/
     const start = mode === "future" ? today : subDays(today, rangeDays);
-    const end = mode === "future" ? addDays(today, rangeDays) : today;
+    const end   = mode === "future" ? addDays(today, rangeDays) : today;
 
-    /* compact allowed only on 7‑day window */
     useEffect(() => {
         if (view === "compact" && rangeDays !== 7) setView("calendar");
     }, [view, rangeDays]);
 
-    /* Fetch table availability for [start,end] whenever window changes */
     useEffect(() => {
         (async () => {
             setLoadingTA(true);
@@ -52,12 +53,13 @@ export default function BookingsOverview({ mode, bookings }) {
                 const merged = {};
                 [lunch, dinner].forEach((src) =>
                     Object.entries(src).forEach(([d, info]) => {
-                        merged[d] = merged[d] ? { ...merged[d], ...info } : info;
+                        merged[d] = merged[d]
+                            ? { ...merged[d], ...info }
+                            : info;
                     })
                 );
                 setTA(merged);
-            } catch (e) {
-                console.error(e);
+            } catch {
                 setTA({});
             } finally {
                 setLoadingTA(false);
@@ -65,17 +67,16 @@ export default function BookingsOverview({ mode, bookings }) {
         })();
     }, [mode, rangeDays]);
 
-    /* Filter bookings according to MODE + WINDOW */
     const filtered = bookings.filter((b) => {
         const dateStr = b.table_availability?.date || b.date;
         const d = parseISO(dateStr);
         if (mode === "future" && differenceInCalendarDays(d, today) <= 0) return false;
-        if (mode === "past" && differenceInCalendarDays(d, today) >= 0) return false;
+        if (mode === "past"   && differenceInCalendarDays(d, today) >= 0) return false;
         return d >= start && d <= end;
     });
 
     const totalBookings = filtered.length;
-    const totalClients = filtered.reduce(
+    const totalClients  = filtered.reduce(
         (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
@@ -85,30 +86,31 @@ export default function BookingsOverview({ mode, bookings }) {
         window.location.reload();
     };
 
-    /* ------------------------------------------------------------------
-       Render
-    ------------------------------------------------------------------*/
     return (
         <div className="p-6 bg-white rounded shadow space-y-6">
-            {/* Header -----------------------------------------------------------*/}
+            {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold">
-                        {mode === "future" ? "Future" : "Past"} Bookings
+                        {mode === "future"
+                            ? t("overview.futureBookings")
+                            : t("overview.pastBookings")}
                     </h2>
                     <p className="text-sm text-gray-500">
-                        Data window for chart: {ymd(start)} → {ymd(end)}
+                        {t("overview.dataWindow", {
+                            start: ymd(start),
+                            end:   ymd(end),
+                        })}
                     </p>
                 </div>
-                {/* Only list-view selector stays here */}
                 <div>
                     <select
                         className="border rounded p-1"
                         value={view}
                         onChange={(e) => setView(e.target.value)}
                     >
-                        {rangeDays === 7 && <option value="compact">Compact</option>}
-                        <option value="calendar">Calendar</option>
+                        {rangeDays === 7 && <option value="compact">{t("admin.compact")}</option>}
+                        <option value="calendar">{t("admin.calendar")}</option>
                     </select>
                 </div>
             </div>
@@ -116,16 +118,16 @@ export default function BookingsOverview({ mode, bookings }) {
             {/* Totals */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">Bookings</p>
+                    <p className="text-xs text-gray-600">{t("overview.bookings30d")}</p>
                     <p className="text-xl font-bold">{totalBookings}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">Total Clients</p>
+                    <p className="text-xs text-gray-600">{t("overview.guests30d")}</p>
                     <p className="text-xl font-bold">{totalClients}</p>
                 </div>
             </div>
 
-            {/* List view (Calendar / Compact) */}
+            {/* List view */}
             {view === "compact" && (
                 <BookingsCompactView
                     mode={mode}
@@ -143,7 +145,7 @@ export default function BookingsOverview({ mode, bookings }) {
                 />
             )}
 
-            {/* Chart controls ----------------------------------------------------*/}
+            {/* Chart controls */}
             <div className="flex justify-end mt-6 mb-2">
                 <select
                     className="border rounded p-1"
@@ -152,15 +154,15 @@ export default function BookingsOverview({ mode, bookings }) {
                 >
                     {mode === "future" ? (
                         <>
-                            <option value={7}>Upcoming 7 d</option>
-                            <option value={30}>Upcoming 1 mo</option>
-                            <option value={90}>Upcoming 3 mo</option>
+                            <option value={7}>{t("overview.upcomingRange", { n: 7 })}</option>
+                            <option value={30}>{t("overview.upcomingRange", { n: 30 })}</option>
+                            <option value={90}>{t("overview.upcomingRange", { n: 90 })}</option>
                         </>
                     ) : (
                         <>
-                            <option value={7}>Past 7 d</option>
-                            <option value={30}>Past 1 mo</option>
-                            <option value={90}>Past 3 mo</option>
+                            <option value={7}>{t("overview.pastRange", { n: 7 })}</option>
+                            <option value={30}>{t("overview.pastRange", { n: 30 })}</option>
+                            <option value={90}>{t("overview.pastRange", { n: 90 })}</option>
                         </>
                     )}
                 </select>
@@ -174,7 +176,7 @@ export default function BookingsOverview({ mode, bookings }) {
                 days={rangeDays}
             />
 
-            {/* Day drill‑in */}
+            {/* Day drill-in */}
             {selDay && (
                 <div className="mt-4 relative">
                     {mode === "future" && (
@@ -182,7 +184,7 @@ export default function BookingsOverview({ mode, bookings }) {
                             onClick={() => setShowModal(true)}
                             className="absolute right-0 -top-10 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
                         >
-                            + Manual Booking
+                            {t("admin.manualBooking")}
                         </button>
                     )}
                     <DaySchedule

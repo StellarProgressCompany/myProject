@@ -1,5 +1,4 @@
 // frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
-// (unchanged – reproduced verbatim)
 
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
@@ -15,10 +14,7 @@ import {
     fetchTableAvailabilityRange,
 } from "../../../services/bookingService";
 import DaySchedule from "../sharedBookings/DaySchedule";
-import { translate } from "../../../services/i18n";
-
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
+import { translate, getLanguage } from "../../../services/i18n";
 
 function SkeletonDaySchedule() {
     return (
@@ -32,6 +28,9 @@ function SkeletonDaySchedule() {
 }
 
 export default function AlgorithmTester({ bookings = [], onRefresh = () => {} }) {
+    const lang = getLanguage();
+    const t    = (key, vars) => translate(lang, key, vars);
+
     const todayISO = format(new Date(), "yyyy-MM-dd");
     const [sizesRaw, setSizesRaw]     = useState("");
     const [dateStr, setDateStr]       = useState(todayISO);

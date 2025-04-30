@@ -1,37 +1,39 @@
 // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
-// (unchanged – reproduced verbatim)
 
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays } from "date-fns";
+import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
 
 import AddBookingModal from "./AddBookingModal";
 import EditBookingModal from "./EditBookingModal";
 import DaySchedule from "../sharedBookings/DaySchedule";
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-import { translate } from "../../../services/i18n";
-
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
+import { translate, getLanguage } from "../../../services/i18n";
 
 function SkeletonDaySchedule() {
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
-            <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
-            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-6 bg-gray-200 rounded w-3/4" />
+            <div className="h-4 bg-gray-200 rounded" />
+            <div className="h-4 bg-gray-200 rounded" />
+            <div className="h-4 bg-gray-200 rounded" />
         </div>
     );
 }
 
 export default function CurrentBookings({ bookings, onDataRefresh }) {
-    const [offset, setOffset] = useState(0);
-    const [isAdding, setIsAdding] = useState(false);
+    const lang      = getLanguage();
+    const t         = (key, vars) => translate(lang, key, vars);
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const locale    = localeMap[lang] || enUS;
+
+    const [offset, setOffset]               = useState(0);
+    const [isAdding, setIsAdding]           = useState(false);
     const [editingBooking, setEditingBooking] = useState(null);
 
     const [tableAvailability, setTableAvailability] = useState({});
-    const [loadingTA, setLoadingTA] = useState(false);
+    const [loadingTA, setLoadingTA]                 = useState(false);
 
     const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
     const dateStr = format(dateObj, "yyyy-MM-dd");
@@ -45,7 +47,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     );
 
     const totalBookings = todaysBookings.length;
-    const totalClients = todaysBookings.reduce(
+    const totalClients  = todaysBookings.reduce(
         (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
@@ -85,9 +87,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     const title =
         offset === 0
             ? t("admin.today")
-            : offset === 1
-                ? format(addDays(new Date(), 1), "EEEE, MMM d")
-                : format(dateObj, "EEEE, MMM d");
+            : format(dateObj, "EEEE, MMMM d", { locale });
 
     return (
         <div className="bg-white p-4 rounded shadow">
@@ -167,6 +167,6 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
 }
 
 CurrentBookings.propTypes = {
-    bookings: PropTypes.array.isRequired,
+    bookings:      PropTypes.array.isRequired,
     onDataRefresh: PropTypes.func.isRequired,
 };

@@ -10,6 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.2",
+    "@heroicons/react": "^2.2.0",
     "@tabler/icons-react": "^3.30.0",
     "axios": "^1.7.9",
     "chart.js": "^4.4.8",

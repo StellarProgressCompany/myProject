@@ -1,5 +1,4 @@
 // frontend/src/components/admin/metrics/StatsGrid.jsx
-// (unchanged – reproduced verbatim)
 
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
@@ -12,14 +11,10 @@ import {
     IconTrendingUp,
 } from "@tabler/icons-react";
 import { parseISO, subDays } from "date-fns";
-import { translate } from "../../../services/i18n";
+import { translate, getLanguage } from "../../../services/i18n";
 
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
-
-/* crunch the last-30-days stats */
 function computeMetrics(bookings) {
-    const today = new Date();
+    const today     = new Date();
     const startCurr = subDays(today, 30);
     const startPrev = subDays(today, 60);
 
@@ -32,15 +27,15 @@ function computeMetrics(bookings) {
     bookings.forEach((b) => {
         const dateStr = b.table_availability?.date || b.date;
         if (!dateStr) return;
-        const d = parseISO(dateStr);
+        const d      = parseISO(dateStr);
         const guests = (b.total_adults || 0) + (b.total_kids || 0);
         uniqueGuests.add(b.full_name?.trim() || `#${b.id}`);
         if (d >= startCurr && d <= today) {
             currBookings++;
-            currGuests += guests;
+            currGuests  += guests;
         } else if (d >= startPrev && d < startCurr) {
             prevBookings++;
-            prevGuests += guests;
+            prevGuests  += guests;
         }
     });
 
@@ -55,9 +50,9 @@ function computeMetrics(bookings) {
         currBookings,
         currGuests,
         uniqueGuests: uniqueGuests.size,
-        avgGuests: currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
-        bookingDiff: bookingDiff.toFixed(0),
-        guestDiff: guestDiff.toFixed(0),
+        avgGuests:    currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
+        bookingDiff:  bookingDiff.toFixed(0),
+        guestDiff:    guestDiff.toFixed(0),
     };
 }
 
@@ -69,6 +64,9 @@ const icons = {
 };
 
 export default function StatsGrid({ bookings = [] }) {
+    const lang = getLanguage();
+    const t    = (key, vars) => translate(lang, key, vars);
+
     const m = useMemo(() => computeMetrics(bookings), [bookings]);
 
     const data = [
@@ -126,8 +124,8 @@ export default function StatsGrid({ bookings = [] }) {
                                 <span className="text-2xl font-bold">{stat.value}</span>
                                 {stat.diff !== 0 && (
                                     <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
-                        {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
-                      </span>
+                                        {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
+                                    </span>
                                 )}
                             </div>
                             {(stat.key === "bookings" || stat.key === "guests") && (

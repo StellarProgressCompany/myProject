@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+
 import {
     IconCalendarClock,
     IconClock,
@@ -9,23 +10,22 @@ import {
     IconChartBar,
     IconLogout,
     IconRefresh,
-    IconFlask,
-    IconLanguage,
 } from "@tabler/icons-react";
 
+import LanguagePicker      from "../components/admin/utils/LanguagePicker.jsx";
 import { fetchAllBookings } from "../services/bookingService";
-import CurrentBookings from "../components/admin/currentBookings/CurrentBookings";
-import BookingsOverview from "../components/admin/sharedBookings/BookingsOverview";
-import StatsGrid from "../components/admin/metrics/StatsGrid";
-import AlgorithmTester from "../components/admin/algorithmTest/AlgorithmTester";
-import { translate } from "../services/i18n";
+import CurrentBookings     from "../components/admin/currentBookings/CurrentBookings";
+import BookingsOverview    from "../components/admin/sharedBookings/BookingsOverview";
+import StatsGrid           from "../components/admin/metrics/StatsGrid";
+import AlgorithmTester     from "../components/admin/algorithmTest/AlgorithmTester";
+import { translate, setLanguage } from "../services/i18n";
 
 const navMeta = [
     { key: "current", icon: IconClock },
     { key: "future",  icon: IconCalendarClock },
     { key: "past",    icon: IconHistory },
     { key: "metrics", icon: IconChartBar },
-    { key: "tester",  icon: IconFlask },
+    { key: "tester",  icon: IconChartBar },
 ];
 
 export default function AdminDashboard() {
@@ -38,14 +38,14 @@ export default function AdminDashboard() {
     const t = (key, vars) => translate(lang, key, vars);
 
     const changeLang = (lng) => {
-        localStorage.setItem("adminLang", lng);
+        setLanguage(lng);
         setLang(lng);
     };
 
     // ─── Bookings state ───
-    const [active, setActive]     = useState("current");
+    const [active,   setActive]   = useState("current");
     const [bookings, setBookings] = useState([]);
-    const [loading, setLoading]   = useState(true);
+    const [loading,  setLoading]  = useState(true);
 
     const loadBookings = useCallback(async () => {
         setLoading(true);
@@ -101,7 +101,12 @@ export default function AdminDashboard() {
             case "metrics":
                 return <StatsGrid bookings={bookings} />;
             case "tester":
-                return <AlgorithmTester bookings={bookings} onRefresh={loadBookings} />;
+                return (
+                    <AlgorithmTester
+                        bookings={bookings}
+                        onRefresh={loadBookings}
+                    />
+                );
             default:
                 return null;
         }
@@ -116,25 +121,15 @@ export default function AdminDashboard() {
             <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                 <div className="border-b">
                     <div className="flex items-center justify-between p-4">
-                        <span className="text-xl font-semibold">{t("admin.title")}</span>
+            <span className="text-xl font-semibold">
+              {t("admin.title")}
+            </span>
                         <code className="text-sm text-gray-500">
                             {t("admin.versionPrefix")}{version}
                         </code>
                     </div>
                     <div className="px-4 pb-4">
-                        <label className="flex items-center text-xs font-medium text-gray-600 mb-1">
-                            <IconLanguage className="w-4 h-4 mr-2" />
-                            {t("admin.language")}
-                        </label>
-                        <select
-                            value={lang}
-                            onChange={(e) => changeLang(e.target.value)}
-                            className="w-full border rounded p-2 text-sm"
-                        >
-                            <option value="ca">Català</option>
-                            <option value="es">Español</option>
-                            <option value="en">English</option>
-                        </select>
+                        <LanguagePicker onChange={changeLang} />
                     </div>
                 </div>
 

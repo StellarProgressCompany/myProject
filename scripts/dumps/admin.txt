@@ -268,89 +268,76 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/AddBookingModal.jsx
     // frontend/src/components/admin/currentBookings/AddBookingModal.jsx
-    // (unchanged – reproduced verbatim)
-    
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format } from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     import { createBooking } from "../../../services/bookingService";
     import { getDayMealTypes } from "../../../services/datePicker";
-    import { translate } from "../../../services/i18n";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    // 15-minute helper to build time slots
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    
+    // helper to build 15-minute slot list
     const buildSlots = (start, end) => {
-        const slots = [];
+        const out = [];
         let [h, m] = start.split(":").map(Number);
         const [eh, em] = end.split(":").map(Number);
-    
         while (h < eh || (h === eh && m <= em)) {
-            slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+            out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
             m += 15;
-            if (m === 60) {
-                h += 1;
-                m = 0;
-            }
+            if (m === 60) { h += 1; m = 0; }
         }
-        return slots;
+        return out;
     };
     
-    const lunchFirstSlots = buildSlots("13:00", "14:00");
+    const lunchFirstSlots  = buildSlots("13:00", "14:00");
     const lunchSecondSlots = buildSlots("15:00", "16:00");
-    const dinnerSlots = buildSlots("20:00", "22:00");
+    const dinnerSlots      = buildSlots("20:00", "22:00");
     
     export default function AddBookingModal({ dateObj, onClose, onSaved }) {
-        // Determine current language: default Catalan ('ca')
-        const lang = localStorage.getItem("lang") || "ca";
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
     
-        // Meal types allowed today (e.g. ["lunch", "dinner"] or [])
         const allowedMeals = useMemo(
             () => getDayMealTypes(dateObj.getDay()),
             [dateObj]
         );
     
-        // State
+        // form state
         const [mealType, setMealType] = useState(
             allowedMeals.includes("lunch") ? "lunch" : "dinner"
         );
-        const [round, setRound] = useState("first");
-        const [time, setTime] = useState(lunchFirstSlots[0]);
+        const [round, setRound]       = useState("first");
+        const [time, setTime]         = useState(lunchFirstSlots[0]);
         const [fullName, setFullName] = useState("");
-        const [party, setParty] = useState(2);
-        const [phone, setPhone] = useState("");
-        const [saving, setSaving] = useState(false);
-        const [error, setError] = useState("");
+        const [party, setParty]       = useState(2);
+        const [phone, setPhone]       = useState("");
+        const [saving, setSaving]     = useState(false);
+        const [error, setError]       = useState("");
     
-        // Ensure mealType stays valid if allowedMeals change
-        useEffect(() => {
-            if (!allowedMeals.includes(mealType)) {
-                setMealType(allowedMeals[0] || "lunch");
-            }
-        }, [allowedMeals.join(","), mealType]);
-    
-        // Update time options when mealType or round changes
+        // keep time options valid
         const timeOptions = useMemo(() => {
-            if (mealType === "lunch") {
+            if (mealType === "lunch")
                 return round === "first" ? lunchFirstSlots : lunchSecondSlots;
-            }
             return dinnerSlots;
         }, [mealType, round]);
     
         useEffect(() => {
-            if (!timeOptions.includes(time)) {
-                setTime(timeOptions[0]);
-            }
+            if (!timeOptions.includes(time)) setTime(timeOptions[0]);
         }, [timeOptions, time]);
     
+        // save handler
         const saveBooking = async () => {
             if (saving) return;
             if (!fullName.trim() || party < 1) {
-                setError(translate(lang, "modal", "fullName") + " " + translate(lang, "modal", "guests") + " " + translate(lang, "modal", "errorRequired", {}));
+                setError(
+                    t("modal.errorRequired")
+                );
                 return;
             }
-    
-            setSaving(true);
-            setError("");
-    
+            setSaving(true); setError("");
             try {
                 await createBooking({
                     date: format(dateObj, "yyyy-MM-dd"),
@@ -358,7 +345,7 @@
                     reserved_time: time,
                     total_adults: party,
                     total_kids: 0,
-                    full_name: fullName,
+                    full_name: fullName.trim(),
                     phone: phone || null,
                     email: null,
                     special_requests: null,
@@ -367,10 +354,10 @@
                 });
                 onSaved();
             } catch (e) {
-                setError(e.response?.data?.error ?? translate(lang, "modal", "saveError", {}));
-            } finally {
-                setSaving(false);
-            }
+                setError(
+                    e.response?.data?.error || t("modal.saveError")
+                );
+            } finally { setSaving(false); }
         };
     
         const closedDay = allowedMeals.length === 0;
@@ -379,25 +366,23 @@
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                 <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
                     <h3 className="text-lg font-bold mb-4">
-                        {translate(lang, "modal", "addTitle")}
+                        {t("modal.addTitle")}
                     </h3>
+    
+                    {/* localized date line */}
                     <p className="text-sm mb-4">
-                        {translate(lang, "modal", "dateDisplay", {
-                            weekday: format(dateObj, "EEEE"),
-                            day:     format(dateObj, "d"),
-                            month:   format(dateObj, "LLL"),
-                            year:    format(dateObj, "yyyy"),
-                        })}
+                        {format(dateObj, "EEEE, d MMMM yyyy", { locale })}
                     </p>
     
                     {closedDay ? (
                         <p className="text-red-600 font-semibold mb-4">
-                            {translate(lang, "modal", "closedDay", {})}
+                            {t("modal.closedDay")}
                         </p>
                     ) : (
                         <>
+                            {/* name */}
                             <label className="block mb-1 text-sm font-medium">
-                                {translate(lang, "modal", "fullName")}
+                                {t("modal.fullName")}
                             </label>
                             <input
                                 className="w-full border p-2 mb-3 rounded"
@@ -405,8 +390,9 @@
                                 onChange={(e) => setFullName(e.target.value)}
                             />
     
+                            {/* party */}
                             <label className="block mb-1 text-sm font-medium">
-                                {translate(lang, "modal", "guests")}
+                                {t("modal.guests")}
                             </label>
                             <input
                                 type="number"
@@ -416,8 +402,9 @@
                                 onChange={(e) => setParty(Number(e.target.value))}
                             />
     
+                            {/* phone */}
                             <label className="block mb-1 text-sm font-medium">
-                                {translate(lang, "modal", "phoneOptional")}
+                                {t("modal.phoneOptional")}
                             </label>
                             <input
                                 className="w-full border p-2 mb-3 rounded"
@@ -425,6 +412,7 @@
                                 onChange={(e) => setPhone(e.target.value)}
                             />
     
+                            {/* meal radio */}
                             <div className="flex space-x-4 mb-3">
                                 {allowedMeals.includes("lunch") && (
                                     <label className="flex items-center space-x-1">
@@ -433,7 +421,7 @@
                                             checked={mealType === "lunch"}
                                             onChange={() => setMealType("lunch")}
                                         />
-                                        <span>{translate(lang, "modal", "meal.lunch")}</span>
+                                        <span>{t("modal.meal.lunch")}</span>
                                     </label>
                                 )}
                                 {allowedMeals.includes("dinner") && (
@@ -443,11 +431,12 @@
                                             checked={mealType === "dinner"}
                                             onChange={() => setMealType("dinner")}
                                         />
-                                        <span>{translate(lang, "modal", "meal.dinner")}</span>
+                                        <span>{t("modal.meal.dinner")}</span>
                                     </label>
                                 )}
                             </div>
     
+                            {/* round radio */}
                             {mealType === "lunch" && (
                                 <div className="flex space-x-4 mb-3">
                                     <label className="flex items-center space-x-1">
@@ -456,7 +445,7 @@
                                             checked={round === "first"}
                                             onChange={() => setRound("first")}
                                         />
-                                        <span>{translate(lang, "modal", "round.first")}</span>
+                                        <span>{t("modal.round.first")}</span>
                                     </label>
                                     <label className="flex items-center space-x-1">
                                         <input
@@ -464,22 +453,23 @@
                                             checked={round === "second"}
                                             onChange={() => setRound("second")}
                                         />
-                                        <span>{translate(lang, "modal", "round.second")}</span>
+                                        <span>{t("modal.round.second")}</span>
                                     </label>
                                 </div>
                             )}
     
+                            {/* time select */}
                             <label className="block mb-1 text-sm font-medium">
-                                {translate(lang, "modal", "time")}
+                                {t("modal.time")}
                             </label>
                             <select
                                 className="w-full border p-2 mb-3 rounded"
                                 value={time}
                                 onChange={(e) => setTime(e.target.value)}
                             >
-                                {timeOptions.map((t) => (
-                                    <option key={t} value={t}>
-                                        {t.slice(0, 5)}
+                                {timeOptions.map((tOpt) => (
+                                    <option key={tOpt} value={tOpt}>
+                                        {tOpt.slice(0, 5)}
                                     </option>
                                 ))}
                             </select>
@@ -494,7 +484,7 @@
                             className="px-4 py-1 border rounded"
                             disabled={saving}
                         >
-                            {translate(lang, "modal", "close")}
+                            {t("modal.close")}
                         </button>
                         {!closedDay && (
                             <button
@@ -502,9 +492,11 @@
                                 className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
                                 disabled={saving}
                             >
-                                {saving
-                                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    : translate(lang, "modal", "save")}
+                                {saving ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    t("modal.save")
+                                )}
                             </button>
                         )}
                     </div>
@@ -1025,23 +1017,20 @@
     
     import React, { useState } from "react";
     import { format } from "date-fns";
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
     import TableUsage from "./TableUsage";
-    import { translate } from "../../../services/i18n";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
-    
-    const prettyRound = (key) => {
-        if (key.includes("first"))
-            return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
-        if (key.includes("second"))
-            return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
-        return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+    const localeMap = {
+        en: enUS,
+        es: esLocale,
+        ca: caLocale,
     };
     
-    /**
-     * DaySchedule – shows three rounds & optional floor plan.
-     */
     export default function DaySchedule({
                                             selectedDate,
                                             bookings,
@@ -1049,10 +1038,16 @@
                                             onClose,
                                             enableZoom = false,
                                         }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        // **Re-added** showFloor state:
         const [showFloor, setShowFloor] = useState(false);
+    
         if (!selectedDate) return null;
     
-        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
         const dayInfo = tableAvailability[dateStr];
     
         if (!dayInfo || dayInfo === "closed") {
@@ -1061,13 +1056,10 @@
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold">
                             {t("schedule.header", {
-                                date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                                date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                             })}
                         </h3>
-                        <button
-                            onClick={onClose}
-                            className="text-sm text-red-500 underline"
-                        >
+                        <button onClick={onClose} className="text-sm text-red-500 underline">
                             {t("admin.close")}
                         </button>
                     </div>
@@ -1086,13 +1078,12 @@
             );
         }
     
-        /* ---- group bookings per round ---- */
         const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
             (rk) => rk in dayInfo
         );
         const roundBookings = {};
         roundKeys.forEach((rk) => {
-            const rows = bookings
+            roundBookings[rk] = bookings
                 .filter((b) => {
                     const d = b.table_availability?.date;
                     if (d !== dateStr) return false;
@@ -1102,13 +1093,11 @@
                             b.reserved_time >= "15:00:00" &&
                             b.reserved_time < "20:00:00"
                         );
-                    return b.reserved_time >= "20:00:00"; // dinner
+                    return b.reserved_time >= "20:00:00";
                 })
                 .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
-            roundBookings[rk] = rows;
         });
     
-        /* ---- compute FULL stock for the day (per capacity) ---- */
         const fullStock = { 2: 0, 4: 0, 6: 0 };
         roundKeys.forEach((rk) => {
             const avail = dayInfo[rk]?.availability || {};
@@ -1123,12 +1112,20 @@
             });
         });
     
+        const prettyRound = (key) => {
+            if (key.includes("first"))
+                return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+            if (key.includes("second"))
+                return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+            return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+        };
+    
         return (
             <div className="mt-6 border rounded bg-white p-4 shadow">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold">
                         {t("schedule.header", {
-                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                         })}
                     </h3>
                     <div className="space-x-3">
@@ -1153,12 +1150,11 @@
     
                 {roundKeys.map((rk) => {
                     const { lbl, bg } = prettyRound(rk);
-                    const rows = roundBookings[rk];
+                    const rows        = roundBookings[rk];
     
                     return (
                         <div key={rk} className="mb-8">
                             <h4 className="text-md font-semibold mb-2">{lbl}</h4>
-    
                             {rows.length > 0 ? (
                                 <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
                                     <thead>
@@ -1187,8 +1183,7 @@
                                                 {bk.full_name}
                                             </td>
                                             <td className="px-3 py-2">
-                                                {bk.total_adults +
-                                                    bk.total_kids}
+                                                {bk.total_adults + bk.total_kids}
                                             </td>
                                         </tr>
                                     ))}
@@ -1199,7 +1194,6 @@
                                     {t("schedule.noBookings")}
                                 </p>
                             )}
-    
                             {showFloor && (
                                 <TableUsage
                                     capacityTotals={fullStock}
@@ -1227,6 +1221,8 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+    // frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+    
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import {
@@ -1239,25 +1235,49 @@
         isSameMonth,
         isSameDay,
     } from "date-fns";
-    import { translate } from "../../../services/i18n";
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
+    const localeMap = {
+        en: enUS,
+        es: esLocale,
+        ca: caLocale,
+    };
     
     export default function BookingsCalendarView({
                                                      selectedDate = null,
                                                      onSelectDay,
                                                      bookings,
                                                  }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
         const [monthToShow, setMonthToShow] = useState(new Date());
-        const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    
+        // weekday headers localized
+        const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
+            format(
+                addDays(
+                    startOfWeek(new Date(), { weekStartsOn: 1, locale }),
+                    i
+                ),
+                "EEE",
+                { locale }
+            )
+        );
+    
         const monthStart = startOfMonth(monthToShow);
-        const monthEnd = endOfMonth(monthToShow);
-        const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-        const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+        const monthEnd   = endOfMonth(monthToShow);
+        const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1, locale });
+        const gridEnd    = endOfWeek(monthEnd, { weekStartsOn: 1, locale });
     
         function getDayStats(date) {
-            const dateStr = format(date, "yyyy-MM-dd");
+            const dateStr = format(date, "yyyy-MM-dd", { locale });
             const dayBookings = bookings.filter((b) => {
                 const bd = b.table_availability?.date || b.date;
                 return bd === dateStr;
@@ -1274,12 +1294,12 @@
         while (day <= gridEnd) {
             const week = [];
             for (let i = 0; i < 7; i++) {
-                const cloneDay = day;
+                const cloneDay     = day;
                 const { bookingsCount, totalClients } = getDayStats(cloneDay);
                 const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
-                const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
+                const isSelected     = selectedDate && isSameDay(cloneDay, selectedDate);
     
-                let bg = isSelected ? "bg-blue-600" : "bg-white";
+                let bg  = isSelected ? "bg-blue-600" : "bg-white";
                 let txt = isSelected
                     ? "text-white"
                     : isCurrentMonth
@@ -1292,13 +1312,12 @@
                         onClick={() => onSelectDay(cloneDay)}
                         className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition`}
                         style={{ minWidth: 50 }}
-                        title={format(cloneDay, "EEEE, MMMM d, yyyy")}
+                        title={format(cloneDay, "EEEE, MMMM d, yyyy", { locale })}
                     >
                         <div className="flex flex-col items-center">
                             <span className="text-sm font-semibold">
-                                {format(cloneDay, "d")}
+                                {format(cloneDay, "d", { locale })}
                             </span>
-    
                             {bookingsCount > 0 && (
                                 <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
                                     {bookingsCount} {t("calendar.badgeBookings")}
@@ -1335,7 +1354,7 @@
                         {t("calendar.prev")}
                     </button>
                     <h3 className="font-semibold">
-                        {format(monthToShow, "MMMM yyyy")}
+                        {format(monthToShow, "MMMM yyyy", { locale })}
                     </h3>
                     <button
                         onClick={() =>
@@ -1362,13 +1381,14 @@
     
     BookingsCalendarView.propTypes = {
         selectedDate: PropTypes.instanceOf(Date),
-        onSelectDay: PropTypes.func.isRequired,
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        onSelectDay:  PropTypes.func.isRequired,
+        bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsChart.jsx
-    // src/components/Admin/SharedBookings/BookingsChart.jsx
+    // frontend/src/components/admin/sharedBookings/BookingsChart.jsx
+    
     import React, { useMemo } from "react";
     import PropTypes from "prop-types";
     import { Bar } from "react-chartjs-2";
@@ -1381,16 +1401,29 @@
         Legend,
     } from "chart.js";
     import { format, addDays } from "date-fns";
-    import { translate } from "../../../services/i18n";
-    
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
+    import { translate, getLanguage } from "../../../services/i18n";
     
     ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
     
+    const localeMap = {
+        en: enUS,
+        es: esLocale,
+        ca: caLocale,
+    };
+    
     export default function BookingsChart({ bookings, startDate, days }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        // count total clients per date
         const counts = bookings.reduce((map, b) => {
-            const d = b.table_availability?.date || b.date;
+            const d       = b.table_availability?.date || b.date;
             const clients = (b.total_adults || 0) + (b.total_kids || 0);
             map[d] = (map[d] || 0) + clients;
             return map;
@@ -1400,23 +1433,23 @@
             const lab = [];
             const dat = [];
             for (let i = 0; i < days; i++) {
-                const d = addDays(startDate, i);
-                const key = format(d, "yyyy-MM-dd");
-                lab.push(format(d, "MMM d"));
+                const d   = addDays(startDate, i);
+                const key = format(d, "yyyy-MM-dd", { locale });
+                lab.push(format(d, "MMMM d", { locale }));
                 dat.push(counts[key] || 0);
             }
             return { labels: lab, data: dat };
-        }, [counts, startDate, days]);
+        }, [counts, startDate, days, locale]);
     
         const chartData = {
             labels,
             datasets: [
                 {
-                    label: t("chart.totalPeople"),
+                    label:           t("chart.totalPeople"),
                     data,
                     backgroundColor: "#4F46E5",
-                    borderRadius: 5,
-                    barPercentage: 0.6,
+                    borderRadius:    5,
+                    barPercentage:   0.6,
                 },
             ],
         };
@@ -1426,15 +1459,15 @@
                 legend: { display: false },
                 tooltip: {
                     backgroundColor: "rgba(0,0,0,0.7)",
-                    titleFont: { size: 14 },
-                    bodyFont: { size: 12 },
-                    padding: 10,
+                    titleFont:       { size: 14 },
+                    bodyFont:        { size: 12 },
+                    padding:         10,
                 },
             },
             scales: {
                 x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
                 y: {
-                    grid: { color: "#E5E7EB" },
+                    grid:  { color: "#E5E7EB" },
                     ticks: { color: "#9CA3AF", stepSize: 1 },
                 },
             },
@@ -1454,20 +1487,30 @@
     }
     
     BookingsChart.propTypes = {
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        bookings:  PropTypes.arrayOf(PropTypes.object).isRequired,
         startDate: PropTypes.instanceOf(Date).isRequired,
-        days: PropTypes.number.isRequired,
+        days:      PropTypes.number.isRequired,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
+    // frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
+    
     import React from "react";
     import PropTypes from "prop-types";
     import { format, addDays, subDays, isSameDay } from "date-fns";
-    import { translate } from "../../../services/i18n";
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
+    const localeMap = {
+        en: enUS,
+        es: esLocale,
+        ca: caLocale,
+    };
     
     export default function BookingsCompactView({
                                                     mode,
@@ -1476,16 +1519,25 @@
                                                     onSelectDay,
                                                     bookings,
                                                 }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
         const today = new Date();
-        const days = [];
+        const days  = [];
+    
         if (mode === "future") {
-            for (let i = 0; i < rangeDays; i++) days.push(addDays(today, i));
+            for (let i = 0; i < rangeDays; i++) {
+                days.push(addDays(today, i));
+            }
         } else {
-            for (let i = 1; i <= rangeDays; i++) days.push(subDays(today, i));
+            for (let i = 1; i <= rangeDays; i++) {
+                days.push(subDays(today, i));
+            }
         }
     
         function getDayStats(day) {
-            const key = format(day, "yyyy-MM-dd");
+            const key = format(day, "yyyy-MM-dd", { locale });
             const dayBookings = bookings.filter((b) => {
                 const bd = b.table_availability?.date || b.date;
                 return bd === key;
@@ -1494,7 +1546,10 @@
                 (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
                 0
             );
-            return { bookingsCount: dayBookings.length, totalClients };
+            return {
+                bookingsCount: dayBookings.length,
+                totalClients,
+            };
         }
     
         return (
@@ -1502,30 +1557,30 @@
                 {days.map((day) => {
                     const { bookingsCount, totalClients } = getDayStats(day);
                     const isSel = selectedDate && isSameDay(day, selectedDate);
-                    const bg = isSel ? "bg-blue-600" : "bg-gray-100";
-                    const txt = isSel ? "text-white" : "text-gray-800";
+                    const bg    = isSel ? "bg-blue-600" : "bg-gray-100";
+                    const txt   = isSel ? "text-white" : "text-gray-800";
     
                     return (
                         <button
                             key={day.toISOString()}
                             onClick={() => onSelectDay(day)}
                             className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
-                            title={format(day, "EEEE, MMMM d, yyyy")}
+                            title={format(day, "EEEE, MMMM d, yyyy", { locale })}
                         >
                             <span className="text-xs font-semibold">
-                                {format(day, "E")}
+                                {format(day, "E", { locale })}
                             </span>
                             <span className="text-xl font-bold">
-                                {format(day, "d")}
-                            </span>
-                            <span className="text-xs">{format(day, "MMM")}</span>
-                            <span className="mt-1 text-xs">
-                                {bookingsCount}
-                                {t("calendar.badgeBookings")}
+                                {format(day, "d", { locale })}
                             </span>
                             <span className="text-xs">
-                                {totalClients}
-                                {t("calendar.badgeClients")}
+                                {format(day, "MMMM", { locale })}
+                            </span>
+                            <span className="mt-1 text-xs">
+                                {bookingsCount} {t("calendar.badgeBookings")}
+                            </span>
+                            <span className="text-xs">
+                                {totalClients} {t("calendar.badgeClients")}
                             </span>
                         </button>
                     );
@@ -1535,11 +1590,11 @@
     }
     
     BookingsCompactView.propTypes = {
-        mode: PropTypes.oneOf(["future", "past"]).isRequired,
-        rangeDays: PropTypes.number.isRequired,
+        mode:         PropTypes.oneOf(["future", "past"]).isRequired,
+        rangeDays:    PropTypes.number.isRequired,
         selectedDate: PropTypes.instanceOf(Date),
-        onSelectDay: PropTypes.func.isRequired,
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        onSelectDay:  PropTypes.func.isRequired,
+        bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
     };
 
 ––––––––––––––––––––––––
@@ -1767,18 +1822,18 @@
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import { format } from "date-fns";
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
     import TableUsage from "./TableUsage";
-    import { translate } from "../../../services/i18n";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
-    
-    const prettyRound = (key) => {
-        if (key.includes("first"))
-            return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
-        if (key.includes("second"))
-            return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
-        return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+    const localeMap = {
+        en: enUS,
+        es: esLocale,
+        ca: caLocale,
     };
     
     export default function DaySchedule({
@@ -1788,26 +1843,28 @@
                                             onClose,
                                             enableZoom = false,
                                         }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        // **Re-added** showFloor state:
         const [showFloor, setShowFloor] = useState(false);
+    
         if (!selectedDate) return null;
     
-        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
         const dayInfo = tableAvailability[dateStr];
     
-        /* --------------------------------------------------  early exit */
         if (!dayInfo || dayInfo === "closed") {
             return (
                 <div className="mt-6 border rounded bg-white p-4 shadow">
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold">
                             {t("schedule.header", {
-                                date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                                date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                             })}
                         </h3>
-                        <button
-                            onClick={onClose}
-                            className="text-sm text-red-500 underline"
-                        >
+                        <button onClick={onClose} className="text-sm text-red-500 underline">
                             {t("admin.close")}
                         </button>
                     </div>
@@ -1826,10 +1883,10 @@
             );
         }
     
-        /* --------------------- build per-round booking arrays */
         const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
             (rk) => rk in dayInfo
         );
+    
         const roundBookings = {};
         roundKeys.forEach((rk) => {
             roundBookings[rk] = bookings
@@ -1847,12 +1904,11 @@
                 .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
         });
     
-        /* --------------------- union table-capacity counts */
         const fullStock = { 2: 0, 4: 0, 6: 0 };
         roundKeys.forEach((rk) => {
             const avail = dayInfo[rk]?.availability || {};
             const booked = {};
-            roundBookings[rk].forEach((bk) => {
+            (roundBookings[rk] || []).forEach((bk) => {
                 const cap = bk.table_availability?.capacity || 0;
                 booked[cap] = (booked[cap] || 0) + 1;
             });
@@ -1862,13 +1918,20 @@
             });
         });
     
-        /* --------------------- render */
+        const prettyRound = (key) => {
+            if (key.includes("first"))
+                return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+            if (key.includes("second"))
+                return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+            return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+        };
+    
         return (
             <div className="mt-6 border rounded bg-white p-4 shadow">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold">
                         {t("schedule.header", {
-                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                         })}
                     </h3>
                     <div className="space-x-3">
@@ -1893,7 +1956,7 @@
     
                 {roundKeys.map((rk) => {
                     const { lbl, bg } = prettyRound(rk);
-                    const rows = roundBookings[rk];
+                    const rows        = roundBookings[rk] || [];
     
                     return (
                         <div key={rk} className="mb-8">
@@ -1927,8 +1990,7 @@
                                                 {bk.full_name}
                                             </td>
                                             <td className="px-3 py-2">
-                                                {bk.total_adults +
-                                                    bk.total_kids}
+                                                {bk.total_adults + bk.total_kids}
                                             </td>
                                         </tr>
                                     ))}
@@ -1955,57 +2017,46 @@
     }
     
     DaySchedule.propTypes = {
-        selectedDate: PropTypes.instanceOf(Date),
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        selectedDate:      PropTypes.instanceOf(Date),
+        bookings:          PropTypes.arrayOf(PropTypes.object).isRequired,
         tableAvailability: PropTypes.object.isRequired,
-        onClose: PropTypes.func.isRequired,
-        enableZoom: PropTypes.bool,
+        onClose:           PropTypes.func.isRequired,
+        enableZoom:        PropTypes.bool,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/TableUsage.jsx
     // frontend/src/components/admin/sharedBookings/TableUsage.jsx
-    // (unchanged – reproduced verbatim)
-    
     import React from "react";
     import PropTypes from "prop-types";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    /**
-     * TableUsage – schematic floor-plan.
-     *
-     * Props:
-     *   capacityTotals: { [capacity: number]: number }
-     *     e.g. { 2: 5, 4: 3, 6: 2 }
-     *   bookings: Array of booking objects (with table_availability.capacity, full_name, totals, etc.)
-     *   expanded: whether to zoom floor-plan
-     *   seatSize (optional): pixels per seat unit (default: 35)
-     */
     export default function TableUsage({
                                            capacityTotals = {},
                                            bookings = [],
                                            expanded = false,
                                            seatSize = 35,
                                        }) {
-        // 1) Derive the list of all capacities from the backend data
+        const lang = getLanguage();
+        const t    = (k, p) => translate(lang, k, p);
+    
+        /* capacities list */
         const capacities = Object.keys(capacityTotals)
-            .map((c) => Number(c))
+            .map(Number)
             .filter((c) => !isNaN(c))
             .sort((a, b) => a - b);
     
-        // 2) Build a flat array of tables = { cap, booked? }
+        /* flat table array */
         const tables = [];
         capacities.forEach((cap) => {
-            const count = capacityTotals[cap] || 0;
-            for (let i = 0; i < count; i++) {
+            for (let i = 0; i < (capacityTotals[cap] || 0); i++) {
                 tables.push({ cap, booked: false });
             }
         });
     
-        // 3) Mark booked tables in order
+        /* mark booked */
         const freePtr = {};
-        capacities.forEach((cap) => {
-            freePtr[cap] = 0;
-        });
+        capacities.forEach((cap) => (freePtr[cap] = 0));
     
         bookings.forEach((bk) => {
             const cap = bk.table_availability?.capacity || 0;
@@ -2031,14 +2082,14 @@
             freePtr[cap]++;
         });
     
-        // 4) Sizing helpers
-        const scale = expanded ? 1.6 : 1;
-        const sizePx = (cap) => cap * seatSize * scale;
+        /* ui helpers */
+        const scale   = expanded ? 1.6 : 1;
+        const sizePx  = (cap) => cap * seatSize * scale;
         const bgClass = (t) => (t.booked ? "bg-green-300" : "bg-gray-200");
     
         return (
             <div className="mt-3">
-                <p className="text-sm font-semibold mb-1">Table Usage</p>
+                <p className="text-sm font-semibold mb-1">{t("tableUsage")}</p>
                 <div className="flex flex-wrap gap-3">
                     {tables.map((t, i) => (
                         <div
@@ -2046,19 +2097,20 @@
                             className={`relative flex flex-col items-center justify-center border rounded-2xl shadow-sm ${bgClass(
                                 t
                             )}`}
-                            style={{ width: sizePx(t.cap), height: sizePx(t.cap) * 0.75 }}
-                            title={
-                                t.booked ? `${t.name} (${t.guests})` : `${t.cap}-top`
-                            }
+                            style={{
+                                width:  sizePx(t.cap),
+                                height: sizePx(t.cap) * 0.75,
+                            }}
+                            title={t.booked ? `${t.name} (${t.guests})` : `${t.cap}-top`}
                         >
                             {t.booked ? (
                                 <>
-                        <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
-                          {t.name}
-                        </span>
+                    <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
+                      {t.name}
+                    </span>
                                     <span className="text-xs">
-                          {t.guests}/{t.cap}
-                        </span>
+                      {t.guests}/{t.cap}
+                    </span>
                                 </>
                             ) : (
                                 <span className="text-xs text-gray-600">{t.cap}</span>

@@ -1,7 +1,4 @@
 // frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
-// (unchanged – reproduced verbatim)
-
-// frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
 
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
@@ -19,19 +16,19 @@ import BookingsCalendarView from "./BookingsCalendarView";
 import BookingsChart from "./BookingsChart";
 import DaySchedule from "./DaySchedule";
 import AddBookingModal from "../currentBookings/AddBookingModal";
-import { translate } from "../../../services/i18n";
-
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
+import { translate, getLanguage } from "../../../services/i18n";
 
 const ymd = (d) => format(d, "yyyy-MM-dd");
 
 export default function BookingsOverview({ mode, bookings }) {
-    const today = new Date();
+    const lang = getLanguage();
+    const t    = (key, vars) => translate(lang, key, vars);
+
+    const today     = new Date();
     const [rangeDays, setRangeDays] = useState(7);
-    const [view, setView] = useState("compact");
-    const [selDay, setSelDay] = useState(null);
-    const [ta, setTA] = useState({});
+    const [view, setView]           = useState("compact");
+    const [selDay, setSelDay]       = useState(null);
+    const [ta, setTA]               = useState({});
     const [loadingTA, setLoadingTA] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
@@ -39,7 +36,9 @@ export default function BookingsOverview({ mode, bookings }) {
     const end   = mode === "future" ? addDays(today, rangeDays) : today;
 
     useEffect(() => {
-        if (view === "compact" && rangeDays !== 7) setView("calendar");
+        if (view === "compact" && rangeDays !== 7) {
+            setView("calendar");
+        }
     }, [view, rangeDays]);
 
     useEffect(() => {
@@ -69,7 +68,7 @@ export default function BookingsOverview({ mode, bookings }) {
 
     const filtered = bookings.filter((b) => {
         const dateStr = b.table_availability?.date || b.date;
-        const d = parseISO(dateStr);
+        const d       = parseISO(dateStr);
         if (mode === "future" && differenceInCalendarDays(d, today) <= 0) return false;
         if (mode === "past"   && differenceInCalendarDays(d, today) >= 0) return false;
         return d >= start && d <= end;
@@ -109,7 +108,9 @@ export default function BookingsOverview({ mode, bookings }) {
                         value={view}
                         onChange={(e) => setView(e.target.value)}
                     >
-                        {rangeDays === 7 && <option value="compact">{t("admin.compact")}</option>}
+                        {rangeDays === 7 && (
+                            <option value="compact">{t("admin.compact")}</option>
+                        )}
                         <option value="calendar">{t("admin.calendar")}</option>
                     </select>
                 </div>
@@ -210,6 +211,6 @@ export default function BookingsOverview({ mode, bookings }) {
 }
 
 BookingsOverview.propTypes = {
-    mode: PropTypes.oneOf(["future", "past"]).isRequired,
+    mode:     PropTypes.oneOf(["future", "past"]).isRequired,
     bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
 };

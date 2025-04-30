@@ -3,18 +3,18 @@
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { format } from "date-fns";
+import {
+    enUS,
+    es as esLocale,
+    ca as caLocale,
+} from "date-fns/locale";
 import TableUsage from "./TableUsage";
-import { translate } from "../../../services/i18n";
+import { translate, getLanguage } from "../../../services/i18n";
 
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
-
-const prettyRound = (key) => {
-    if (key.includes("first"))
-        return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
-    if (key.includes("second"))
-        return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
-    return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+const localeMap = {
+    en: enUS,
+    es: esLocale,
+    ca: caLocale,
 };
 
 export default function DaySchedule({
@@ -24,26 +24,28 @@ export default function DaySchedule({
                                         onClose,
                                         enableZoom = false,
                                     }) {
+    const lang   = getLanguage();
+    const t      = (k, p) => translate(lang, k, p);
+    const locale = localeMap[lang] || enUS;
+
+    // **Re-added** showFloor state:
     const [showFloor, setShowFloor] = useState(false);
+
     if (!selectedDate) return null;
 
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
     const dayInfo = tableAvailability[dateStr];
 
-    /* --------------------------------------------------  early exit */
     if (!dayInfo || dayInfo === "closed") {
         return (
             <div className="mt-6 border rounded bg-white p-4 shadow">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold">
                         {t("schedule.header", {
-                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                         })}
                     </h3>
-                    <button
-                        onClick={onClose}
-                        className="text-sm text-red-500 underline"
-                    >
+                    <button onClick={onClose} className="text-sm text-red-500 underline">
                         {t("admin.close")}
                     </button>
                 </div>
@@ -62,10 +64,10 @@ export default function DaySchedule({
         );
     }
 
-    /* --------------------- build per-round booking arrays */
     const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
         (rk) => rk in dayInfo
     );
+
     const roundBookings = {};
     roundKeys.forEach((rk) => {
         roundBookings[rk] = bookings
@@ -83,12 +85,11 @@ export default function DaySchedule({
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
     });
 
-    /* --------------------- union table-capacity counts */
     const fullStock = { 2: 0, 4: 0, 6: 0 };
     roundKeys.forEach((rk) => {
         const avail = dayInfo[rk]?.availability || {};
         const booked = {};
-        roundBookings[rk].forEach((bk) => {
+        (roundBookings[rk] || []).forEach((bk) => {
             const cap = bk.table_availability?.capacity || 0;
             booked[cap] = (booked[cap] || 0) + 1;
         });
@@ -98,13 +99,20 @@ export default function DaySchedule({
         });
     });
 
-    /* --------------------- render */
+    const prettyRound = (key) => {
+        if (key.includes("first"))
+            return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+        if (key.includes("second"))
+            return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+        return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+    };
+
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">
                     {t("schedule.header", {
-                        date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                        date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                     })}
                 </h3>
                 <div className="space-x-3">
@@ -129,7 +137,7 @@ export default function DaySchedule({
 
             {roundKeys.map((rk) => {
                 const { lbl, bg } = prettyRound(rk);
-                const rows = roundBookings[rk];
+                const rows        = roundBookings[rk] || [];
 
                 return (
                     <div key={rk} className="mb-8">
@@ -163,8 +171,7 @@ export default function DaySchedule({
                                             {bk.full_name}
                                         </td>
                                         <td className="px-3 py-2">
-                                            {bk.total_adults +
-                                                bk.total_kids}
+                                            {bk.total_adults + bk.total_kids}
                                         </td>
                                     </tr>
                                 ))}
@@ -191,9 +198,9 @@ export default function DaySchedule({
 }
 
 DaySchedule.propTypes = {
-    selectedDate: PropTypes.instanceOf(Date),
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    selectedDate:      PropTypes.instanceOf(Date),
+    bookings:          PropTypes.arrayOf(PropTypes.object).isRequired,
     tableAvailability: PropTypes.object.isRequired,
-    onClose: PropTypes.func.isRequired,
-    enableZoom: PropTypes.bool,
+    onClose:           PropTypes.func.isRequired,
+    enableZoom:        PropTypes.bool,
 };

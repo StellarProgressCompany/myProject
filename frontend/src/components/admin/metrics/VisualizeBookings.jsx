@@ -2,23 +2,20 @@
 
 import React, { useState } from "react";
 import { format } from "date-fns";
+import {
+    enUS,
+    es as esLocale,
+    ca as caLocale,
+} from "date-fns/locale";
 import TableUsage from "./TableUsage";
-import { translate } from "../../../services/i18n";
+import { translate, getLanguage } from "../../../services/i18n";
 
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
-
-const prettyRound = (key) => {
-    if (key.includes("first"))
-        return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
-    if (key.includes("second"))
-        return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
-    return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+const localeMap = {
+    en: enUS,
+    es: esLocale,
+    ca: caLocale,
 };
 
-/**
- * DaySchedule – shows three rounds & optional floor plan.
- */
 export default function DaySchedule({
                                         selectedDate,
                                         bookings,
@@ -26,10 +23,16 @@ export default function DaySchedule({
                                         onClose,
                                         enableZoom = false,
                                     }) {
+    const lang   = getLanguage();
+    const t      = (k, p) => translate(lang, k, p);
+    const locale = localeMap[lang] || enUS;
+
+    // **Re-added** showFloor state:
     const [showFloor, setShowFloor] = useState(false);
+
     if (!selectedDate) return null;
 
-    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
     const dayInfo = tableAvailability[dateStr];
 
     if (!dayInfo || dayInfo === "closed") {
@@ -38,13 +41,10 @@ export default function DaySchedule({
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-bold">
                         {t("schedule.header", {
-                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                         })}
                     </h3>
-                    <button
-                        onClick={onClose}
-                        className="text-sm text-red-500 underline"
-                    >
+                    <button onClick={onClose} className="text-sm text-red-500 underline">
                         {t("admin.close")}
                     </button>
                 </div>
@@ -63,13 +63,12 @@ export default function DaySchedule({
         );
     }
 
-    /* ---- group bookings per round ---- */
     const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
         (rk) => rk in dayInfo
     );
     const roundBookings = {};
     roundKeys.forEach((rk) => {
-        const rows = bookings
+        roundBookings[rk] = bookings
             .filter((b) => {
                 const d = b.table_availability?.date;
                 if (d !== dateStr) return false;
@@ -79,13 +78,11 @@ export default function DaySchedule({
                         b.reserved_time >= "15:00:00" &&
                         b.reserved_time < "20:00:00"
                     );
-                return b.reserved_time >= "20:00:00"; // dinner
+                return b.reserved_time >= "20:00:00";
             })
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
-        roundBookings[rk] = rows;
     });
 
-    /* ---- compute FULL stock for the day (per capacity) ---- */
     const fullStock = { 2: 0, 4: 0, 6: 0 };
     roundKeys.forEach((rk) => {
         const avail = dayInfo[rk]?.availability || {};
@@ -100,12 +97,20 @@ export default function DaySchedule({
         });
     });
 
+    const prettyRound = (key) => {
+        if (key.includes("first"))
+            return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+        if (key.includes("second"))
+            return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+        return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+    };
+
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">
                     {t("schedule.header", {
-                        date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                        date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                     })}
                 </h3>
                 <div className="space-x-3">
@@ -130,12 +135,11 @@ export default function DaySchedule({
 
             {roundKeys.map((rk) => {
                 const { lbl, bg } = prettyRound(rk);
-                const rows = roundBookings[rk];
+                const rows        = roundBookings[rk];
 
                 return (
                     <div key={rk} className="mb-8">
                         <h4 className="text-md font-semibold mb-2">{lbl}</h4>
-
                         {rows.length > 0 ? (
                             <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
                                 <thead>
@@ -164,8 +168,7 @@ export default function DaySchedule({
                                             {bk.full_name}
                                         </td>
                                         <td className="px-3 py-2">
-                                            {bk.total_adults +
-                                                bk.total_kids}
+                                            {bk.total_adults + bk.total_kids}
                                         </td>
                                     </tr>
                                 ))}
@@ -176,7 +179,6 @@ export default function DaySchedule({
                                 {t("schedule.noBookings")}
                             </p>
                         )}
-
                         {showFloor && (
                             <TableUsage
                                 capacityTotals={fullStock}

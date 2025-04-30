@@ -1,0 +1,2079 @@
+└── frontend
+    ├── /frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
+    ├── /frontend/src/components/admin/currentBookings/AddBookingModal.jsx
+    ├── /frontend/src/components/admin/currentBookings/CurrentBookings.jsx
+    ├── /frontend/src/components/admin/currentBookings/EditBookingModal.jsx
+    ├── /frontend/src/components/admin/futureBookings/FutureBookings.jsx
+    ├── /frontend/src/components/admin/metrics/StatsGrid.jsx
+    ├── /frontend/src/components/admin/metrics/VisualizeBookings.jsx
+    ├── /frontend/src/components/admin/pastBookings/PastBookings.jsx
+    ├── /frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+    ├── /frontend/src/components/admin/sharedBookings/BookingsChart.jsx
+    ├── /frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
+    ├── /frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
+    ├── /frontend/src/components/admin/sharedBookings/DaySchedule.jsx
+    ├── /frontend/src/components/admin/sharedBookings/TableUsage.jsx
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
+    // frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
+    // (unchanged – reproduced verbatim)
+    
+    import React, { useState, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import { format, parseISO, isValid, addMinutes } from "date-fns";
+    import {
+        IconPlayerPlay,
+        IconCheck,
+        IconX,
+        IconClock,
+    } from "@tabler/icons-react";
+    import {
+        createBooking,
+        fetchTableAvailabilityRange,
+    } from "../../../services/bookingService";
+    import DaySchedule from "../sharedBookings/DaySchedule";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    function SkeletonDaySchedule() {
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+            </div>
+        );
+    }
+    
+    export default function AlgorithmTester({ bookings = [], onRefresh = () => {} }) {
+        const todayISO = format(new Date(), "yyyy-MM-dd");
+        const [sizesRaw, setSizesRaw]     = useState("");
+        const [dateStr, setDateStr]       = useState(todayISO);
+        const [meal, setMeal]             = useState("lunch");
+        const [time, setTime]             = useState("13:00");
+        const [running, setRunning]       = useState(false);
+        const [results, setResults]       = useState([]);
+        const [ta, setTA]                 = useState({});
+        const [loadingTA, setLoadingTA]   = useState(false);
+    
+        const dateObj = isValid(parseISO(dateStr)) ? parseISO(dateStr) : null;
+    
+        const loadTA = async () => {
+            if (!dateStr) return;
+            setLoadingTA(true);
+            try {
+                const [lunch, dinner] = await Promise.all([
+                    fetchTableAvailabilityRange(dateStr, dateStr, "lunch"),
+                    fetchTableAvailabilityRange(dateStr, dateStr, "dinner"),
+                ]);
+                const merged = {};
+                [lunch, dinner].forEach((src) =>
+                    Object.entries(src).forEach(([d, obj]) => {
+                        merged[d] = merged[d]
+                            ? { ...merged[d], ...obj }
+                            : obj;
+                    })
+                );
+                setTA(merged);
+            } catch {
+                setTA({});
+            } finally {
+                setLoadingTA(false);
+            }
+        };
+    
+        useEffect(() => {
+            loadTA();
+        }, [dateStr]);
+    
+        const run = async () => {
+            const parts = sizesRaw
+                .split(/[,\s]+/)
+                .map((t) => parseInt(t, 10))
+                .filter((n) => n > 0 && Number.isFinite(n));
+    
+            if (parts.length === 0) {
+                alert(t("tester.partySizes"));
+                return;
+            }
+    
+            setRunning(true);
+            setResults([]);
+            let baseTime = time;
+            const log = [];
+    
+            for (let i = 0; i < parts.length; i++) {
+                const guests = parts[i];
+                if (i > 0) {
+                    const [h, m] = baseTime.split(":").map(Number);
+                    const t2 = addMinutes(new Date(0, 0, 0, h, m), 2);
+                    baseTime = format(t2, "HH:mm");
+                }
+                try {
+                    await createBooking({
+                        date:           dateStr,
+                        meal_type:      meal,
+                        reserved_time:  `${baseTime}:00`,
+                        total_adults:   guests,
+                        total_kids:     0,
+                        full_name:      `TEST-${guests}-${Date.now()}`,
+                        phone:          null,
+                        email:          null,
+                        special_requests: null,
+                        gdpr_consent:     false,
+                        marketing_opt_in: false,
+                        long_stay:        false,
+                    });
+                    log.push({ size: guests, ok: true, msg: t("tester.ok") });
+                } catch (e) {
+                    log.push({
+                        size: guests,
+                        ok:   false,
+                        msg:  e?.response?.data?.error || t("tester.rejected"),
+                    });
+                }
+            }
+    
+            setResults(log);
+            setRunning(false);
+            if (typeof onRefresh === "function") await onRefresh();
+            await loadTA();
+        };
+    
+        const dayBookings = bookings.filter(
+            (b) => (b.table_availability?.date || b.date) === dateStr
+        );
+    
+        return (
+            <div className="space-y-8">
+                {/* Control panel */}
+                <div className="bg-white p-6 rounded shadow max-w-lg">
+                    <h2 className="text-xl font-bold mb-4 flex items-center">
+                        <IconClock className="w-5 h-5 mr-2" />
+                        {t("tester.title")}
+                    </h2>
+    
+                    <label className="block text-sm font-medium mb-1">
+                        {t("tester.partySizes")}
+                    </label>
+                    <input
+                        className="w-full border rounded p-2 mb-4"
+                        placeholder={t("tester.partySizes")}
+                        value={sizesRaw}
+                        onChange={(e) => setSizesRaw(e.target.value)}
+                    />
+    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">
+                                {t("tester.date")}
+                            </label>
+                            <input
+                                type="date"
+                                className="w-full border rounded p-2"
+                                value={dateStr}
+                                onChange={(e) => setDateStr(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">
+                                {t("tester.meal")}
+                            </label>
+                            <select
+                                className="w-full border rounded p-2"
+                                value={meal}
+                                onChange={(e) => setMeal(e.target.value)}
+                            >
+                                <option value="lunch">Lunch</option>
+                                <option value="dinner">Dinner</option>
+                            </select>
+                        </div>
+                    </div>
+    
+                    <label className="block text-sm font-medium mb-1">
+                        {t("tester.startingTime")}
+                    </label>
+                    <input
+                        type="time"
+                        step={900}
+                        className="w-full border rounded p-2 mb-6"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                    />
+    
+                    <button
+                        onClick={run}
+                        disabled={running}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        <IconPlayerPlay className="w-5 h-5 mr-2" />
+                        {running ? `${t("tester.runTest")}…` : t("tester.runTest")}
+                    </button>
+    
+                    {results.length > 0 && (
+                        <div className="mt-6">
+                            <h4 className="font-semibold mb-2">{t("tester.results")}</h4>
+                            <ul className="space-y-1 text-sm">
+                                {results.map((r, i) => (
+                                    <li
+                                        key={i}
+                                        className={`flex items-center ${
+                                            r.ok ? "text-green-700" : "text-red-600"
+                                        }`}
+                                    >
+                                        {r.ok ? (
+                                            <IconCheck className="w-4 h-4 mr-1" />
+                                        ) : (
+                                            <IconX className="w-4 h-4 mr-1" />
+                                        )}
+                                        {r.size} → {r.msg}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+    
+                {/* Day schedule */}
+                {dateObj && (
+                    loadingTA ? (
+                        <SkeletonDaySchedule />
+                    ) : (
+                        <DaySchedule
+                            selectedDate={dateObj}
+                            bookings={dayBookings}
+                            tableAvailability={ta}
+                            onClose={() => {}}
+                            enableZoom
+                        />
+                    )
+                )}
+    
+                {loadingTA && (
+                    <p className="text-sm text-gray-500">{t("tester.loadingTA")}</p>
+                )}
+            </div>
+        );
+    }
+    
+    AlgorithmTester.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object),
+        onRefresh: PropTypes.func,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/AddBookingModal.jsx
+    // frontend/src/components/admin/currentBookings/AddBookingModal.jsx
+    // (unchanged – reproduced verbatim)
+    
+    import React, { useState, useMemo, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import { format } from "date-fns";
+    import { createBooking } from "../../../services/bookingService";
+    import { getDayMealTypes } from "../../../services/datePicker";
+    import { translate } from "../../../services/i18n";
+    
+    // 15-minute helper to build time slots
+    const buildSlots = (start, end) => {
+        const slots = [];
+        let [h, m] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+    
+        while (h < eh || (h === eh && m <= em)) {
+            slots.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+            m += 15;
+            if (m === 60) {
+                h += 1;
+                m = 0;
+            }
+        }
+        return slots;
+    };
+    
+    const lunchFirstSlots = buildSlots("13:00", "14:00");
+    const lunchSecondSlots = buildSlots("15:00", "16:00");
+    const dinnerSlots = buildSlots("20:00", "22:00");
+    
+    export default function AddBookingModal({ dateObj, onClose, onSaved }) {
+        // Determine current language: default Catalan ('ca')
+        const lang = localStorage.getItem("lang") || "ca";
+    
+        // Meal types allowed today (e.g. ["lunch", "dinner"] or [])
+        const allowedMeals = useMemo(
+            () => getDayMealTypes(dateObj.getDay()),
+            [dateObj]
+        );
+    
+        // State
+        const [mealType, setMealType] = useState(
+            allowedMeals.includes("lunch") ? "lunch" : "dinner"
+        );
+        const [round, setRound] = useState("first");
+        const [time, setTime] = useState(lunchFirstSlots[0]);
+        const [fullName, setFullName] = useState("");
+        const [party, setParty] = useState(2);
+        const [phone, setPhone] = useState("");
+        const [saving, setSaving] = useState(false);
+        const [error, setError] = useState("");
+    
+        // Ensure mealType stays valid if allowedMeals change
+        useEffect(() => {
+            if (!allowedMeals.includes(mealType)) {
+                setMealType(allowedMeals[0] || "lunch");
+            }
+        }, [allowedMeals.join(","), mealType]);
+    
+        // Update time options when mealType or round changes
+        const timeOptions = useMemo(() => {
+            if (mealType === "lunch") {
+                return round === "first" ? lunchFirstSlots : lunchSecondSlots;
+            }
+            return dinnerSlots;
+        }, [mealType, round]);
+    
+        useEffect(() => {
+            if (!timeOptions.includes(time)) {
+                setTime(timeOptions[0]);
+            }
+        }, [timeOptions, time]);
+    
+        const saveBooking = async () => {
+            if (saving) return;
+            if (!fullName.trim() || party < 1) {
+                setError(translate(lang, "modal", "fullName") + " " + translate(lang, "modal", "guests") + " " + translate(lang, "modal", "errorRequired", {}));
+                return;
+            }
+    
+            setSaving(true);
+            setError("");
+    
+            try {
+                await createBooking({
+                    date: format(dateObj, "yyyy-MM-dd"),
+                    meal_type: mealType,
+                    reserved_time: time,
+                    total_adults: party,
+                    total_kids: 0,
+                    full_name: fullName,
+                    phone: phone || null,
+                    email: null,
+                    special_requests: null,
+                    gdpr_consent: false,
+                    marketing_opt_in: false,
+                });
+                onSaved();
+            } catch (e) {
+                setError(e.response?.data?.error ?? translate(lang, "modal", "saveError", {}));
+            } finally {
+                setSaving(false);
+            }
+        };
+    
+        const closedDay = allowedMeals.length === 0;
+    
+        return (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
+                    <h3 className="text-lg font-bold mb-4">
+                        {translate(lang, "modal", "addTitle")}
+                    </h3>
+                    <p className="text-sm mb-4">
+                        {translate(lang, "modal", "dateDisplay", {
+                            weekday: format(dateObj, "EEEE"),
+                            day:     format(dateObj, "d"),
+                            month:   format(dateObj, "LLL"),
+                            year:    format(dateObj, "yyyy"),
+                        })}
+                    </p>
+    
+                    {closedDay ? (
+                        <p className="text-red-600 font-semibold mb-4">
+                            {translate(lang, "modal", "closedDay", {})}
+                        </p>
+                    ) : (
+                        <>
+                            <label className="block mb-1 text-sm font-medium">
+                                {translate(lang, "modal", "fullName")}
+                            </label>
+                            <input
+                                className="w-full border p-2 mb-3 rounded"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                            />
+    
+                            <label className="block mb-1 text-sm font-medium">
+                                {translate(lang, "modal", "guests")}
+                            </label>
+                            <input
+                                type="number"
+                                min={1}
+                                className="w-full border p-2 mb-3 rounded"
+                                value={party}
+                                onChange={(e) => setParty(Number(e.target.value))}
+                            />
+    
+                            <label className="block mb-1 text-sm font-medium">
+                                {translate(lang, "modal", "phoneOptional")}
+                            </label>
+                            <input
+                                className="w-full border p-2 mb-3 rounded"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                            />
+    
+                            <div className="flex space-x-4 mb-3">
+                                {allowedMeals.includes("lunch") && (
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={mealType === "lunch"}
+                                            onChange={() => setMealType("lunch")}
+                                        />
+                                        <span>{translate(lang, "modal", "meal.lunch")}</span>
+                                    </label>
+                                )}
+                                {allowedMeals.includes("dinner") && (
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={mealType === "dinner"}
+                                            onChange={() => setMealType("dinner")}
+                                        />
+                                        <span>{translate(lang, "modal", "meal.dinner")}</span>
+                                    </label>
+                                )}
+                            </div>
+    
+                            {mealType === "lunch" && (
+                                <div className="flex space-x-4 mb-3">
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={round === "first"}
+                                            onChange={() => setRound("first")}
+                                        />
+                                        <span>{translate(lang, "modal", "round.first")}</span>
+                                    </label>
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={round === "second"}
+                                            onChange={() => setRound("second")}
+                                        />
+                                        <span>{translate(lang, "modal", "round.second")}</span>
+                                    </label>
+                                </div>
+                            )}
+    
+                            <label className="block mb-1 text-sm font-medium">
+                                {translate(lang, "modal", "time")}
+                            </label>
+                            <select
+                                className="w-full border p-2 mb-3 rounded"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                            >
+                                {timeOptions.map((t) => (
+                                    <option key={t} value={t}>
+                                        {t.slice(0, 5)}
+                                    </option>
+                                ))}
+                            </select>
+                        </>
+                    )}
+    
+                    {error && <p className="text-red-600 mb-2">{error}</p>}
+    
+                    <div className="flex justify-end space-x-2">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-1 border rounded"
+                            disabled={saving}
+                        >
+                            {translate(lang, "modal", "close")}
+                        </button>
+                        {!closedDay && (
+                            <button
+                                onClick={saveBooking}
+                                className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                                disabled={saving}
+                            >
+                                {saving
+                                    ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                    : translate(lang, "modal", "save")}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    AddBookingModal.propTypes = {
+        dateObj: PropTypes.instanceOf(Date).isRequired,
+        onClose: PropTypes.func.isRequired,
+        onSaved: PropTypes.func.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/CurrentBookings.jsx
+    // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
+    // (unchanged – reproduced verbatim)
+    
+    import React, { useState, useMemo, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import { format, addDays } from "date-fns";
+    
+    import AddBookingModal from "./AddBookingModal";
+    import EditBookingModal from "./EditBookingModal";
+    import DaySchedule from "../sharedBookings/DaySchedule";
+    import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    function SkeletonDaySchedule() {
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+            </div>
+        );
+    }
+    
+    export default function CurrentBookings({ bookings, onDataRefresh }) {
+        const [offset, setOffset] = useState(0);
+        const [isAdding, setIsAdding] = useState(false);
+        const [editingBooking, setEditingBooking] = useState(null);
+    
+        const [tableAvailability, setTableAvailability] = useState({});
+        const [loadingTA, setLoadingTA] = useState(false);
+    
+        const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
+        const dateStr = format(dateObj, "yyyy-MM-dd");
+    
+        const todaysBookings = useMemo(
+            () =>
+                bookings.filter(
+                    (b) => (b.table_availability?.date || b.date) === dateStr
+                ),
+            [bookings, dateStr]
+        );
+    
+        const totalBookings = todaysBookings.length;
+        const totalClients = todaysBookings.reduce(
+            (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
+            0
+        );
+    
+        useEffect(() => {
+            let cancelled = false;
+            setLoadingTA(true);
+    
+            Promise.all([
+                fetchTableAvailabilityRange(dateStr, dateStr, "lunch"),
+                fetchTableAvailabilityRange(dateStr, dateStr, "dinner"),
+            ])
+                .then(([lunch, dinner]) => {
+                    if (cancelled) return;
+                    const merged = {};
+                    [lunch, dinner].forEach((src) =>
+                        Object.entries(src).forEach(([d, info]) => {
+                            merged[d] = merged[d]
+                                ? { ...merged[d], ...info }
+                                : info;
+                        })
+                    );
+                    setTableAvailability(merged);
+                })
+                .catch(() => {
+                    if (!cancelled) setTableAvailability({});
+                })
+                .finally(() => {
+                    if (!cancelled) setLoadingTA(false);
+                });
+    
+            return () => {
+                cancelled = true;
+            };
+        }, [dateStr]);
+    
+        const title =
+            offset === 0
+                ? t("admin.today")
+                : offset === 1
+                    ? format(addDays(new Date(), 1), "EEEE, MMM d")
+                    : format(dateObj, "EEEE, MMM d");
+    
+        return (
+            <div className="bg-white p-4 rounded shadow">
+                {/* header + controls */}
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <h2 className="text-xl font-bold">{title}</h2>
+                    <div className="space-x-2">
+                        <button
+                            onClick={() => setOffset((o) => o - 1)}
+                            className="px-2 py-1 border rounded"
+                        >
+                            ◀
+                        </button>
+                        <button
+                            onClick={() => setOffset((o) => o + 1)}
+                            className="px-2 py-1 border rounded"
+                        >
+                            ▶
+                        </button>
+                        <button
+                            onClick={() => setIsAdding(true)}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                        >
+                            {t("admin.manualBooking")}
+                        </button>
+                    </div>
+                </div>
+    
+                {/* metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="bg-blue-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("admin.bookings")}</p>
+                        <p className="text-xl font-bold">{totalBookings}</p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("admin.totalClients")}</p>
+                        <p className="text-xl font-bold">{totalClients}</p>
+                    </div>
+                </div>
+    
+                {/* day schedule or skeleton */}
+                {loadingTA ? (
+                    <SkeletonDaySchedule />
+                ) : (
+                    <DaySchedule
+                        selectedDate={dateObj}
+                        bookings={todaysBookings}
+                        tableAvailability={tableAvailability}
+                        onClose={() => {}}
+                        enableZoom
+                    />
+                )}
+    
+                {/* add / edit modals */}
+                {isAdding && (
+                    <AddBookingModal
+                        dateObj={dateObj}
+                        onClose={() => setIsAdding(false)}
+                        onSaved={() => {
+                            setIsAdding(false);
+                            onDataRefresh();
+                        }}
+                    />
+                )}
+                {editingBooking && (
+                    <EditBookingModal
+                        booking={editingBooking}
+                        onClose={() => setEditingBooking(null)}
+                        onSaved={() => {
+                            setEditingBooking(null);
+                            onDataRefresh();
+                        }}
+                    />
+                )}
+            </div>
+        );
+    }
+    
+    CurrentBookings.propTypes = {
+        bookings: PropTypes.array.isRequired,
+        onDataRefresh: PropTypes.func.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/EditBookingModal.jsx
+    // frontend/src/components/admin/currentBookings/EditBookingModal.jsx
+    // (unchanged – reproduced verbatim)
+    import React, { useState } from "react";
+    import PropTypes from "prop-types";
+    import { updateBooking, deleteBooking } from "../../../services/bookingService";
+    
+    export default function EditBookingModal({ booking, onClose, onSaved }) {
+        const [fullName, setFullName] = useState(booking.full_name);
+        const [adults, setAdults] = useState(booking.total_adults);
+        const [kids, setKids] = useState(booking.total_kids);
+        const [phone, setPhone] = useState(booking.phone || "");
+        const [time, setTime] = useState(booking.reserved_time.slice(0, 5));
+        const [saving, setSaving] = useState(false);
+        const [error, setError] = useState("");
+    
+        const handleSave = async () => {
+            if (saving) return;
+            if (!fullName.trim() || adults < 1) {
+                return setError("Name and at least 1 adult required.");
+            }
+            setSaving(true);
+            setError("");
+    
+            try {
+                await updateBooking(booking.id, {
+                    full_name:
+                        fullName.trim() !== booking.full_name
+                            ? fullName.trim()
+                            : undefined,
+                    total_adults: adults,
+                    total_kids: kids,
+                    phone: phone || null,
+                    reserved_time: `${time}:00`,
+                });
+                onSaved();
+            } catch (e) {
+                console.error(e);
+                setError(e.response?.data?.error ?? "Update failed");
+            } finally {
+                setSaving(false);
+            }
+        };
+    
+        const handleDelete = async () => {
+            if (!window.confirm("Delete this booking?")) return;
+            setSaving(true);
+    
+            try {
+                await deleteBooking(booking.id);
+                onSaved();
+            } catch (e) {
+                console.error(e);
+                setError("Delete failed");
+            } finally {
+                setSaving(false);
+            }
+        };
+    
+        return (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
+                    <h3 className="text-lg font-bold mb-4">Edit Booking</h3>
+    
+                    <label className="block mb-1 text-sm font-medium">Full Name</label>
+                    <input
+                        className="w-full border p-2 mb-3 rounded"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                    />
+    
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                            <label className="block mb-1 text-sm font-medium">Adults</label>
+                            <input
+                                type="number"
+                                min={1}
+                                className="w-full border p-2 rounded"
+                                value={adults}
+                                onChange={(e) => setAdults(Number(e.target.value))}
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-1 text-sm font-medium">Kids</label>
+                            <input
+                                type="number"
+                                min={0}
+                                className="w-full border p-2 rounded"
+                                value={kids}
+                                onChange={(e) => setKids(Number(e.target.value))}
+                            />
+                        </div>
+                    </div>
+    
+                    <label className="block mb-1 text-sm font-medium">Phone</label>
+                    <input
+                        className="w-full border p-2 mb-3 rounded"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                    />
+    
+                    <label className="block mb-1 text-sm font-medium">Time (HH:MM)</label>
+                    <input
+                        type="time"
+                        step={900}
+                        className="w-full border p-2 mb-3 rounded"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                    />
+    
+                    {error && <p className="text-red-600 mb-2">{error}</p>}
+    
+                    <div className="flex justify-between items-center">
+                        <button
+                            onClick={handleDelete}
+                            className="px-3 py-1 text-red-600 underline disabled:opacity-50"
+                            disabled={saving}
+                        >
+                            Delete
+                        </button>
+                        <div className="space-x-2">
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-1 border rounded"
+                                disabled={saving}
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    "Save"
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    EditBookingModal.propTypes = {
+        booking: PropTypes.shape({
+            id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
+                .isRequired,
+            full_name: PropTypes.string,
+            total_adults: PropTypes.number,
+            total_kids: PropTypes.number,
+            phone: PropTypes.string,
+            reserved_time: PropTypes.string,
+        }).isRequired,
+        onClose: PropTypes.func.isRequired,
+        onSaved: PropTypes.func.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/futureBookings/FutureBookings.jsx
+    // frontend/src/components/admin/futureBookings/FutureBookings.jsx
+    // (unchanged – reproduced verbatim)
+    
+    import React from "react";
+    import BookingsOverview from "../sharedBookings/BookingsOverview";
+    
+    // eslint-disable-next-line react/prop-types
+    export default function FutureBookings({ bookings }) {
+        return <BookingsOverview mode="future" bookings={bookings} />;
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/metrics/StatsGrid.jsx
+    // frontend/src/components/admin/metrics/StatsGrid.jsx
+    // (unchanged – reproduced verbatim)
+    
+    import React, { useMemo } from "react";
+    import PropTypes from "prop-types";
+    import {
+        IconArrowDownRight,
+        IconArrowUpRight,
+        IconCalendarStats,
+        IconUsers,
+        IconLayoutGrid,
+        IconTrendingUp,
+    } from "@tabler/icons-react";
+    import { parseISO, subDays } from "date-fns";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    /* crunch the last-30-days stats */
+    function computeMetrics(bookings) {
+        const today = new Date();
+        const startCurr = subDays(today, 30);
+        const startPrev = subDays(today, 60);
+    
+        let currBookings = 0,
+            prevBookings = 0,
+            currGuests   = 0,
+            prevGuests   = 0,
+            uniqueGuests = new Set();
+    
+        bookings.forEach((b) => {
+            const dateStr = b.table_availability?.date || b.date;
+            if (!dateStr) return;
+            const d = parseISO(dateStr);
+            const guests = (b.total_adults || 0) + (b.total_kids || 0);
+            uniqueGuests.add(b.full_name?.trim() || `#${b.id}`);
+            if (d >= startCurr && d <= today) {
+                currBookings++;
+                currGuests += guests;
+            } else if (d >= startPrev && d < startCurr) {
+                prevBookings++;
+                prevGuests += guests;
+            }
+        });
+    
+        const bookingDiff = prevBookings === 0
+            ? 100
+            : ((currBookings - prevBookings) / prevBookings) * 100;
+        const guestDiff = prevGuests === 0
+            ? 100
+            : ((currGuests - prevGuests) / prevGuests) * 100;
+    
+        return {
+            currBookings,
+            currGuests,
+            uniqueGuests: uniqueGuests.size,
+            avgGuests: currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
+            bookingDiff: bookingDiff.toFixed(0),
+            guestDiff: guestDiff.toFixed(0),
+        };
+    }
+    
+    const icons = {
+        calendar: IconCalendarStats,
+        users:    IconUsers,
+        grid:     IconLayoutGrid,
+        trend:    IconTrendingUp,
+    };
+    
+    export default function StatsGrid({ bookings = [] }) {
+        const m = useMemo(() => computeMetrics(bookings), [bookings]);
+    
+        const data = [
+            {
+                key:   "bookings",
+                title: t("overview.bookings30d"),
+                icon:  icons.calendar,
+                value: m.currBookings,
+                diff:  m.bookingDiff,
+            },
+            {
+                key:   "guests",
+                title: t("overview.guests30d"),
+                icon:  icons.users,
+                value: m.currGuests,
+                diff:  m.guestDiff,
+            },
+            {
+                key:   "avg",
+                title: t("overview.avgGuests"),
+                icon:  icons.grid,
+                value: m.avgGuests,
+                diff:  0,
+            },
+            {
+                key:   "unique",
+                title: t("overview.uniqueNames"),
+                icon:  icons.trend,
+                value: m.uniqueGuests,
+                diff:  0,
+            },
+        ];
+    
+        return (
+            <div className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    {data.map((stat) => {
+                        const StatIcon = stat.icon;
+                        const positive = Number(stat.diff) >= 0;
+                        const DiffIcon = positive ? IconArrowUpRight : IconArrowDownRight;
+                        const diffColor = positive ? "text-teal-500" : "text-red-500";
+    
+                        return (
+                            <div
+                                key={stat.key}
+                                className="border rounded-md p-4 shadow bg-white"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-gray-500 font-semibold uppercase">
+                                        {stat.title}
+                                    </p>
+                                    <StatIcon className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <div className="flex items-end space-x-2 mt-4">
+                                    <span className="text-2xl font-bold">{stat.value}</span>
+                                    {stat.diff !== 0 && (
+                                        <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
+                            {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
+                          </span>
+                                    )}
+                                </div>
+                                {(stat.key === "bookings" || stat.key === "guests") && (
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        {t("overview.vsPrevious")}
+                                    </p>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+    
+    StatsGrid.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object),
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/metrics/VisualizeBookings.jsx
+    // frontend/src/components/admin/metrics/VisualizeBookings.jsx
+    
+    import React, { useState } from "react";
+    import { format } from "date-fns";
+    import TableUsage from "./TableUsage";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    const prettyRound = (key) => {
+        if (key.includes("first"))
+            return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+        if (key.includes("second"))
+            return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+        return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+    };
+    
+    /**
+     * DaySchedule – shows three rounds & optional floor plan.
+     */
+    export default function DaySchedule({
+                                            selectedDate,
+                                            bookings,
+                                            tableAvailability,
+                                            onClose,
+                                            enableZoom = false,
+                                        }) {
+        const [showFloor, setShowFloor] = useState(false);
+        if (!selectedDate) return null;
+    
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const dayInfo = tableAvailability[dateStr];
+    
+        if (!dayInfo || dayInfo === "closed") {
+            return (
+                <div className="mt-6 border rounded bg-white p-4 shadow">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold">
+                            {t("schedule.header", {
+                                date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                            })}
+                        </h3>
+                        <button
+                            onClick={onClose}
+                            className="text-sm text-red-500 underline"
+                        >
+                            {t("admin.close")}
+                        </button>
+                    </div>
+                    <p
+                        className={
+                            dayInfo === "closed"
+                                ? "text-red-600 font-semibold"
+                                : "text-gray-700"
+                        }
+                    >
+                        {dayInfo === "closed"
+                            ? "CLOSED"
+                            : t("schedule.noBookings")}
+                    </p>
+                </div>
+            );
+        }
+    
+        /* ---- group bookings per round ---- */
+        const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
+            (rk) => rk in dayInfo
+        );
+        const roundBookings = {};
+        roundKeys.forEach((rk) => {
+            const rows = bookings
+                .filter((b) => {
+                    const d = b.table_availability?.date;
+                    if (d !== dateStr) return false;
+                    if (rk.includes("first")) return b.reserved_time < "15:00:00";
+                    if (rk.includes("second"))
+                        return (
+                            b.reserved_time >= "15:00:00" &&
+                            b.reserved_time < "20:00:00"
+                        );
+                    return b.reserved_time >= "20:00:00"; // dinner
+                })
+                .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
+            roundBookings[rk] = rows;
+        });
+    
+        /* ---- compute FULL stock for the day (per capacity) ---- */
+        const fullStock = { 2: 0, 4: 0, 6: 0 };
+        roundKeys.forEach((rk) => {
+            const avail = dayInfo[rk]?.availability || {};
+            const bookedCounts = { 2: 0, 4: 0, 6: 0 };
+            roundBookings[rk].forEach((bk) => {
+                const cap = bk.table_availability?.capacity || 0;
+                bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
+            });
+            [2, 4, 6].forEach((cap) => {
+                const totalHere = (avail[cap] ?? 0) + bookedCounts[cap];
+                fullStock[cap] = Math.max(fullStock[cap], totalHere);
+            });
+        });
+    
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">
+                        {t("schedule.header", {
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                        })}
+                    </h3>
+                    <div className="space-x-3">
+                        {enableZoom && (
+                            <button
+                                onClick={() => setShowFloor((v) => !v)}
+                                className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
+                            >
+                                {showFloor
+                                    ? t("admin.hideFloor")
+                                    : t("admin.expandFloor")}
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-sm text-red-500 underline hover:text-red-700"
+                        >
+                            {t("admin.close")}
+                        </button>
+                    </div>
+                </div>
+    
+                {roundKeys.map((rk) => {
+                    const { lbl, bg } = prettyRound(rk);
+                    const rows = roundBookings[rk];
+    
+                    return (
+                        <div key={rk} className="mb-8">
+                            <h4 className="text-md font-semibold mb-2">{lbl}</h4>
+    
+                            {rows.length > 0 ? (
+                                <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
+                                    <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.time")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.name")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.totalClients")}
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {rows.map((bk) => (
+                                        <tr
+                                            key={bk.id}
+                                            className={`${bg} hover:bg-yellow-50 transition`}
+                                        >
+                                            <td className="px-3 py-2">
+                                                {bk.reserved_time.slice(0, 5)}
+                                            </td>
+                                            <td className="px-3 py-2 truncate max-w-[160px]">
+                                                {bk.full_name}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {bk.total_adults +
+                                                    bk.total_kids}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-gray-500 mb-3">
+                                    {t("schedule.noBookings")}
+                                </p>
+                            )}
+    
+                            {showFloor && (
+                                <TableUsage
+                                    capacityTotals={fullStock}
+                                    bookings={rows}
+                                    expanded
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/pastBookings/PastBookings.jsx
+    // frontend/src/components/admin/pastBookings/PastBookings.jsx
+    
+    import React from "react";
+    import BookingsOverview from "../sharedBookings/BookingsOverview";
+    
+    export default function PastBookings({ bookings }) {
+        return <BookingsOverview mode="past" bookings={bookings} />;
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+    import React, { useState } from "react";
+    import PropTypes from "prop-types";
+    import {
+        format,
+        startOfMonth,
+        endOfMonth,
+        startOfWeek,
+        endOfWeek,
+        addDays,
+        isSameMonth,
+        isSameDay,
+    } from "date-fns";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    export default function BookingsCalendarView({
+                                                     selectedDate = null,
+                                                     onSelectDay,
+                                                     bookings,
+                                                 }) {
+        const [monthToShow, setMonthToShow] = useState(new Date());
+        const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+        const monthStart = startOfMonth(monthToShow);
+        const monthEnd = endOfMonth(monthToShow);
+        const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+        const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    
+        function getDayStats(date) {
+            const dateStr = format(date, "yyyy-MM-dd");
+            const dayBookings = bookings.filter((b) => {
+                const bd = b.table_availability?.date || b.date;
+                return bd === dateStr;
+            });
+            const totalClients = dayBookings.reduce(
+                (acc, b) => acc + (b.table_availability?.capacity || 0),
+                0
+            );
+            return { bookingsCount: dayBookings.length, totalClients };
+        }
+    
+        const rows = [];
+        let day = gridStart;
+        while (day <= gridEnd) {
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const cloneDay = day;
+                const { bookingsCount, totalClients } = getDayStats(cloneDay);
+                const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
+                const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
+    
+                let bg = isSelected ? "bg-blue-600" : "bg-white";
+                let txt = isSelected
+                    ? "text-white"
+                    : isCurrentMonth
+                        ? "text-gray-800"
+                        : "text-gray-400";
+    
+                week.push(
+                    <button
+                        key={cloneDay.toISOString()}
+                        onClick={() => onSelectDay(cloneDay)}
+                        className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition`}
+                        style={{ minWidth: 50 }}
+                        title={format(cloneDay, "EEEE, MMMM d, yyyy")}
+                    >
+                        <div className="flex flex-col items-center">
+                            <span className="text-sm font-semibold">
+                                {format(cloneDay, "d")}
+                            </span>
+    
+                            {bookingsCount > 0 && (
+                                <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                                    {bookingsCount} {t("calendar.badgeBookings")}
+                                </span>
+                            )}
+                            {totalClients > 0 && (
+                                <span className="text-xs mt-1 inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                                    {totalClients} {t("calendar.badgeClients")}
+                                </span>
+                            )}
+                        </div>
+                    </button>
+                );
+                day = addDays(day, 1);
+            }
+            rows.push(
+                <div key={rows.length} className="grid grid-cols-7">
+                    {week}
+                </div>
+            );
+        }
+    
+        return (
+            <div className="bg-white p-4 rounded shadow">
+                <div className="flex items-center justify-between mb-2">
+                    <button
+                        onClick={() =>
+                            setMonthToShow((prev) =>
+                                new Date(prev.setMonth(prev.getMonth() - 1))
+                            )
+                        }
+                        className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                    >
+                        {t("calendar.prev")}
+                    </button>
+                    <h3 className="font-semibold">
+                        {format(monthToShow, "MMMM yyyy")}
+                    </h3>
+                    <button
+                        onClick={() =>
+                            setMonthToShow((prev) =>
+                                new Date(prev.setMonth(prev.getMonth() + 1))
+                            )
+                        }
+                        className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                    >
+                        {t("calendar.next")}
+                    </button>
+                </div>
+    
+                <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
+                    {weekdayLabels.map((lbl) => (
+                        <div key={lbl}>{lbl}</div>
+                    ))}
+                </div>
+    
+                {rows}
+            </div>
+        );
+    }
+    
+    BookingsCalendarView.propTypes = {
+        selectedDate: PropTypes.instanceOf(Date),
+        onSelectDay: PropTypes.func.isRequired,
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsChart.jsx
+    // src/components/Admin/SharedBookings/BookingsChart.jsx
+    import React, { useMemo } from "react";
+    import PropTypes from "prop-types";
+    import { Bar } from "react-chartjs-2";
+    import {
+        Chart as ChartJS,
+        BarElement,
+        CategoryScale,
+        LinearScale,
+        Tooltip,
+        Legend,
+    } from "chart.js";
+    import { format, addDays } from "date-fns";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+    
+    export default function BookingsChart({ bookings, startDate, days }) {
+        const counts = bookings.reduce((map, b) => {
+            const d = b.table_availability?.date || b.date;
+            const clients = (b.total_adults || 0) + (b.total_kids || 0);
+            map[d] = (map[d] || 0) + clients;
+            return map;
+        }, {});
+    
+        const { labels, data } = useMemo(() => {
+            const lab = [];
+            const dat = [];
+            for (let i = 0; i < days; i++) {
+                const d = addDays(startDate, i);
+                const key = format(d, "yyyy-MM-dd");
+                lab.push(format(d, "MMM d"));
+                dat.push(counts[key] || 0);
+            }
+            return { labels: lab, data: dat };
+        }, [counts, startDate, days]);
+    
+        const chartData = {
+            labels,
+            datasets: [
+                {
+                    label: t("chart.totalPeople"),
+                    data,
+                    backgroundColor: "#4F46E5",
+                    borderRadius: 5,
+                    barPercentage: 0.6,
+                },
+            ],
+        };
+    
+        const options = {
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: "rgba(0,0,0,0.7)",
+                    titleFont: { size: 14 },
+                    bodyFont: { size: 12 },
+                    padding: 10,
+                },
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+                y: {
+                    grid: { color: "#E5E7EB" },
+                    ticks: { color: "#9CA3AF", stepSize: 1 },
+                },
+            },
+            maintainAspectRatio: false,
+        };
+    
+        return (
+            <div className="p-4 bg-white rounded shadow">
+                <h3 className="text-lg font-bold mb-4">
+                    {t("chart.titleTotalPeople")}
+                </h3>
+                <div className="w-full" style={{ height: 300 }}>
+                    <Bar data={chartData} options={options} />
+                </div>
+            </div>
+        );
+    }
+    
+    BookingsChart.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        startDate: PropTypes.instanceOf(Date).isRequired,
+        days: PropTypes.number.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
+    import React from "react";
+    import PropTypes from "prop-types";
+    import { format, addDays, subDays, isSameDay } from "date-fns";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    export default function BookingsCompactView({
+                                                    mode,
+                                                    rangeDays,
+                                                    selectedDate = null,
+                                                    onSelectDay,
+                                                    bookings,
+                                                }) {
+        const today = new Date();
+        const days = [];
+        if (mode === "future") {
+            for (let i = 0; i < rangeDays; i++) days.push(addDays(today, i));
+        } else {
+            for (let i = 1; i <= rangeDays; i++) days.push(subDays(today, i));
+        }
+    
+        function getDayStats(day) {
+            const key = format(day, "yyyy-MM-dd");
+            const dayBookings = bookings.filter((b) => {
+                const bd = b.table_availability?.date || b.date;
+                return bd === key;
+            });
+            const totalClients = dayBookings.reduce(
+                (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
+                0
+            );
+            return { bookingsCount: dayBookings.length, totalClients };
+        }
+    
+        return (
+            <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow">
+                {days.map((day) => {
+                    const { bookingsCount, totalClients } = getDayStats(day);
+                    const isSel = selectedDate && isSameDay(day, selectedDate);
+                    const bg = isSel ? "bg-blue-600" : "bg-gray-100";
+                    const txt = isSel ? "text-white" : "text-gray-800";
+    
+                    return (
+                        <button
+                            key={day.toISOString()}
+                            onClick={() => onSelectDay(day)}
+                            className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
+                            title={format(day, "EEEE, MMMM d, yyyy")}
+                        >
+                            <span className="text-xs font-semibold">
+                                {format(day, "E")}
+                            </span>
+                            <span className="text-xl font-bold">
+                                {format(day, "d")}
+                            </span>
+                            <span className="text-xs">{format(day, "MMM")}</span>
+                            <span className="mt-1 text-xs">
+                                {bookingsCount}
+                                {t("calendar.badgeBookings")}
+                            </span>
+                            <span className="text-xs">
+                                {totalClients}
+                                {t("calendar.badgeClients")}
+                            </span>
+                        </button>
+                    );
+                })}
+            </div>
+        );
+    }
+    
+    BookingsCompactView.propTypes = {
+        mode: PropTypes.oneOf(["future", "past"]).isRequired,
+        rangeDays: PropTypes.number.isRequired,
+        selectedDate: PropTypes.instanceOf(Date),
+        onSelectDay: PropTypes.func.isRequired,
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
+    // frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
+    // (unchanged – reproduced verbatim)
+    
+    // frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
+    
+    import React, { useState, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import {
+        format,
+        addDays,
+        subDays,
+        parseISO,
+        differenceInCalendarDays,
+    } from "date-fns";
+    
+    import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+    import BookingsCompactView from "./BookingsCompactView";
+    import BookingsCalendarView from "./BookingsCalendarView";
+    import BookingsChart from "./BookingsChart";
+    import DaySchedule from "./DaySchedule";
+    import AddBookingModal from "../currentBookings/AddBookingModal";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    const ymd = (d) => format(d, "yyyy-MM-dd");
+    
+    export default function BookingsOverview({ mode, bookings }) {
+        const today = new Date();
+        const [rangeDays, setRangeDays] = useState(7);
+        const [view, setView] = useState("compact");
+        const [selDay, setSelDay] = useState(null);
+        const [ta, setTA] = useState({});
+        const [loadingTA, setLoadingTA] = useState(false);
+        const [showModal, setShowModal] = useState(false);
+    
+        const start = mode === "future" ? today : subDays(today, rangeDays);
+        const end   = mode === "future" ? addDays(today, rangeDays) : today;
+    
+        useEffect(() => {
+            if (view === "compact" && rangeDays !== 7) setView("calendar");
+        }, [view, rangeDays]);
+    
+        useEffect(() => {
+            (async () => {
+                setLoadingTA(true);
+                try {
+                    const [lunch, dinner] = await Promise.all([
+                        fetchTableAvailabilityRange(ymd(start), ymd(end), "lunch"),
+                        fetchTableAvailabilityRange(ymd(start), ymd(end), "dinner"),
+                    ]);
+                    const merged = {};
+                    [lunch, dinner].forEach((src) =>
+                        Object.entries(src).forEach(([d, info]) => {
+                            merged[d] = merged[d]
+                                ? { ...merged[d], ...info }
+                                : info;
+                        })
+                    );
+                    setTA(merged);
+                } catch {
+                    setTA({});
+                } finally {
+                    setLoadingTA(false);
+                }
+            })();
+        }, [mode, rangeDays]);
+    
+        const filtered = bookings.filter((b) => {
+            const dateStr = b.table_availability?.date || b.date;
+            const d = parseISO(dateStr);
+            if (mode === "future" && differenceInCalendarDays(d, today) <= 0) return false;
+            if (mode === "past"   && differenceInCalendarDays(d, today) >= 0) return false;
+            return d >= start && d <= end;
+        });
+    
+        const totalBookings = filtered.length;
+        const totalClients  = filtered.reduce(
+            (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
+            0
+        );
+    
+        const handleSaved = () => {
+            setShowModal(false);
+            window.location.reload();
+        };
+    
+        return (
+            <div className="p-6 bg-white rounded shadow space-y-6">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold">
+                            {mode === "future"
+                                ? t("overview.futureBookings")
+                                : t("overview.pastBookings")}
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            {t("overview.dataWindow", {
+                                start: ymd(start),
+                                end:   ymd(end),
+                            })}
+                        </p>
+                    </div>
+                    <div>
+                        <select
+                            className="border rounded p-1"
+                            value={view}
+                            onChange={(e) => setView(e.target.value)}
+                        >
+                            {rangeDays === 7 && <option value="compact">{t("admin.compact")}</option>}
+                            <option value="calendar">{t("admin.calendar")}</option>
+                        </select>
+                    </div>
+                </div>
+    
+                {/* Totals */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-blue-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("overview.bookings30d")}</p>
+                        <p className="text-xl font-bold">{totalBookings}</p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("overview.guests30d")}</p>
+                        <p className="text-xl font-bold">{totalClients}</p>
+                    </div>
+                </div>
+    
+                {/* List view */}
+                {view === "compact" && (
+                    <BookingsCompactView
+                        mode={mode}
+                        rangeDays={7}
+                        selectedDate={selDay}
+                        onSelectDay={setSelDay}
+                        bookings={filtered}
+                    />
+                )}
+                {view === "calendar" && (
+                    <BookingsCalendarView
+                        selectedDate={selDay}
+                        onSelectDay={setSelDay}
+                        bookings={filtered}
+                    />
+                )}
+    
+                {/* Chart controls */}
+                <div className="flex justify-end mt-6 mb-2">
+                    <select
+                        className="border rounded p-1"
+                        value={rangeDays}
+                        onChange={(e) => setRangeDays(Number(e.target.value))}
+                    >
+                        {mode === "future" ? (
+                            <>
+                                <option value={7}>{t("overview.upcomingRange", { n: 7 })}</option>
+                                <option value={30}>{t("overview.upcomingRange", { n: 30 })}</option>
+                                <option value={90}>{t("overview.upcomingRange", { n: 90 })}</option>
+                            </>
+                        ) : (
+                            <>
+                                <option value={7}>{t("overview.pastRange", { n: 7 })}</option>
+                                <option value={30}>{t("overview.pastRange", { n: 30 })}</option>
+                                <option value={90}>{t("overview.pastRange", { n: 90 })}</option>
+                            </>
+                        )}
+                    </select>
+                </div>
+    
+                {/* Chart */}
+                <BookingsChart
+                    key={`${mode}-${rangeDays}`}
+                    bookings={filtered}
+                    startDate={start}
+                    days={rangeDays}
+                />
+    
+                {/* Day drill-in */}
+                {selDay && (
+                    <div className="mt-4 relative">
+                        {mode === "future" && (
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="absolute right-0 -top-10 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                            >
+                                {t("admin.manualBooking")}
+                            </button>
+                        )}
+                        <DaySchedule
+                            selectedDate={selDay}
+                            bookings={filtered}
+                            tableAvailability={ta}
+                            onClose={() => setSelDay(null)}
+                            enableZoom
+                        />
+                    </div>
+                )}
+    
+                {/* Manual add */}
+                {showModal && selDay && (
+                    <AddBookingModal
+                        dateObj={selDay}
+                        onClose={() => setShowModal(false)}
+                        onSaved={handleSaved}
+                    />
+                )}
+            </div>
+        );
+    }
+    
+    BookingsOverview.propTypes = {
+        mode: PropTypes.oneOf(["future", "past"]).isRequired,
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/DaySchedule.jsx
+    // frontend/src/components/admin/sharedBookings/DaySchedule.jsx
+    
+    import React, { useState } from "react";
+    import PropTypes from "prop-types";
+    import { format } from "date-fns";
+    import TableUsage from "./TableUsage";
+    import { translate } from "../../../services/i18n";
+    
+    const lang = localStorage.getItem("adminLang") || "ca";
+    const t = (key, vars) => translate(lang, key, vars);
+    
+    const prettyRound = (key) => {
+        if (key.includes("first"))
+            return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+        if (key.includes("second"))
+            return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+        return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+    };
+    
+    export default function DaySchedule({
+                                            selectedDate,
+                                            bookings,
+                                            tableAvailability,
+                                            onClose,
+                                            enableZoom = false,
+                                        }) {
+        const [showFloor, setShowFloor] = useState(false);
+        if (!selectedDate) return null;
+    
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const dayInfo = tableAvailability[dateStr];
+    
+        /* --------------------------------------------------  early exit */
+        if (!dayInfo || dayInfo === "closed") {
+            return (
+                <div className="mt-6 border rounded bg-white p-4 shadow">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold">
+                            {t("schedule.header", {
+                                date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                            })}
+                        </h3>
+                        <button
+                            onClick={onClose}
+                            className="text-sm text-red-500 underline"
+                        >
+                            {t("admin.close")}
+                        </button>
+                    </div>
+                    <p
+                        className={
+                            dayInfo === "closed"
+                                ? "text-red-600 font-semibold"
+                                : "text-gray-700"
+                        }
+                    >
+                        {dayInfo === "closed"
+                            ? "CLOSED"
+                            : t("schedule.noBookings")}
+                    </p>
+                </div>
+            );
+        }
+    
+        /* --------------------- build per-round booking arrays */
+        const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
+            (rk) => rk in dayInfo
+        );
+        const roundBookings = {};
+        roundKeys.forEach((rk) => {
+            roundBookings[rk] = bookings
+                .filter((b) => {
+                    const d = b.table_availability?.date;
+                    if (d !== dateStr) return false;
+                    if (rk.includes("first")) return b.reserved_time < "15:00:00";
+                    if (rk.includes("second"))
+                        return (
+                            b.reserved_time >= "15:00:00" &&
+                            b.reserved_time < "20:00:00"
+                        );
+                    return b.reserved_time >= "20:00:00";
+                })
+                .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
+        });
+    
+        /* --------------------- union table-capacity counts */
+        const fullStock = { 2: 0, 4: 0, 6: 0 };
+        roundKeys.forEach((rk) => {
+            const avail = dayInfo[rk]?.availability || {};
+            const booked = {};
+            roundBookings[rk].forEach((bk) => {
+                const cap = bk.table_availability?.capacity || 0;
+                booked[cap] = (booked[cap] || 0) + 1;
+            });
+            [2, 4, 6].forEach((cap) => {
+                const totalHere = (avail[cap] || 0) + (booked[cap] || 0);
+                fullStock[cap] = Math.max(fullStock[cap], totalHere);
+            });
+        });
+    
+        /* --------------------- render */
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">
+                        {t("schedule.header", {
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy"),
+                        })}
+                    </h3>
+                    <div className="space-x-3">
+                        {enableZoom && (
+                            <button
+                                onClick={() => setShowFloor((v) => !v)}
+                                className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
+                            >
+                                {showFloor
+                                    ? t("admin.hideFloor")
+                                    : t("admin.expandFloor")}
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-sm text-red-500 underline hover:text-red-700"
+                        >
+                            {t("admin.close")}
+                        </button>
+                    </div>
+                </div>
+    
+                {roundKeys.map((rk) => {
+                    const { lbl, bg } = prettyRound(rk);
+                    const rows = roundBookings[rk];
+    
+                    return (
+                        <div key={rk} className="mb-8">
+                            <h4 className="text-md font-semibold mb-2">{lbl}</h4>
+    
+                            {rows.length > 0 ? (
+                                <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
+                                    <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.time")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.name")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.totalClients")}
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {rows.map((bk) => (
+                                        <tr
+                                            key={bk.id}
+                                            className={`${bg} hover:bg-yellow-50 transition`}
+                                        >
+                                            <td className="px-3 py-2">
+                                                {bk.reserved_time.slice(0, 5)}
+                                            </td>
+                                            <td className="px-3 py-2 truncate max-w-[160px]">
+                                                {bk.full_name}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {bk.total_adults +
+                                                    bk.total_kids}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-gray-500 mb-3">
+                                    {t("schedule.noBookings")}
+                                </p>
+                            )}
+    
+                            {showFloor && (
+                                <TableUsage
+                                    capacityTotals={fullStock}
+                                    bookings={rows}
+                                    expanded
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+    
+    DaySchedule.propTypes = {
+        selectedDate: PropTypes.instanceOf(Date),
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        tableAvailability: PropTypes.object.isRequired,
+        onClose: PropTypes.func.isRequired,
+        enableZoom: PropTypes.bool,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/TableUsage.jsx
+    // frontend/src/components/admin/sharedBookings/TableUsage.jsx
+    // (unchanged – reproduced verbatim)
+    
+    import React from "react";
+    import PropTypes from "prop-types";
+    
+    /**
+     * TableUsage – schematic floor-plan.
+     *
+     * Props:
+     *   capacityTotals: { [capacity: number]: number }
+     *     e.g. { 2: 5, 4: 3, 6: 2 }
+     *   bookings: Array of booking objects (with table_availability.capacity, full_name, totals, etc.)
+     *   expanded: whether to zoom floor-plan
+     *   seatSize (optional): pixels per seat unit (default: 35)
+     */
+    export default function TableUsage({
+                                           capacityTotals = {},
+                                           bookings = [],
+                                           expanded = false,
+                                           seatSize = 35,
+                                       }) {
+        // 1) Derive the list of all capacities from the backend data
+        const capacities = Object.keys(capacityTotals)
+            .map((c) => Number(c))
+            .filter((c) => !isNaN(c))
+            .sort((a, b) => a - b);
+    
+        // 2) Build a flat array of tables = { cap, booked? }
+        const tables = [];
+        capacities.forEach((cap) => {
+            const count = capacityTotals[cap] || 0;
+            for (let i = 0; i < count; i++) {
+                tables.push({ cap, booked: false });
+            }
+        });
+    
+        // 3) Mark booked tables in order
+        const freePtr = {};
+        capacities.forEach((cap) => {
+            freePtr[cap] = 0;
+        });
+    
+        bookings.forEach((bk) => {
+            const cap = bk.table_availability?.capacity || 0;
+            let idx = -1,
+                seen = 0;
+            for (let i = 0; i < tables.length; i++) {
+                if (tables[i].cap === cap) {
+                    if (seen === freePtr[cap]) {
+                        idx = i;
+                        break;
+                    }
+                    seen++;
+                }
+            }
+            if (idx !== -1) {
+                tables[idx] = {
+                    cap,
+                    booked: true,
+                    name: bk.full_name,
+                    guests: (bk.total_adults || 0) + (bk.total_kids || 0),
+                };
+            }
+            freePtr[cap]++;
+        });
+    
+        // 4) Sizing helpers
+        const scale = expanded ? 1.6 : 1;
+        const sizePx = (cap) => cap * seatSize * scale;
+        const bgClass = (t) => (t.booked ? "bg-green-300" : "bg-gray-200");
+    
+        return (
+            <div className="mt-3">
+                <p className="text-sm font-semibold mb-1">Table Usage</p>
+                <div className="flex flex-wrap gap-3">
+                    {tables.map((t, i) => (
+                        <div
+                            key={i}
+                            className={`relative flex flex-col items-center justify-center border rounded-2xl shadow-sm ${bgClass(
+                                t
+                            )}`}
+                            style={{ width: sizePx(t.cap), height: sizePx(t.cap) * 0.75 }}
+                            title={
+                                t.booked ? `${t.name} (${t.guests})` : `${t.cap}-top`
+                            }
+                        >
+                            {t.booked ? (
+                                <>
+                        <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
+                          {t.name}
+                        </span>
+                                    <span className="text-xs">
+                          {t.guests}/{t.cap}
+                        </span>
+                                </>
+                            ) : (
+                                <span className="text-xs text-gray-600">{t.cap}</span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+    
+    TableUsage.propTypes = {
+        capacityTotals: PropTypes.objectOf(PropTypes.number),
+        bookings:       PropTypes.array,
+        expanded:       PropTypes.bool,
+        seatSize:       PropTypes.number,
+    };
+

@@ -1,3 +1,5 @@
+// frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import {
@@ -10,25 +12,49 @@ import {
     isSameMonth,
     isSameDay,
 } from "date-fns";
-import { translate } from "../../../services/i18n";
+import {
+    enUS,
+    es as esLocale,
+    ca as caLocale,
+} from "date-fns/locale";
+import { translate, getLanguage } from "../../../services/i18n";
 
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
+const localeMap = {
+    en: enUS,
+    es: esLocale,
+    ca: caLocale,
+};
 
 export default function BookingsCalendarView({
                                                  selectedDate = null,
                                                  onSelectDay,
                                                  bookings,
                                              }) {
+    const lang   = getLanguage();
+    const t      = (k, p) => translate(lang, k, p);
+    const locale = localeMap[lang] || enUS;
+
     const [monthToShow, setMonthToShow] = useState(new Date());
-    const weekdayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    // weekday headers localized
+    const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
+        format(
+            addDays(
+                startOfWeek(new Date(), { weekStartsOn: 1, locale }),
+                i
+            ),
+            "EEE",
+            { locale }
+        )
+    );
+
     const monthStart = startOfMonth(monthToShow);
-    const monthEnd = endOfMonth(monthToShow);
-    const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
-    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 1 });
+    const monthEnd   = endOfMonth(monthToShow);
+    const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1, locale });
+    const gridEnd    = endOfWeek(monthEnd, { weekStartsOn: 1, locale });
 
     function getDayStats(date) {
-        const dateStr = format(date, "yyyy-MM-dd");
+        const dateStr = format(date, "yyyy-MM-dd", { locale });
         const dayBookings = bookings.filter((b) => {
             const bd = b.table_availability?.date || b.date;
             return bd === dateStr;
@@ -45,12 +71,12 @@ export default function BookingsCalendarView({
     while (day <= gridEnd) {
         const week = [];
         for (let i = 0; i < 7; i++) {
-            const cloneDay = day;
+            const cloneDay     = day;
             const { bookingsCount, totalClients } = getDayStats(cloneDay);
             const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
-            const isSelected = selectedDate && isSameDay(cloneDay, selectedDate);
+            const isSelected     = selectedDate && isSameDay(cloneDay, selectedDate);
 
-            let bg = isSelected ? "bg-blue-600" : "bg-white";
+            let bg  = isSelected ? "bg-blue-600" : "bg-white";
             let txt = isSelected
                 ? "text-white"
                 : isCurrentMonth
@@ -63,13 +89,12 @@ export default function BookingsCalendarView({
                     onClick={() => onSelectDay(cloneDay)}
                     className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition`}
                     style={{ minWidth: 50 }}
-                    title={format(cloneDay, "EEEE, MMMM d, yyyy")}
+                    title={format(cloneDay, "EEEE, MMMM d, yyyy", { locale })}
                 >
                     <div className="flex flex-col items-center">
                         <span className="text-sm font-semibold">
-                            {format(cloneDay, "d")}
+                            {format(cloneDay, "d", { locale })}
                         </span>
-
                         {bookingsCount > 0 && (
                             <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
                                 {bookingsCount} {t("calendar.badgeBookings")}
@@ -106,7 +131,7 @@ export default function BookingsCalendarView({
                     {t("calendar.prev")}
                 </button>
                 <h3 className="font-semibold">
-                    {format(monthToShow, "MMMM yyyy")}
+                    {format(monthToShow, "MMMM yyyy", { locale })}
                 </h3>
                 <button
                     onClick={() =>
@@ -133,6 +158,6 @@ export default function BookingsCalendarView({
 
 BookingsCalendarView.propTypes = {
     selectedDate: PropTypes.instanceOf(Date),
-    onSelectDay: PropTypes.func.isRequired,
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    onSelectDay:  PropTypes.func.isRequired,
+    bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
 };

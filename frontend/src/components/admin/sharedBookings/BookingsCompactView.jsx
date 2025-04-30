@@ -1,10 +1,20 @@
+// frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
+
 import React from "react";
 import PropTypes from "prop-types";
 import { format, addDays, subDays, isSameDay } from "date-fns";
-import { translate } from "../../../services/i18n";
+import {
+    enUS,
+    es as esLocale,
+    ca as caLocale,
+} from "date-fns/locale";
+import { translate, getLanguage } from "../../../services/i18n";
 
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
+const localeMap = {
+    en: enUS,
+    es: esLocale,
+    ca: caLocale,
+};
 
 export default function BookingsCompactView({
                                                 mode,
@@ -13,16 +23,25 @@ export default function BookingsCompactView({
                                                 onSelectDay,
                                                 bookings,
                                             }) {
+    const lang   = getLanguage();
+    const t      = (k, p) => translate(lang, k, p);
+    const locale = localeMap[lang] || enUS;
+
     const today = new Date();
-    const days = [];
+    const days  = [];
+
     if (mode === "future") {
-        for (let i = 0; i < rangeDays; i++) days.push(addDays(today, i));
+        for (let i = 0; i < rangeDays; i++) {
+            days.push(addDays(today, i));
+        }
     } else {
-        for (let i = 1; i <= rangeDays; i++) days.push(subDays(today, i));
+        for (let i = 1; i <= rangeDays; i++) {
+            days.push(subDays(today, i));
+        }
     }
 
     function getDayStats(day) {
-        const key = format(day, "yyyy-MM-dd");
+        const key = format(day, "yyyy-MM-dd", { locale });
         const dayBookings = bookings.filter((b) => {
             const bd = b.table_availability?.date || b.date;
             return bd === key;
@@ -31,7 +50,10 @@ export default function BookingsCompactView({
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
             0
         );
-        return { bookingsCount: dayBookings.length, totalClients };
+        return {
+            bookingsCount: dayBookings.length,
+            totalClients,
+        };
     }
 
     return (
@@ -39,30 +61,30 @@ export default function BookingsCompactView({
             {days.map((day) => {
                 const { bookingsCount, totalClients } = getDayStats(day);
                 const isSel = selectedDate && isSameDay(day, selectedDate);
-                const bg = isSel ? "bg-blue-600" : "bg-gray-100";
-                const txt = isSel ? "text-white" : "text-gray-800";
+                const bg    = isSel ? "bg-blue-600" : "bg-gray-100";
+                const txt   = isSel ? "text-white" : "text-gray-800";
 
                 return (
                     <button
                         key={day.toISOString()}
                         onClick={() => onSelectDay(day)}
                         className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
-                        title={format(day, "EEEE, MMMM d, yyyy")}
+                        title={format(day, "EEEE, MMMM d, yyyy", { locale })}
                     >
                         <span className="text-xs font-semibold">
-                            {format(day, "E")}
+                            {format(day, "E", { locale })}
                         </span>
                         <span className="text-xl font-bold">
-                            {format(day, "d")}
-                        </span>
-                        <span className="text-xs">{format(day, "MMM")}</span>
-                        <span className="mt-1 text-xs">
-                            {bookingsCount}
-                            {t("calendar.badgeBookings")}
+                            {format(day, "d", { locale })}
                         </span>
                         <span className="text-xs">
-                            {totalClients}
-                            {t("calendar.badgeClients")}
+                            {format(day, "MMMM", { locale })}
+                        </span>
+                        <span className="mt-1 text-xs">
+                            {bookingsCount} {t("calendar.badgeBookings")}
+                        </span>
+                        <span className="text-xs">
+                            {totalClients} {t("calendar.badgeClients")}
                         </span>
                     </button>
                 );
@@ -72,9 +94,9 @@ export default function BookingsCompactView({
 }
 
 BookingsCompactView.propTypes = {
-    mode: PropTypes.oneOf(["future", "past"]).isRequired,
-    rangeDays: PropTypes.number.isRequired,
+    mode:         PropTypes.oneOf(["future", "past"]).isRequired,
+    rangeDays:    PropTypes.number.isRequired,
     selectedDate: PropTypes.instanceOf(Date),
-    onSelectDay: PropTypes.func.isRequired,
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    onSelectDay:  PropTypes.func.isRequired,
+    bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
 };

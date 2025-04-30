@@ -1,4 +1,5 @@
-// src/components/Admin/SharedBookings/BookingsChart.jsx
+// frontend/src/components/admin/sharedBookings/BookingsChart.jsx
+
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import { Bar } from "react-chartjs-2";
@@ -11,16 +12,29 @@ import {
     Legend,
 } from "chart.js";
 import { format, addDays } from "date-fns";
-import { translate } from "../../../services/i18n";
-
-const lang = localStorage.getItem("adminLang") || "ca";
-const t = (key, vars) => translate(lang, key, vars);
+import {
+    enUS,
+    es as esLocale,
+    ca as caLocale,
+} from "date-fns/locale";
+import { translate, getLanguage } from "../../../services/i18n";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
+const localeMap = {
+    en: enUS,
+    es: esLocale,
+    ca: caLocale,
+};
+
 export default function BookingsChart({ bookings, startDate, days }) {
+    const lang   = getLanguage();
+    const t      = (k, p) => translate(lang, k, p);
+    const locale = localeMap[lang] || enUS;
+
+    // count total clients per date
     const counts = bookings.reduce((map, b) => {
-        const d = b.table_availability?.date || b.date;
+        const d       = b.table_availability?.date || b.date;
         const clients = (b.total_adults || 0) + (b.total_kids || 0);
         map[d] = (map[d] || 0) + clients;
         return map;
@@ -30,23 +44,23 @@ export default function BookingsChart({ bookings, startDate, days }) {
         const lab = [];
         const dat = [];
         for (let i = 0; i < days; i++) {
-            const d = addDays(startDate, i);
-            const key = format(d, "yyyy-MM-dd");
-            lab.push(format(d, "MMM d"));
+            const d   = addDays(startDate, i);
+            const key = format(d, "yyyy-MM-dd", { locale });
+            lab.push(format(d, "MMMM d", { locale }));
             dat.push(counts[key] || 0);
         }
         return { labels: lab, data: dat };
-    }, [counts, startDate, days]);
+    }, [counts, startDate, days, locale]);
 
     const chartData = {
         labels,
         datasets: [
             {
-                label: t("chart.totalPeople"),
+                label:           t("chart.totalPeople"),
                 data,
                 backgroundColor: "#4F46E5",
-                borderRadius: 5,
-                barPercentage: 0.6,
+                borderRadius:    5,
+                barPercentage:   0.6,
             },
         ],
     };
@@ -56,15 +70,15 @@ export default function BookingsChart({ bookings, startDate, days }) {
             legend: { display: false },
             tooltip: {
                 backgroundColor: "rgba(0,0,0,0.7)",
-                titleFont: { size: 14 },
-                bodyFont: { size: 12 },
-                padding: 10,
+                titleFont:       { size: 14 },
+                bodyFont:        { size: 12 },
+                padding:         10,
             },
         },
         scales: {
             x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
             y: {
-                grid: { color: "#E5E7EB" },
+                grid:  { color: "#E5E7EB" },
                 ticks: { color: "#9CA3AF", stepSize: 1 },
             },
         },
@@ -84,7 +98,7 @@ export default function BookingsChart({ bookings, startDate, days }) {
 }
 
 BookingsChart.propTypes = {
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    bookings:  PropTypes.arrayOf(PropTypes.object).isRequired,
     startDate: PropTypes.instanceOf(Date).isRequired,
-    days: PropTypes.number.isRequired,
+    days:      PropTypes.number.isRequired,
 };

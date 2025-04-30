@@ -54,7 +54,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Demo booking (turn off in production)
+    | Demo booking (turn off in production) (enabled => false si no vull que em posi reservas random per probar).
     |--------------------------------------------------------------------------
     */
     'demo_booking' => [

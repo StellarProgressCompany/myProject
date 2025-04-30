@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\TableAvailability;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Config;
 
 class TableAvailabilitySeeder extends Seeder
 {
@@ -13,36 +14,33 @@ class TableAvailabilitySeeder extends Seeder
      */
     public function run(): void
     {
-        // Generate data for the next 30 days
-        $startDate = Carbon::today();
-        $endDate   = Carbon::today()->addDays(29);
+        /* ───────── read dataset ───────── */
+        $ds = Config::get('restaurant_dataset');
 
-        // Define the available table types (capacities) and counts
-        $tableTypes = [
-            ['capacity' => 2, 'available_count' => 4],
-            ['capacity' => 4, 'available_count' => 7],
-            ['capacity' => 6, 'available_count' => 7],
-        ];
+        $horizonDays     = $ds['seeding_horizon_days'] ?? 30;
+        $tableTypes      = $ds['table_types']          ?? [];
+        $serviceSchedule = $ds['service_schedule']     ?? [];
+
+        /* ───────── safety fallback (should never trigger) ───────── */
+        if (empty($tableTypes)) {
+            $tableTypes = [
+                ['capacity' => 2, 'available_count' => 4],
+                ['capacity' => 4, 'available_count' => 7],
+                ['capacity' => 6, 'available_count' => 7],
+            ];
+        }
+
+        $startDate = Carbon::today();
+        $endDate   = Carbon::today()->addDays($horizonDays - 1);
 
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-            // dayOfWeek: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.
-            $dayOfWeek = $date->dayOfWeek;
+            $dayOfWeek = $date->dayOfWeek;    // 0 (Sun) … 6 (Sat)
 
-            // Determine which meal types apply:
-            // - Monday (1) & Tuesday (2) => restaurant is closed (skip)
-            // - Wednesday (3) & Thursday (4) => lunch only
-            // - Friday (5), Saturday (6), Sunday (0) => lunch & dinner
-            $mealTypes = [];
-            if ($dayOfWeek === 3 || $dayOfWeek === 4) {
-                $mealTypes = ['lunch'];
-            } elseif (in_array($dayOfWeek, [5, 6, 0])) {
-                $mealTypes = ['lunch', 'dinner'];
-            } else {
-                // Skip Monday & Tuesday
-                continue;
+            $mealTypes = $serviceSchedule[$dayOfWeek] ?? [];
+            if (empty($mealTypes)) {
+                continue;                    // closed
             }
 
-            // Create a record for each meal type and table capacity
             foreach ($mealTypes as $mealType) {
                 foreach ($tableTypes as $type) {
                     TableAvailability::create([

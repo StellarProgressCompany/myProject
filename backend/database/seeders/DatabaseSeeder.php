@@ -13,8 +13,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             TableAvailabilitySeeder::class,
-            // Uncomment the following line if you want to seed sample bookings:
-            // BookingSeeder::class,
+            BookingSeeder::class, // demo seeder – disabled via config when needed
         ]);
     }
 }

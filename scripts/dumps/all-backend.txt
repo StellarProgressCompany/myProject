@@ -24,10 +24,88 @@
     ├── database/seeders/DatabaseSeeder.php
     ├── database/seeders/TableAvailabilitySeeder.php
     ├── routes/api.php
-    ├── config/important/mail.php
-    ├── config/important/restaurant.php
+    ├── config/mail.php
+    ├── config/restaurant.php
+    ├── config/restaurant_dataset.php
 
-⚠️ Warning: missing file backend/config/restaurant.php
+––––––––––––––––––––––––
+backend/config/restaurant.php
+    <?php
+    /**
+     * Restaurant-level operational parameters
+     * (single source of truth for the algorithm).
+     *
+     */
+    
+    return [
+    
+        /*───────────────────────────────────────────────────────────
+         | Seating rounds – start / end for every service window
+         *───────────────────────────────────────────────────────────*/
+        'rounds' => [
+            'lunch' => [
+                'first_round'  => [
+                    'start' => '13:00',
+                    'end'   => '14:59',
+                    'note'  => '1st lunch',
+                ],
+                'second_round' => [
+                    'start' => '15:00',
+                    'end'   => '17:30',
+                    'note'  => '2nd lunch',
+                ],
+            ],
+            'dinner' => [
+                'dinner_round' => [
+                    'start' => '20:00',
+                    'end'   => '23:30',
+                    'note'  => 'Dinner',
+                ],
+            ],
+        ],
+    
+        /*───────────────────────────────────────────────────────────
+         | Party-size slack ϵ   ( capacity ≥ party − ϵ )
+         *───────────────────────────────────────────────────────────*/
+        'party_to_eps' => [
+            1 => 0,
+            2 => 3,
+            3 => 2,
+            4 => 1,
+        ],
+    
+        /*───────────────────────────────────────────────────────────
+         | Slot granularity – minutes between successive booking slots
+         *───────────────────────────────────────────────────────────*/
+        'slot_step'    => 15,
+    
+        /*───────────────────────────────────────────────────────────
+         | Physical table sizes available
+         *───────────────────────────────────────────────────────────*/
+        'capacities'   => [2, 4, 6],
+    
+        /*───────────────────────────────────────────────────────────
+         | ZONE THRESHOLDS φ1..φ4 (five-zone policy)
+         | Hard-coded values; widget will never re-derive these.
+         *───────────────────────────────────────────────────────────*/
+        'phi' => [
+            'phi1' => 0.401,
+            'phi2' => 0.547,
+            'phi3' => 0.714,
+            'phi4' => 0.800,
+        ],
+    
+        /*───────────────────────────────────────────────────────────
+         | Session parameters
+         *───────────────────────────────────────────────────────────*/
+        'tau'           => 1.75,    // hours incl. cleaning
+        'omega'         => 1.50,    // long-stay multiplier
+        'p_max'         => 14,      // largest party bookable online
+        'beta'          => 0.05,    // walk-in buffer 5%
+        'eta_max'       => 0.10,    // total invisible seats ≤10%
+        'rebuild_times' => ['11:00', '17:00'], // daily shuffle
+    ];
+
 ––––––––––––––––––––––––
 backend/app/Http/Controllers/BookingController.php
     <?php
@@ -224,15 +302,32 @@ backend/app/Http/Controllers/TableAvailabilityController.php
      */
     class TableAvailabilityController extends Controller
     {
-        /* ------------------------------------------------------------
+        /* -------------------------------------------------------------
+         | Constants
+         * ------------------------------------------------------------*/
+        /** Indicator returned for days when the restaurant is fully closed */
+        private const CLOSED_INDICATOR = 'closed';
+    
+        /* -------------------------------------------------------------
          | Helpers
-         * -----------------------------------------------------------*/
+         * ------------------------------------------------------------*/
+        /** Minutes between successive booking slots (fail-fast if missing) */
         private function minutesStep(): int
         {
-            return (int) Config::get('restaurant.slot_step', 15);
+            $step = Config::get('restaurant.slot_step');
+            if ($step === null) {
+                throw new \RuntimeException('Missing config: restaurant.slot_step');
+            }
+            return (int) $step;
         }
     
-        /** Return an array of HH:MM strings between $start and $end (inclusive) */
+        /** Weekly service schedule (0 = Sun … 6 = Sat) from the dataset */
+        private function serviceSchedule(): array
+        {
+            return Config::get('restaurant_dataset.service_schedule', []);
+        }
+    
+        /** Build a HH:MM grid between two times (inclusive) */
         private function buildTimeGrid(string $start, string $end): array
         {
             [$sh, $sm] = array_map('intval', explode(':', $start));
@@ -245,7 +340,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return $slots;
         }
     
-        /** Generic round-availability computer */
+        /** Seat-availability computer for a single service round */
         private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings = null)
         {
             if ($allBookings === null) {
@@ -253,22 +348,28 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                 $allBookings = Booking::whereIn('table_availability_id', $ids)->get();
             }
     
-            $caps      = Config::get('restaurant.capacities', [2, 4, 6]);
-            $isSecond  = in_array(Config::get('restaurant.rounds.lunch.second_round.start'), $roundTimes, true);
+            $caps = Config::get('restaurant.capacities');
+            if ($caps === null) {
+                throw new \RuntimeException('Missing config: restaurant.capacities');
+            }
+    
+            $isSecond = in_array(
+                Config::get('restaurant.rounds.lunch.second_round.start'),
+                $roundTimes,
+                true
+            );
     
             $availability = [];
             foreach ($caps as $cap) {
-                $taRow = $tableAvailabilities->firstWhere('capacity', $cap);
-    
-                $seeded = $taRow?->available_count ?? 0;
-    
-                $booked = $allBookings
+                $taRow   = $tableAvailabilities->firstWhere('capacity', $cap);
+                $seeded  = $taRow?->available_count ?? 0;
+                $booked  = $allBookings
                     ->where('table_availability_id', $taRow?->id)
                     ->filter(function ($b) use ($roundTimes, $isSecond) {
                         if (in_array($b->reserved_time, $roundTimes, true)) {
                             return true;
                         }
-                        // spill-over from 1st → 2nd lunch (if long-stay)
+                        // spill-over from 1st → 2nd lunch (long-stay)
                         return $isSecond && $b->long_stay && $b->reserved_time < $roundTimes[0];
                     })
                     ->count();
@@ -279,9 +380,9 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return $availability;
         }
     
-        /* ------------------------------------------------------------
-         | /api/table-availability?date=YYYY-MM-DD&mealType=lunch|dinner
-         * -----------------------------------------------------------*/
+        /* -------------------------------------------------------------
+         | GET /api/table-availability?date=YYYY-MM-DD&mealType=lunch|dinner
+         * ------------------------------------------------------------*/
         public function index(Request $request)
         {
             $date     = trim($request->query('date', ''));
@@ -291,6 +392,15 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                 return response()->json([], 400);
             }
     
+            // ── honour weekly service schedule ─────────────────────────
+            $dow            = Carbon::parse($date)->dayOfWeek;
+            $serviceAllowed = in_array($mealType, $this->serviceSchedule()[$dow] ?? [], true);
+    
+            if (!$serviceAllowed) {
+                return response()->json(self::CLOSED_INDICATOR);
+            }
+    
+            // ── fetch availability rows ───────────────────────────────
             $rows = TableAvailability::where('date', $date)
                 ->where('meal_type', $mealType)
                 ->get()
@@ -304,8 +414,8 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             $payload  = [];
     
             foreach ($roundCfg as $key => $def) {
-                $times             = $this->buildTimeGrid($def['start'], $def['end']);
-                $payload[$key]     = [
+                $times         = $this->buildTimeGrid($def['start'], $def['end']);
+                $payload[$key] = [
                     'time'         => $def['start'],
                     'availability' => $this->computeRoundAvailability($rows, $times),
                     'note'         => $def['note'],
@@ -315,9 +425,9 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return response()->json($payload);
         }
     
-        /* ------------------------------------------------------------
-         | /api/table-availability-range?start=YYYY-MM-DD&end=YYYY-MM-DD...
-         * -----------------------------------------------------------*/
+        /* -------------------------------------------------------------
+         | GET /api/table-availability-range?start=YYYY-MM-DD&end=YYYY-MM-DD&mealType=…
+         * ------------------------------------------------------------*/
         public function range(Request $request): \Illuminate\Http\JsonResponse
         {
             $start    = $request->query('start');
@@ -341,16 +451,26 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             $availabilityIds = $rows->pluck('id');
             $bookings        = Booking::whereIn('table_availability_id', $availabilityIds)->get();
     
-            $roundCfg = Config::get("restaurant.rounds.$mealType");
-            $results  = [];
+            $roundCfg   = Config::get("restaurant.rounds.$mealType");
+            $schedule   = $this->serviceSchedule();
+            $results    = [];
     
             $cursor = $startDate->copy();
             while ($cursor->lte($endDate)) {
-                $dateStr = $cursor->format('Y-m-d');
+                $dateStr     = $cursor->format('Y-m-d');
+                $dow         = $cursor->dayOfWeek;
+                $servedMeals = $schedule[$dow] ?? [];
     
-                // Monday & Tuesday → closed
-                if (in_array($cursor->dayOfWeek, [1, 2], true)) {
-                    $results[$dateStr] = 'closed';
+                /* closed all day */
+                if (empty($servedMeals)) {
+                    $results[$dateStr] = self::CLOSED_INDICATOR;
+                    $cursor->addDay();
+                    continue;
+                }
+    
+                /* meal type not offered that day */
+                if (!in_array($mealType, $servedMeals, true)) {
+                    $results[$dateStr] = [];
                     $cursor->addDay();
                     continue;
                 }
@@ -364,7 +484,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
     
                 $payload = [];
                 foreach ($roundCfg as $key => $def) {
-                    $grid        = $this->buildTimeGrid($def['start'], $def['end']);
+                    $grid          = $this->buildTimeGrid($def['start'], $def['end']);
                     $payload[$key] = [
                         'time'         => $def['start'],
                         'availability' => $this->computeRoundAvailability($dayRows, $grid, $bookings),
@@ -900,257 +1020,178 @@ backend/app/Models/User.php
 ––––––––––––––––––––––––
 backend/app/Services/BookingAlgorithmService.php
     <?php
-    /**
-     * BookingAlgorithmService
-     *
-     * Five-zone capacity-control (Strict Automatic Allocation) driven entirely
-     * by config/restaurant.php → no hard-wired magic numbers.
-     */
     
     namespace App\Services;
     
     use App\Models\TableAvailability;
     use App\Models\Booking;
     use Illuminate\Support\Facades\Config;
+    use Illuminate\Support\Facades\DB;
     
+    /**
+     * Deterministic “smallest-waste” allocation engine.
+     *
+     * Signature matches what the controller already expects:
+     *   tryAllocate($date, $mealType, $reservedTime, $partySize, $longStay = false): array
+     *
+     * It returns a list like
+     *   [
+     *     ['capacity' => 4, 'extra_chair' => false],
+     *     ['capacity' => 2, 'extra_chair' => true],
+     *   ]
+     * or `['error' => '…']` when seating is impossible.
+     */
     class BookingAlgorithmService
     {
-        /* ------------------------------------------------------------------
-         | Public entry point – create-time allocation
-         * -----------------------------------------------------------------*/
+        private array $cfg;
+        private array $capacities;
+        private array $epsMap;
+    
+        public function __construct()
+        {
+            $this->cfg        = Config::get('restaurant');
+            $this->capacities = $this->cfg['capacities']     ?? [2, 4, 6];
+            $this->epsMap     = $this->cfg['party_to_eps']   ?? [];
+        }
+    
+        /*───────────────────────────────────────────────────────────
+         | Public API – called from BookingController
+         *───────────────────────────────────────────────────────────*/
         public function tryAllocate(
             string $date,
             string $mealType,
-            string $time,
+            string $reservedTime,
             int    $partySize,
-            bool   $longStay,
+            bool   $longStay = false
         ): array {
+            return DB::transaction(function () use ($date, $mealType, $reservedTime, $partySize, $longStay) {
     
-            /* ---------- guard-rails driven by config ---------- */
-            $maxOnline = Config::get('restaurant.online_max_group_size', 14);
-            if ($partySize > $maxOnline) {
-                return ['error' => "Groups >$maxOnline must book by phone"];
-            }
+                /* ── lock stock rows for this service ───────────────────*/
+                $rows = TableAvailability::where('date', $date)
+                    ->where('meal_type', $mealType)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('capacity');
     
-            /* ---------- static stock for that service ---------- */
-            $stockRows = TableAvailability::where('date', $date)
-                ->where('meal_type', $mealType)
-                ->get();
+                if ($rows->isEmpty()) {
+                    return ['error' => 'No tables configured for the selected date / service.'];
+                }
     
-            if ($stockRows->isEmpty()) {
-                return ['error' => 'Restaurant closed for that service'];
-            }
+                /* ── free-table counts for the chosen round ─────────────*/
+                $roundKey   = $this->detectRound($reservedTime, $mealType);
+                $roundTimes = $this->roundTimeWindow($mealType, $roundKey);
     
-            /* table-mix:  capacity => count  */
-            $tableMix = $stockRows->pluck('available_count', 'capacity')->toArray();
-            $m        = array_sum($tableMix);               // tables in that session
+                $free = [];
+                foreach ($this->capacities as $cap) {
+                    $row = $rows->get($cap);
+                    if (! $row) {
+                        $free[$cap] = 0;
+                        continue;
+                    }
     
-            /* φ-cut-offs – auto or override */
-            $phi = $this->computeCutOffs($m);
+                    // bookings occupying this capacity in the *same* round
+                    $booked = Booking::where('table_availability_id', $row->id)
+                        ->whereBetween('reserved_time', [$roundTimes['start'], $roundTimes['end']])
+                        ->count();
     
-            /* bookings that overlap the candidate’s round */
-            $bookedRound = $this->overlappingBookings($date, $mealType, $time);
+                    // spill-over from 1st → 2nd lunch when long-stay
+                    if ($roundKey === 'second_round') {
+                        $booked += Booking::where('table_availability_id', $row->id)
+                            ->where('reserved_time', '<', $roundTimes['start'])
+                            ->where('long_stay', true)
+                            ->count();
+                    }
     
-            $seatsNow = $bookedRound->sum(fn ($b) => $b->total_adults + $b->total_kids);
-            $seatCap  = collect($tableMix)->map(fn ($cnt, $cap) => $cap * $cnt)->sum();
-            $U_after  = ($seatsNow + $partySize) / $seatCap;
+                    $free[$cap] = max($row->available_count - $booked, 0);
+                }
     
-            /* zone / ε */
-            [$zone, $eps] = $this->zoneAndEps($U_after, $phi);
-            if ($zone === 5) {
-                return ['error' => 'Online widget closed – please phone the restaurant'];
-            }
+                /* ── greedy “smallest-waste” packer ─────────────────────*/
+                $required = $partySize;
+                $assign   = [];
     
-            /* -------------------- SAA greedy -------------------- */
-            $partySizes   = $bookedRound->pluck('total_adults', null)
-                ->zip($bookedRound->pluck('total_kids'))
-                ->map(fn ($pair) => $pair[0] + $pair[1])
-                ->toArray();
-            $partySizes[] = $partySize;
+                sort($this->capacities);                // 2 → 4 → 6, always
     
-            $assignment = $this->greedyAssign($partySizes, $tableMix, $eps);
-            if (isset($assignment['error'])) {
-                return $assignment;
-            }
+                while ($required > 0) {
     
-            return $this->diffAgainstExisting($assignment, $bookedRound);
+                    $eps = $this->epsMap[$required] ?? 0;
+                    $bestCap = null;
+    
+                    /* ① perfect / ε-fit on the smallest possible table */
+                    foreach ($this->capacities as $cap) {
+                        if ($free[$cap] <= 0) {
+                            continue;
+                        }
+                        if ($required <= $cap && ($cap - $required) <= $eps) {
+                            $bestCap = $cap;
+                            break;
+                        }
+                    }
+    
+                    /* ② otherwise: largest table that is ≤ seats-remaining */
+                    if ($bestCap === null) {
+                        foreach (array_reverse($this->capacities) as $cap) {
+                            if ($free[$cap] > 0 && $cap <= $required) {
+                                $bestCap = $cap;
+                                break;
+                            }
+                        }
+                    }
+    
+                    /* ③ still nothing? grab the absolutely smallest free table */
+                    if ($bestCap === null) {
+                        foreach ($this->capacities as $cap) {
+                            if ($free[$cap] > 0) {
+                                $bestCap = $cap;
+                                break;
+                            }
+                        }
+                    }
+    
+                    if ($bestCap === null) {
+                        return ['error' => 'Not enough free tables to seat this party.'];
+                    }
+    
+                    /* record assignment */
+                    $extraChair = ($required > $bestCap);        // ε case
+                    $assign[]   = [
+                        'capacity'    => $bestCap,
+                        'extra_chair' => $extraChair,
+                    ];
+    
+                    /* update counters */
+                    $free[$bestCap]--;
+                    $required -= min($required, $bestCap);
+                }
+    
+                return $assign;
+            });
         }
     
-        /* ------------------------------------------------------------------
+        /*───────────────────────────────────────────────────────────
          | Helpers
-         * -----------------------------------------------------------------*/
-    
-        private function detectRound(string $mealType, string $time): string
+         *───────────────────────────────────────────────────────────*/
+        public function detectRound(string $hhmmss, string $meal): string
         {
-            $lunchSecond = Config::get('restaurant.rounds.lunch.second_round.start', '15:00');
-            $dinnerStart = Config::get('restaurant.rounds.dinner.dinner_round.start', '20:00');
+            [$h, $m] = array_map('intval', explode(':', substr($hhmmss, 0, 5)));
+            $time    = sprintf('%02d:%02d', $h, $m);
+            $rounds  = $this->cfg['rounds'][$meal];
     
-            if ($mealType === 'lunch') {
-                return $time < "$lunchSecond:00" ? 'lunch_first' : 'lunch_second';
-            }
-            return 'dinner';
-        }
-    
-        /** Only bookings that overlap the candidate’s round
-         *  (long-stay spill-over handled via ω·τ)                          */
-        private function overlappingBookings(string $date, string $mealType, string $time)
-        {
-            $cfg        = Config::get('restaurant.algorithm');
-            $omega      = $cfg['omega']   ?? 1.5;
-            $tauMinutes = $cfg['tau']     ?? 105;
-    
-            $lunchSecond = Config::get('restaurant.rounds.lunch.second_round.start', '15:00');
-            $dinnerStart = Config::get('restaurant.rounds.dinner.dinner_round.start', '20:00');
-    
-            $round = $this->detectRound($mealType, $time);
-    
-            return Booking::whereHas('tableAvailability', function ($q) use ($date, $mealType) {
-                $q->where('date', $date)->where('meal_type', $mealType);
-            })
-                ->where(function ($q) use ($round, $lunchSecond, $dinnerStart, $omega, $tauMinutes) {
-                    /* helper: add minutes to HH:MM:SS string */
-                    $add = function (string $hhmmss, int $min): string {
-                        [$h,$m,$s] = array_map('intval', explode(':', $hhmmss));
-                        $tot = $h * 60 + $m + $min;
-                        return sprintf('%02d:%02d:%02d', intdiv($tot,60)%24, $tot%60, $s);
-                    };
-    
-                    if ($round === 'lunch_first') {
-                        /* any booking whose service window intersects [13:00,14:00] */
-                        $q->where('reserved_time', '<', "$lunchSecond:00"); // starts in 1st
-                    } elseif ($round === 'lunch_second') {
-                        /* start in 2nd OR spill-over from 1st with long-stay */
-                        $q->where(function ($sub) use ($lunchSecond) {
-                            $sub->whereBetween('reserved_time', ["$lunchSecond:00", '19:59:59']);
-                        })->orWhere(function ($sub) use ($lunchSecond, $omega, $tauMinutes, $add) {
-                            $spillBorder = $add("$lunchSecond:00", -$tauMinutes * ($omega - 1));
-                            $sub->where('reserved_time', '<', "$lunchSecond:00")
-                                ->where('reserved_time', '>=', $spillBorder);
-                        });
-                    } else { // dinner
-                        $q->where('reserved_time', '>=', "$dinnerStart:00");
-                    }
-                })
-                ->get();
-        }
-    
-        /* ------------------------------------------------------------------
-         | φ-cut-off computation  (config-driven)
-         * -----------------------------------------------------------------*/
-        private function computeCutOffs(int $m): array
-        {
-            $cfg = Config::get('restaurant.algorithm');
-    
-            /* explicit override? */
-            if ($cfg['override_cutoffs'] && count($cfg['override_cutoffs']) === 4) {
-                return array_values($cfg['override_cutoffs']);
+            if ($meal === 'lunch') {
+                return ($time < $rounds['second_round']['start'])
+                    ? 'first_round'
+                    : 'second_round';
             }
     
-            $F     = $cfg['waste'] ?? [1 => 0.028, 2 => 0.040, 3 => 0.052];
-            $beta  = $cfg['beta']  ?? 0.05;
-            $eta   = $cfg['eta']   ?? 0.10;
-            $alpha = $cfg['alpha'] ?? 0.01;
-    
-            $phi4 = $this->calcPhi4($m, $alpha);
-            $phi3 = ($eta - $beta) / $F[1];
-            $phi2 = $phi3 - ($eta - $beta - $phi3 * $F[2]) / ($F[1] - $F[2]);
-            $phi1 = $phi2 - ($eta - $beta - $phi2 * $F[3]) / ($F[2] - $F[3]);
-    
-            return [$phi1, $phi2, $phi3, $phi4];
+            return 'dinner_round';
         }
     
-        private function zoneAndEps(float $U, array $phi): array
+        private function roundTimeWindow(string $meal, string $round): array
         {
-            [$p1, $p2, $p3, $p4] = $phi;
-    
-            $slack = Config::get('restaurant.algorithm.slack', [
-                1 => 0, 2 => 3, 3 => 2, 4 => 1
-            ]);
-    
-            if ($U < $p1) return [1, $slack[1] ?? 0];
-            if ($U < $p2) return [2, $slack[2] ?? 3];
-            if ($U < $p3) return [3, $slack[3] ?? 2];
-            if ($U < $p4) return [4, $slack[4] ?? 1];
-            return [5, null];
-        }
-    
-        /* ------------------------------------------------------------------
-         | Strict-AA greedy (unchanged)
-         * -----------------------------------------------------------------*/
-        private function greedyAssign(array $partySizes, array $tableMix, int $eps)
-        {
-            rsort($partySizes);
-            $tables = [];
-            foreach ($tableMix as $cap => $cnt) {
-                $tables = array_merge($tables, array_fill(0, $cnt, $cap));
-            }
-            sort($tables); // ascending capacity
-    
-            $used = [];
-            foreach ($partySizes as $s) {
-                $idx = null;
-                foreach ($tables as $k => $cap) {
-                    if ($cap >= $s - $eps) {
-                        $idx = $k;
-                        break;
-                    }
-                }
-                if ($idx === null) {
-                    return ['error' => 'Cannot fit party without breaching limits'];
-                }
-                $used[] = $tables[$idx];
-                unset($tables[$idx]);
-                $tables = array_values($tables);
-            }
-            return $used;
-        }
-    
-        private function diffAgainstExisting(array $usedCaps, $bookedRound): array
-        {
-            $prevCounts = array_count_values(
-                $bookedRound->map(fn ($b) => $b->tableAvailability->capacity)->toArray()
-            );
-    
-            $new = [];
-            foreach ($usedCaps as $cap) {
-                if (($prevCounts[$cap] ?? 0) > 0) {
-                    $prevCounts[$cap]--;
-                } else {
-                    $new[] = ['capacity' => $cap, 'extra_chair' => false];
-                }
-            }
-            return $new;
-        }
-    
-        /* ------------------------------------------------------------------
-         | Erlang helpers (unchanged)
-         * -----------------------------------------------------------------*/
-        private function calcPhi4(int $m, float $alpha): float
-        {
-            if ($m === 0) return 0.80;
-            if ($m <= 12) {
-                $Astar = $m * (1 - pow($alpha * $this->factorial($m), 1 / $m));
-                return $Astar / $m;
-            }
-            $A = 0.8 * $m;
-            for ($i = 0; $i < 5; $i++) {
-                $B  = $this->erlangB($A, $m);
-                $dB = $B * (1 + $B - ($m + 1) / $A);
-                $A  = max(0.01, $A - ($B - $alpha) / $dB);
-            }
-            return $A / $m;
-        }
-        private function erlangB(float $A, int $m): float
-        {
-            $B = 1.0;
-            for ($k = 1; $k <= $m; $k++) {
-                $B = ($A * $B) / ($k + $A * $B);
-            }
-            return $B;
-        }
-        private function factorial(int $n): float
-        {
-            return array_product(range(1, $n));
+            $def = $this->cfg['rounds'][$meal][$round] ?? ['start' => '00:00', 'end' => '23:59'];
+            return [
+                'start' => $def['start'] . ':00',
+                'end'   => $def['end']   . ':00',
+            ];
         }
     }
 
@@ -1329,41 +1370,78 @@ backend/database/seeders/BookingSeeder.php
     namespace Database\Seeders;
     
     use Illuminate\Database\Seeder;
-    use App\Models\Booking;
     use App\Models\TableAvailability;
-    use Carbon\Carbon;
+    use App\Models\Booking;
+    use Faker\Factory as Faker;
     
     class BookingSeeder extends Seeder
     {
-        /**
-         * Seed the bookings table with sample bookings.
-         */
         public function run(): void
         {
-            // For demonstration, create a sample booking for each available TableAvailability row
-            // on today's lunch (adjust as needed for testing)
-            $today = Carbon::today()->toDateString();
-            $availabilities = TableAvailability::where('date', $today)
-                ->where('meal_type', 'lunch')
-                ->get();
+            /* ─── read the toggle ─── */
+            $demo = config('restaurant_dataset.demo_booking', []);
     
-            foreach ($availabilities as $availability) {
-                // Only create a booking if there is available capacity
-                if ($availability->available_count > 0) {
-                    Booking::create([
-                        'table_availability_id' => $availability->id,
-                        'reserved_time'         => '12:30:00',
-                        'total_adults'          => 2,
-                        'total_kids'            => 0,
-                        'full_name'             => 'Test User',
-                        'phone'                 => '+34 600000000',
-                        'email'                 => 'test@example.com',
-                        'special_requests'      => 'No special requests',
-                        'gdpr_consent'          => true,
-                        'marketing_opt_in'      => false,
-                    ]);
-                }
+            if (empty($demo['enabled'])) {
+                $this->command->info('Demo bookings disabled – skipping BookingSeeder.');
+                return;
             }
+    
+            $faker           = Faker::create();
+            $specialRequests = [
+                'Window seat please',
+                'Celebrating birthday',
+                'High chair needed',
+                'Vegetarian menu',
+                'Allergic to nuts',
+                'Anniversary celebration',
+                'Quiet corner',
+                'No special requests',
+            ];
+    
+            // Pre-build time slots for each meal
+            $slots = [
+                'lunch'  => $this->buildSlots(13, 0, 16, 0),
+                'dinner' => $this->buildSlots(20, 0, 22, 0),
+            ];
+    
+            TableAvailability::chunkById(500, function ($chunk) use ($faker, $specialRequests, $slots) {
+                foreach ($chunk as $stock) {
+                    // Was floor($stock->available_count / 2); now use all tables
+                    $maxToBook = $stock->available_count;
+                    $count     = $maxToBook > 0 ? rand(0, $maxToBook) : 0;
+    
+                    for ($i = 0; $i < $count; $i++) {
+                        Booking::create([
+                            'table_availability_id' => $stock->id,
+                            'total_adults'          => min($stock->capacity, rand(1, $stock->capacity)),
+                            'total_kids'            => rand(0, 2),
+                            'reserved_time'         => $faker->randomElement($slots[$stock->meal_type]),
+                            'full_name'             => $faker->name,
+                            'phone'                 => $faker->phoneNumber,
+                            'email'                 => $faker->safeEmail,
+                            'special_requests'      => $faker->randomElement($specialRequests),
+                            'gdpr_consent'          => true,
+                            'marketing_opt_in'      => $faker->boolean(30),
+                            'long_stay'             => $faker->boolean(10),
+                        ]);
+                    }
+                }
+            });
+    
+            $this->command->info('✅ Demo bookings generated.');
+        }
+    
+        /** Generate HH:MM:00 slots every 15 minutes */
+        private function buildSlots(int $fromH, int $fromM, int $toH, int $toM): array
+        {
+            $out = [];
+            for ($h = $fromH, $m = $fromM;
+                 ($h < $toH) || ($h === $toH && $m <= $toM);
+                 ($m += 15) >= 60 && ($h += 1) && ($m = 0)
+            ) {
+                $out[] = sprintf('%02d:%02d:00', $h, $m);
+            }
+            return $out;
         }
     }
 
@@ -1384,8 +1462,8 @@ backend/database/seeders/DatabaseSeeder.php
         {
             $this->call([
                 TableAvailabilitySeeder::class,
-                // Uncomment the following line if you want to seed sample bookings:
-                // BookingSeeder::class,
+                BookingSeeder::class,           // heavier random bookings now
+                ReallocateBookingsSeeder::class // then re-seat them for minimal waste
             ]);
         }
     }
@@ -1399,55 +1477,53 @@ backend/database/seeders/TableAvailabilitySeeder.php
     use Illuminate\Database\Seeder;
     use App\Models\TableAvailability;
     use Carbon\Carbon;
+    use Illuminate\Support\Facades\Config;
     
     class TableAvailabilitySeeder extends Seeder
     {
-        /**
-         * Run the database seeds for table availabilities.
-         */
         public function run(): void
         {
-            // Generate data for the next 30 days
-            $startDate = Carbon::today();
-            $endDate   = Carbon::today()->addDays(29);
+            /* ─── read dataset ─── */
+            // ⬇️ drop the 'important.' prefix
+            $ds = Config::get('restaurant_dataset', []);
     
-            // Define the available table types (capacities) and counts
-            $tableTypes = [
-                ['capacity' => 2, 'available_count' => 4],
-                ['capacity' => 4, 'available_count' => 7],
-                ['capacity' => 6, 'available_count' => 7],
-            ];
+            $horizonDays     = $ds['seeding_horizon_days'] ?? 30;
+            $tableTypes      = $ds['table_types']          ?? [];
+            $serviceSchedule = $ds['service_schedule']     ?? [];
     
-            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-                // dayOfWeek: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, etc.
-                $dayOfWeek = $date->dayOfWeek;
+            /* ─── fallback ─── */
+            if (empty($tableTypes)) {
+                $tableTypes = [
+                    ['capacity' => 2, 'available_count' => 4],
+                    ['capacity' => 4, 'available_count' => 7],
+                    ['capacity' => 6, 'available_count' => 7],
+                ];
+            }
     
-                // Determine which meal types apply:
-                // - Monday (1) & Tuesday (2) => restaurant is closed (skip)
-                // - Wednesday (3) & Thursday (4) => lunch only
-                // - Friday (5), Saturday (6), Sunday (0) => lunch & dinner
-                $mealTypes = [];
-                if ($dayOfWeek === 3 || $dayOfWeek === 4) {
-                    $mealTypes = ['lunch'];
-                } elseif (in_array($dayOfWeek, [5, 6, 0])) {
-                    $mealTypes = ['lunch', 'dinner'];
-                } else {
-                    // Skip Monday & Tuesday
-                    continue;
+            $start = Carbon::today();
+            $end   = Carbon::today()->addDays($horizonDays - 1);
+    
+            for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+                $dow       = $d->dayOfWeek;               // 0 = Sun … 6 = Sat
+                $mealTypes = $serviceSchedule[$dow] ?? [];
+    
+                if (empty($mealTypes)) {
+                    continue;                            // closed
                 }
     
-                // Create a record for each meal type and table capacity
-                foreach ($mealTypes as $mealType) {
-                    foreach ($tableTypes as $type) {
+                foreach ($mealTypes as $meal) {
+                    foreach ($tableTypes as $t) {
                         TableAvailability::create([
-                            'date'            => $date->toDateString(),
-                            'meal_type'       => $mealType,
-                            'capacity'        => $type['capacity'],
-                            'available_count' => $type['available_count'],
+                            'date'            => $d->toDateString(),
+                            'meal_type'       => $meal,
+                            'capacity'        => $t['capacity'],
+                            'available_count' => $t['available_count'],
                         ]);
                     }
                 }
             }
+    
+            $this->command->info('✅ Table availability stock generated.');
         }
     }
 
@@ -1477,7 +1553,7 @@ backend/routes/api.php
     Route::delete('/bookings/{booking}',[BookingController::class, 'destroy']);
 
 ––––––––––––––––––––––––
-backend/config/important/mail.php
+backend/config/mail.php
     <?php
     
     return [
@@ -1614,91 +1690,152 @@ backend/config/important/mail.php
     ];
 
 ––––––––––––––––––––––––
-backend/config/important/restaurant.php
+backend/config/restaurant.php
     <?php
     /**
-     * Restaurant-wide configuration.
+     * Restaurant-level operational parameters
+     * (single source of truth for the algorithm).
      *
-     * Keep every operational value that you might tweak per venue / season
-     * in ONE place instead of hard-coding them throughout the code-base.
      */
     
     return [
     
-        /* -----------------------------------------------------------------
-         | Seating & stock
-         * -----------------------------------------------------------------*/
-        'capacities'            => [2, 4, 6],   // table sizes offered
-        'online_max_group_size' => 14,          // cap for self-service widget
-    
-        /* minutes between two successive slots when we build a time grid */
-        'slot_step'             => 15,
-    
-        /* -----------------------------------------------------------------
-         | Service rounds
-         |   └──  format HH:MM (24 h)
-         * -----------------------------------------------------------------*/
+        /*───────────────────────────────────────────────────────────
+         | Seating rounds – start / end for every service window
+         *───────────────────────────────────────────────────────────*/
         'rounds' => [
-    
             'lunch' => [
-                'first_round' => [
-                    'start'      => '13:00',
-                    'end'        => '14:00',
-                    'must_leave' => '15:00',
-                    'note'       => 'Must leave by 15:00',
+                'first_round'  => [
+                    'start' => '13:00',
+                    'end'   => '14:59',
+                    'note'  => '1st lunch',
                 ],
                 'second_round' => [
-                    'start'      => '15:00',
-                    'end'        => '16:00',
-                    'must_leave' => '17:30',
-                    'note'       => 'Must leave by 17:30',
+                    'start' => '15:00',
+                    'end'   => '17:30',
+                    'note'  => '2nd lunch',
                 ],
             ],
-    
             'dinner' => [
                 'dinner_round' => [
-                    'start'      => '20:00',
-                    'end'        => '22:00',
-                    'must_leave' => null,
-                    'note'       => 'Dinner booking',
+                    'start' => '20:00',
+                    'end'   => '23:30',
+                    'note'  => 'Dinner',
                 ],
             ],
         ],
     
-        /* -----------------------------------------------------------------
-         | Five-zone / SAA algorithm knobs
-         * -----------------------------------------------------------------*/
-        'algorithm' => [
+        /*───────────────────────────────────────────────────────────
+         | Party-size slack ϵ   ( capacity ≥ party − ϵ )
+         *───────────────────────────────────────────────────────────*/
+        'party_to_eps' => [
+            1 => 0,
+            2 => 3,
+            3 => 2,
+            4 => 1,
+        ],
     
-            /* walk-in buffer β, seat-waste envelope η, service-level α */
-            'beta'  => 0.05,
-            'eta'   => 0.10,
-            'alpha' => 0.01,
+        /*───────────────────────────────────────────────────────────
+         | Slot granularity – minutes between successive booking slots
+         *───────────────────────────────────────────────────────────*/
+        'slot_step'    => 15,
     
-            /* Empirical seat-waste curves  F(ε)  for ε = 1,2,3  */
-            'waste' => [
-                1 => 0.028,
-                2 => 0.040,
-                3 => 0.052,
-            ],
+        /*───────────────────────────────────────────────────────────
+         | Physical table sizes available
+         *───────────────────────────────────────────────────────────*/
+        'capacities'   => [2, 4, 6],
     
-            /* Slack ε by zone (Γ-5) →   zone 1 = Γ = 0 */
-            'slack' => [
-                1 => 0,
-                2 => 3,
-                3 => 2,
-                4 => 1,
-            ],
+        /*───────────────────────────────────────────────────────────
+         | ZONE THRESHOLDS φ1..φ4 (five-zone policy)
+         | Hard-coded values; widget will never re-derive these.
+         *───────────────────────────────────────────────────────────*/
+        'phi' => [
+            'phi1' => 0.401,
+            'phi2' => 0.547,
+            'phi3' => 0.714,
+            'phi4' => 0.800,
+        ],
     
-            /* Hard-override the four φ cut-offs (or leave null to auto-compute) */
-            'override_cutoffs' => null, // e.g. [0.40, 0.55, 0.70, 0.80]
+        /*───────────────────────────────────────────────────────────
+         | Session parameters
+         *───────────────────────────────────────────────────────────*/
+        'tau'           => 1.75,    // hours incl. cleaning
+        'omega'         => 1.50,    // long-stay multiplier
+        'p_max'         => 14,      // largest party bookable online
+        'beta'          => 0.05,    // walk-in buffer 5%
+        'eta_max'       => 0.10,    // total invisible seats ≤10%
+        'rebuild_times' => ['11:00', '17:00'], // daily shuffle
+    ];
+
+––––––––––––––––––––––––
+backend/config/restaurant_dataset.php
+    <?php
+    /**
+     * Operational dataset used by seeders and runtime code.
+     * Edit this file to adapt the software to a new venue – no code changes required.
+     */
     
-            /* Turn-time τ (minutes) and long-stay multiplier ω */
-            'tau'   => 105,
-            'omega' => 1.5,
+    return [
     
-            /* Daily re-optimisation instants  – 24 h format HH:MM */
-            'rebuild_times' => ['11:00', '17:00'],
+        /*
+        |--------------------------------------------------------------------------
+        | How far ahead to pre-generate stock (in days)
+        |--------------------------------------------------------------------------
+        */
+        'seeding_horizon_days' => 30,
+    
+        /*
+        |--------------------------------------------------------------------------
+        | Table mix
+        |--------------------------------------------------------------------------
+        | One entry per table size you own:
+        |   capacity  → seats per table
+        |   available_count → how many such tables exist
+        */
+        'table_types' => [
+            ['capacity' => 2, 'available_count' => 4],
+            ['capacity' => 4, 'available_count' => 7],
+            ['capacity' => 6, 'available_count' => 7],
+        ],
+    
+        /*
+        |--------------------------------------------------------------------------
+        | Weekly service schedule
+        |--------------------------------------------------------------------------
+        | Keys are Carbon day-of-week integers (0 = Sun … 6 = Sat).
+        | Value is an array of meal types served that day.
+        | Empty array ⇒ restaurant closed.
+        */
+        'service_schedule' => [
+            0 => ['lunch', 'dinner'], // Sunday
+            1 => [],                  // Monday    (closed)
+            2 => [],                  // Tuesday   (closed)
+            3 => ['lunch'],           // Wednesday
+            4 => ['lunch'],           // Thursday
+            5 => ['lunch', 'dinner'], // Friday
+            6 => ['lunch', 'dinner'], // Saturday
+        ],
+    
+        /*
+        |--------------------------------------------------------------------------
+        | Default slot used by the demo-booking seeder
+        |--------------------------------------------------------------------------
+        */
+        'default_reserved_time' => '12:30:00',
+    
+        /*
+        |--------------------------------------------------------------------------
+        | Demo booking (turn off in production) (enabled => false si no vull que em posi reservas random per probar).
+        |--------------------------------------------------------------------------
+        */
+        'demo_booking' => [
+            'enabled'          => true,
+            'full_name'        => 'Test User',
+            'phone'            => '+34 600000000',
+            'email'            => 'test@example.com',
+            'special_requests' => 'No special requests',
+            'gdpr_consent'     => true,
+            'marketing_opt_in' => false,
         ],
     ];
 

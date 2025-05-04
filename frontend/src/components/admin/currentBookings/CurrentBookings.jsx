@@ -1,5 +1,4 @@
 // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
-
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays } from "date-fns";
@@ -10,6 +9,11 @@ import EditBookingModal from "./EditBookingModal";
 import DaySchedule from "../sharedBookings/DaySchedule";
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
 import { translate, getLanguage } from "../../../services/i18n";
+
+/* ───────── helpers ───────── */
+const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+const getBookingDate = (b) =>
+    (b.table_availability?.date || b.date || "").slice(0, 10); // always "YYYY-MM-DD"
 
 function SkeletonDaySchedule() {
     return (
@@ -23,10 +27,9 @@ function SkeletonDaySchedule() {
 }
 
 export default function CurrentBookings({ bookings, onDataRefresh }) {
-    const lang      = getLanguage();
-    const t         = (key, vars) => translate(lang, key, vars);
-    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-    const locale    = localeMap[lang] || enUS;
+    const lang   = getLanguage();
+    const t      = (key, vars) => translate(lang, key, vars);
+    const locale = localeMap[lang] || enUS;
 
     const [offset, setOffset]               = useState(0);
     const [isAdding, setIsAdding]           = useState(false);
@@ -38,11 +41,9 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
     const dateStr = format(dateObj, "yyyy-MM-dd");
 
+    /* bookings for the selected day */
     const todaysBookings = useMemo(
-        () =>
-            bookings.filter(
-                (b) => (b.table_availability?.date || b.date) === dateStr
-            ),
+        () => bookings.filter((b) => getBookingDate(b) === dateStr),
         [bookings, dateStr]
     );
 
@@ -52,6 +53,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
         0
     );
 
+    /* ─── load table-availability for the chosen date ─── */
     useEffect(() => {
         let cancelled = false;
         setLoadingTA(true);
@@ -65,9 +67,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
                 const merged = {};
                 [lunch, dinner].forEach((src) =>
                     Object.entries(src).forEach(([d, info]) => {
-                        merged[d] = merged[d]
-                            ? { ...merged[d], ...info }
-                            : info;
+                        merged[d] = merged[d] ? { ...merged[d], ...info } : info;
                     })
                 );
                 setTableAvailability(merged);

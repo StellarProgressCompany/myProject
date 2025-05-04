@@ -1,184 +1,257 @@
-// frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
-
-import React, { useState, useEffect } from "react";
+// src/components/admin/sharedBookings/BookingsOverview.jsx
+import React, { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import {
     format,
     addDays,
     subDays,
     parseISO,
-    differenceInCalendarDays,
+    startOfMonth,
+    endOfMonth,
+    startOfDay,
 } from "date-fns";
 
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-import BookingsCompactView from "./BookingsCompactView";
-import BookingsCalendarView from "./BookingsCalendarView";
-import BookingsChart from "./BookingsChart";
-import DaySchedule from "./DaySchedule";
-import AddBookingModal from "../currentBookings/AddBookingModal";
+import BookingsCompactView   from "./BookingsCompactView";
+import BookingsCalendarView  from "./BookingsCalendarView";
+import BookingsChart         from "./BookingsChart";
+import DaySchedule           from "./DaySchedule";
+import AddBookingModal       from "../currentBookings/AddBookingModal";
 import { translate, getLanguage } from "../../../services/i18n";
 
+/* helper ― consistent “yyyy-MM-dd” string */
 const ymd = (d) => format(d, "yyyy-MM-dd");
 
-export default function BookingsOverview({ mode, bookings }) {
+export default function BookingsOverview({
+                                             mode,
+                                             bookings,
+                                             showChart   = true,
+                                             allowDrill  = true,
+                                             onWindowChange = () => {},
+                                         }) {
+    /* ───────── i18n ───────── */
     const lang = getLanguage();
-    const t    = (key, vars) => translate(lang, key, vars);
+    const t    = (k, v) => translate(lang, k, v);
 
-    const today     = new Date();
-    const [rangeDays, setRangeDays] = useState(7);
-    const [view, setView]           = useState("compact");
-    const [selDay, setSelDay]       = useState(null);
-    const [ta, setTA]               = useState({});
+    /* ───────── constants ───────── */
+    const rangeDays = 7;
+    const today     = useMemo(() => startOfDay(new Date()), []);   // stable “today”
+
+    /* ───────── local state ───────── */
+    const [offset,    setOffset]    = useState(0);        // window offset
+    const [view,      setView]      = useState("compact"); // compact | calendar
+    const [selDay,    setSelDay]    = useState(null);     // drilled-in date
+    const [ta,        setTA]        = useState({});       // table availability
     const [loadingTA, setLoadingTA] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
-    const start = mode === "future" ? today : subDays(today, rangeDays);
-    const end   = mode === "future" ? addDays(today, rangeDays) : today;
+    /* ───────── window boundaries ───────── */
+    const compactStart = useMemo(
+        () =>
+            mode === "future"
+                ? addDays(today, offset)
+                : subDays(today, rangeDays + offset),
+        [mode, today, offset]
+    );
+    const compactEnd = useMemo(
+        () =>
+            mode === "future"
+                ? addDays(compactStart, rangeDays - 1)
+                : subDays(today, 1 + offset),
+        [mode, compactStart, today, offset]
+    );
 
+    /* ───────── helpers ───────── */
+    const inFuture = (d) => d >= today;
+    const inPast   = (d) => d <  today;
+
+    /* ╭─────────────────────────────────────────────────────────╮
+       │ bookings slices (memoised → stable reference)           │
+       ╰─────────────────────────────────────────────────────────╯ */
+    const compactFiltered = useMemo(
+        () =>
+            bookings.filter((b) => {
+                const d = parseISO(b.table_availability?.date || b.date);
+                return d >= compactStart && d <= compactEnd;
+            }),
+        [bookings, compactStart, compactEnd]
+    );
+
+    const calendarBookings = useMemo(
+        () =>
+            bookings.filter((b) => {
+                const d = parseISO(b.table_availability?.date || b.date);
+                return mode === "future" ? inFuture(d) : inPast(d);
+            }),
+        [bookings, mode, today]
+    );
+
+    /* which set to expose to MetricsDashboard for KPIs */
+    const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
+
+    /* ╭─────────────────────────────────────────────────────────╮
+       │ notify parent when statsBookings **content** changes    │
+       ╰─────────────────────────────────────────────────────────╯ */
     useEffect(() => {
-        if (view === "compact" && rangeDays !== 7) {
-            setView("calendar");
-        }
-    }, [view, rangeDays]);
+        onWindowChange(statsBookings);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [statsBookings]);         // safe – memo gives stable reference unless real diff
 
-    useEffect(() => {
-        (async () => {
-            setLoadingTA(true);
-            try {
-                const [lunch, dinner] = await Promise.all([
-                    fetchTableAvailabilityRange(ymd(start), ymd(end), "lunch"),
-                    fetchTableAvailabilityRange(ymd(start), ymd(end), "dinner"),
-                ]);
-                const merged = {};
-                [lunch, dinner].forEach((src) =>
-                    Object.entries(src).forEach(([d, info]) => {
-                        merged[d] = merged[d]
-                            ? { ...merged[d], ...info }
-                            : info;
-                    })
-                );
-                setTA(merged);
-            } catch {
-                setTA({});
-            } finally {
-                setLoadingTA(false);
-            }
-        })();
-    }, [mode, rangeDays]);
-
-    const filtered = bookings.filter((b) => {
-        const dateStr = b.table_availability?.date || b.date;
-        const d       = parseISO(dateStr);
-        if (mode === "future" && differenceInCalendarDays(d, today) <= 0) return false;
-        if (mode === "past"   && differenceInCalendarDays(d, today) >= 0) return false;
-        return d >= start && d <= end;
-    });
-
-    const totalBookings = filtered.length;
-    const totalClients  = filtered.reduce(
+    const totalBookings = statsBookings.length;
+    const totalClients  = statsBookings.reduce(
         (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
 
+    /* ╭─────────────────────────────────────────────────────────╮
+       │ Fetch table availability for the visible window         │
+       ╰─────────────────────────────────────────────────────────╯ */
+
+    /*  stringify dates so dependency identity is stable  */
+    const viewWinStart = useMemo(
+        () =>
+            view === "calendar"
+                ? startOfMonth(addDays(today, offset))
+                : compactStart,
+        [view, today, offset, compactStart]
+    );
+    const viewWinEnd = useMemo(
+        () =>
+            view === "calendar"
+                ? endOfMonth(viewWinStart)
+                : compactEnd,
+        [view, viewWinStart, compactEnd]
+    );
+    const winStartStr = ymd(viewWinStart);
+    const winEndStr   = ymd(viewWinEnd);
+
+    useEffect(() => {
+        let cancelled = false;
+        setLoadingTA(true);
+
+        Promise.all([
+            fetchTableAvailabilityRange(winStartStr, winEndStr, "lunch"),
+            fetchTableAvailabilityRange(winStartStr, winEndStr, "dinner"),
+        ])
+            .then(([lunch, dinner]) => {
+                if (cancelled) return;
+                /* merge */
+                const merged = {};
+                [lunch, dinner].forEach((src) =>
+                    Object.entries(src).forEach(([d, info]) => {
+                        merged[d] = merged[d] ? { ...merged[d], ...info } : info;
+                    })
+                );
+                setTA(merged);
+            })
+            .catch(() => !cancelled && setTA({}))
+            .finally(() => !cancelled && setLoadingTA(false));
+
+        return () => void (cancelled = true);
+    }, [winStartStr, winEndStr, view]);  // ← primitive deps, no endless loop
+
+    /* ensure TA for drilled-in day inside calendar view (once) */
+    useEffect(() => {
+        if (!selDay || view !== "calendar") return;
+        const key = ymd(selDay);
+        if (ta[key]) return; // already present
+
+        (async () => {
+            try {
+                const [lunch, dinner] = await Promise.all([
+                    fetchTableAvailabilityRange(key, key, "lunch"),
+                    fetchTableAvailabilityRange(key, key, "dinner"),
+                ]);
+                setTA((prev) => ({
+                    ...prev,
+                    [key]: { ...(lunch[key] || {}), ...(dinner[key] || {}) },
+                }));
+            } catch {
+                /* swallow */
+            }
+        })();
+    }, [selDay, view, ta]);
+
+    /* manual booking saved → refresh full page */
     const handleSaved = () => {
         setShowModal(false);
         window.location.reload();
     };
 
+    /* ───────── UI ───────── */
     return (
         <div className="p-6 bg-white rounded shadow space-y-6">
-            {/* Header */}
+            {/* header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl font-bold">
-                        {mode === "future"
-                            ? t("overview.futureBookings")
-                            : t("overview.pastBookings")}
+                    <h2 className="text-2xl font-bold capitalize">
+                        {t(`overview.${mode}Bookings`)}
                     </h2>
                     <p className="text-sm text-gray-500">
                         {t("overview.dataWindow", {
-                            start: ymd(start),
-                            end:   ymd(end),
+                            start: winStartStr,
+                            end:   winEndStr,
                         })}
                     </p>
                 </div>
-                <div>
-                    <select
-                        className="border rounded p-1"
-                        value={view}
-                        onChange={(e) => setView(e.target.value)}
-                    >
-                        {rangeDays === 7 && (
-                            <option value="compact">{t("admin.compact")}</option>
-                        )}
-                        <option value="calendar">{t("admin.calendar")}</option>
-                    </select>
-                </div>
+
+                <select
+                    className="border rounded p-1"
+                    value={view}
+                    onChange={(e) => setView(e.target.value)}
+                >
+                    <option value="compact">{t("admin.compact")}</option>
+                    <option value="calendar">{t("admin.calendar")}</option>
+                </select>
             </div>
 
-            {/* Totals */}
+            {/* stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">{t("overview.bookings30d")}</p>
+                    <p className="text-xs text-gray-600">
+                        {t("overview.bookings30d")}
+                    </p>
                     <p className="text-xl font-bold">{totalBookings}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">{t("overview.guests30d")}</p>
+                    <p className="text-xs text-gray-600">
+                        {t("overview.guests30d")}
+                    </p>
                     <p className="text-xl font-bold">{totalClients}</p>
                 </div>
             </div>
 
-            {/* List view */}
-            {view === "compact" && (
+            {/* list view */}
+            {view === "compact" ? (
                 <BookingsCompactView
                     mode={mode}
-                    rangeDays={7}
-                    selectedDate={selDay}
-                    onSelectDay={setSelDay}
-                    bookings={filtered}
+                    rangeDays={rangeDays}
+                    offset={offset}
+                    onOffsetChange={setOffset}
+                    selectedDate={allowDrill ? selDay : null}
+                    onSelectDay={allowDrill ? setSelDay : () => {}}
+                    bookings={statsBookings}
                 />
-            )}
-            {view === "calendar" && (
+            ) : (
                 <BookingsCalendarView
-                    selectedDate={selDay}
-                    onSelectDay={setSelDay}
-                    bookings={filtered}
+                    selectedDate={allowDrill ? selDay : null}
+                    onSelectDay={allowDrill ? setSelDay : () => {}}
+                    bookings={calendarBookings}
                 />
             )}
 
-            {/* Chart controls */}
-            <div className="flex justify-end mt-6 mb-2">
-                <select
-                    className="border rounded p-1"
-                    value={rangeDays}
-                    onChange={(e) => setRangeDays(Number(e.target.value))}
-                >
-                    {mode === "future" ? (
-                        <>
-                            <option value={7}>{t("overview.upcomingRange", { n: 7 })}</option>
-                            <option value={30}>{t("overview.upcomingRange", { n: 30 })}</option>
-                            <option value={90}>{t("overview.upcomingRange", { n: 90 })}</option>
-                        </>
-                    ) : (
-                        <>
-                            <option value={7}>{t("overview.pastRange", { n: 7 })}</option>
-                            <option value={30}>{t("overview.pastRange", { n: 30 })}</option>
-                            <option value={90}>{t("overview.pastRange", { n: 90 })}</option>
-                        </>
-                    )}
-                </select>
-            </div>
+            {/* chart */}
+            {showChart && (
+                <BookingsChart
+                    key={`${mode}-${offset}-${view}`}
+                    bookings={statsBookings}
+                    startDate={compactStart}
+                    days={rangeDays}
+                />
+            )}
 
-            {/* Chart */}
-            <BookingsChart
-                key={`${mode}-${rangeDays}`}
-                bookings={filtered}
-                startDate={start}
-                days={rangeDays}
-            />
-
-            {/* Day drill-in */}
-            {selDay && (
+            {/* drill-in panel */}
+            {allowDrill && selDay && (
                 <div className="mt-4 relative">
                     {mode === "future" && (
                         <button
@@ -190,7 +263,7 @@ export default function BookingsOverview({ mode, bookings }) {
                     )}
                     <DaySchedule
                         selectedDate={selDay}
-                        bookings={filtered}
+                        bookings={bookings}
                         tableAvailability={ta}
                         onClose={() => setSelDay(null)}
                         enableZoom
@@ -198,8 +271,8 @@ export default function BookingsOverview({ mode, bookings }) {
                 </div>
             )}
 
-            {/* Manual add */}
-            {showModal && selDay && (
+            {/* manual-add modal */}
+            {allowDrill && showModal && selDay && (
                 <AddBookingModal
                     dateObj={selDay}
                     onClose={() => setShowModal(false)}
@@ -211,6 +284,9 @@ export default function BookingsOverview({ mode, bookings }) {
 }
 
 BookingsOverview.propTypes = {
-    mode:     PropTypes.oneOf(["future", "past"]).isRequired,
-    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    mode:            PropTypes.oneOf(["future", "past"]).isRequired,
+    bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
+    showChart:       PropTypes.bool,
+    allowDrill:      PropTypes.bool,
+    onWindowChange:  PropTypes.func,
 };

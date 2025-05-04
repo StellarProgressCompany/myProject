@@ -7,9 +7,9 @@
     ├── /frontend/src/components/admin/currentBookings/CurrentBookings.jsx
     ├── /frontend/src/components/admin/currentBookings/EditBookingModal.jsx
     ├── /frontend/src/components/admin/futureBookings/FutureBookings.jsx
+    ├── /frontend/src/components/admin/metrics/MetricsDashboard.jsx
     ├── /frontend/src/components/admin/metrics/StatsGrid.jsx
     ├── /frontend/src/components/admin/metrics/VisualizeBookings.jsx
-    ├── /frontend/src/components/admin/pastBookings/PastBookings.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsChart.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
@@ -619,7 +619,6 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/CurrentBookings.jsx
     // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
-    
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format, addDays } from "date-fns";
@@ -630,6 +629,11 @@
     import DaySchedule from "../sharedBookings/DaySchedule";
     import { fetchTableAvailabilityRange } from "../../../services/bookingService";
     import { translate, getLanguage } from "../../../services/i18n";
+    
+    /* ───────── helpers ───────── */
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10); // always "YYYY-MM-DD"
     
     function SkeletonDaySchedule() {
         return (
@@ -643,10 +647,9 @@
     }
     
     export default function CurrentBookings({ bookings, onDataRefresh }) {
-        const lang      = getLanguage();
-        const t         = (key, vars) => translate(lang, key, vars);
-        const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-        const locale    = localeMap[lang] || enUS;
+        const lang   = getLanguage();
+        const t      = (key, vars) => translate(lang, key, vars);
+        const locale = localeMap[lang] || enUS;
     
         const [offset, setOffset]               = useState(0);
         const [isAdding, setIsAdding]           = useState(false);
@@ -658,11 +661,9 @@
         const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
         const dateStr = format(dateObj, "yyyy-MM-dd");
     
+        /* bookings for the selected day */
         const todaysBookings = useMemo(
-            () =>
-                bookings.filter(
-                    (b) => (b.table_availability?.date || b.date) === dateStr
-                ),
+            () => bookings.filter((b) => getBookingDate(b) === dateStr),
             [bookings, dateStr]
         );
     
@@ -672,6 +673,7 @@
             0
         );
     
+        /* ─── load table-availability for the chosen date ─── */
         useEffect(() => {
             let cancelled = false;
             setLoadingTA(true);
@@ -685,9 +687,7 @@
                     const merged = {};
                     [lunch, dinner].forEach((src) =>
                         Object.entries(src).forEach(([d, info]) => {
-                            merged[d] = merged[d]
-                                ? { ...merged[d], ...info }
-                                : info;
+                            merged[d] = merged[d] ? { ...merged[d], ...info } : info;
                         })
                     );
                     setTableAvailability(merged);
@@ -955,15 +955,63 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/futureBookings/FutureBookings.jsx
     // frontend/src/components/admin/futureBookings/FutureBookings.jsx
-    // (unchanged – reproduced verbatim)
     
     import React from "react";
     import BookingsOverview from "../sharedBookings/BookingsOverview";
     
     // eslint-disable-next-line react/prop-types
     export default function FutureBookings({ bookings }) {
-        return <BookingsOverview mode="future" bookings={bookings} />;
+        return (
+            <BookingsOverview
+                mode="future"
+                bookings={bookings}
+                showChart={false}
+                allowDrill={true}
+            />
+        );
     }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/metrics/MetricsDashboard.jsx
+    // frontend/src/components/admin/metrics/MetricsDashboard.jsx
+    import React, { useState } from "react";
+    import PropTypes from "prop-types";
+    
+    import StatsGrid from "./StatsGrid";
+    import BookingsOverview from "../sharedBookings/BookingsOverview";
+    
+    /**
+     * Shows the KPI grid plus a BookingsOverview (past-mode).
+     * The KPI grid now always reflects the *currently selected*
+     * window inside BookingsOverview (7-day compact window or
+     * the full calendar month), so metrics are never stuck on “today”.
+     */
+    export default function MetricsDashboard({ bookings }) {
+        /* windowBookings is updated by BookingsOverview via the
+           onWindowChange callback.  Default to the whole set.    */
+        const [windowBookings, setWindowBookings] = useState(bookings);
+    
+        return (
+            <div className="space-y-8">
+                {/* KPIs for the visible window */}
+                <StatsGrid bookings={windowBookings} />
+    
+                {/* Past bookings list / chart.  We pass the callback so the
+                    KPI grid stays in-sync with whatever the user is viewing. */}
+                <BookingsOverview
+                    mode="past"
+                    bookings={bookings}
+                    showChart={true}
+                    allowDrill={false}
+                    onWindowChange={setWindowBookings}
+                />
+            </div>
+        );
+    }
+    
+    MetricsDashboard.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/metrics/StatsGrid.jsx
@@ -1312,20 +1360,8 @@
     }
 
 ––––––––––––––––––––––––
-/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/pastBookings/PastBookings.jsx
-    // frontend/src/components/admin/pastBookings/PastBookings.jsx
-    
-    import React from "react";
-    import BookingsOverview from "../sharedBookings/BookingsOverview";
-    
-    export default function PastBookings({ bookings }) {
-        return <BookingsOverview mode="past" bookings={bookings} />;
-    }
-
-––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
     // frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
-    
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import {
@@ -1335,21 +1371,17 @@
         startOfWeek,
         endOfWeek,
         addDays,
+        addMonths,
+        subMonths,
         isSameMonth,
         isSameDay,
     } from "date-fns";
-    import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = {
-        en: enUS,
-        es: esLocale,
-        ca: caLocale,
-    };
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10);
     
     export default function BookingsCalendarView({
                                                      selectedDate = null,
@@ -1362,13 +1394,10 @@
     
         const [monthToShow, setMonthToShow] = useState(new Date());
     
-        // weekday headers localized
+        /* ───────── helpers ───────── */
         const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
             format(
-                addDays(
-                    startOfWeek(new Date(), { weekStartsOn: 1, locale }),
-                    i
-                ),
+                addDays(startOfWeek(new Date(), { weekStartsOn: 1, locale }), i),
                 "EEE",
                 { locale }
             )
@@ -1377,64 +1406,60 @@
         const monthStart = startOfMonth(monthToShow);
         const monthEnd   = endOfMonth(monthToShow);
         const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1, locale });
-        const gridEnd    = endOfWeek(monthEnd, { weekStartsOn: 1, locale });
+        const gridEnd    = endOfWeek(monthEnd,   { weekStartsOn: 1, locale });
     
-        function getDayStats(date) {
-            const dateStr = format(date, "yyyy-MM-dd", { locale });
-            const dayBookings = bookings.filter((b) => {
-                const bd = b.table_availability?.date || b.date;
-                return bd === dateStr;
-            });
-            const totalClients = dayBookings.reduce(
-                (acc, b) => acc + (b.table_availability?.capacity || 0),
+        const getDayStats = (date) => {
+            const key   = format(date, "yyyy-MM-dd", { locale });
+            const dayBk = bookings.filter((b) => getBookingDate(b) === key);
+            const tot   = dayBk.reduce(
+                (n, b) => n + (b.total_adults || 0) + (b.total_kids || 0),
                 0
             );
-            return { bookingsCount: dayBookings.length, totalClients };
-        }
+            return { bookings: dayBk.length, clients: tot };
+        };
     
+        /* ───────── build calendar grid ───────── */
         const rows = [];
-        let day = gridStart;
-        while (day <= gridEnd) {
+        let dayPtr = gridStart;
+        while (dayPtr <= gridEnd) {
             const week = [];
             for (let i = 0; i < 7; i++) {
-                const cloneDay     = day;
-                const { bookingsCount, totalClients } = getDayStats(cloneDay);
-                const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
-                const isSelected     = selectedDate && isSameDay(cloneDay, selectedDate);
+                const d                 = dayPtr;
+                const { bookings: bc, clients } = getDayStats(d);
+                const inMonth           = isSameMonth(d, monthToShow);
+                const selected          = selectedDate && isSameDay(d, selectedDate);
     
-                let bg  = isSelected ? "bg-blue-600" : "bg-white";
-                let txt = isSelected
+                const bg  = selected ? "bg-blue-600" : "bg-white";
+                const txt = selected
                     ? "text-white"
-                    : isCurrentMonth
+                    : inMonth
                         ? "text-gray-800"
                         : "text-gray-400";
     
                 week.push(
                     <button
-                        key={cloneDay.toISOString()}
-                        onClick={() => onSelectDay(cloneDay)}
-                        className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition`}
+                        key={d.toISOString()}
+                        onClick={() => onSelectDay(d)}
+                        className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex flex-col items-center justify-center hover:bg-blue-50 transition`}
                         style={{ minWidth: 50 }}
-                        title={format(cloneDay, "EEEE, MMMM d, yyyy", { locale })}
+                        title={format(d, "EEEE, MMMM d, yyyy", { locale })}
                     >
-                        <div className="flex flex-col items-center">
-                            <span className="text-sm font-semibold">
-                                {format(cloneDay, "d", { locale })}
+                        <span className="text-sm font-semibold">
+                            {format(d, "d", { locale })}
+                        </span>
+                        {bc > 0 && (
+                            <span className="text-[10px] mt-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
+                                {bc} {t("calendar.badgeBookings")}
                             </span>
-                            {bookingsCount > 0 && (
-                                <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                                    {bookingsCount} {t("calendar.badgeBookings")}
-                                </span>
-                            )}
-                            {totalClients > 0 && (
-                                <span className="text-xs mt-1 inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                    {totalClients} {t("calendar.badgeClients")}
-                                </span>
-                            )}
-                        </div>
+                        )}
+                        {clients > 0 && (
+                            <span className="text-[10px] mt-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                                {clients} {t("calendar.badgeClients")}
+                            </span>
+                        )}
                     </button>
                 );
-                day = addDays(day, 1);
+                dayPtr = addDays(dayPtr, 1);
             }
             rows.push(
                 <div key={rows.length} className="grid grid-cols-7">
@@ -1445,13 +1470,10 @@
     
         return (
             <div className="bg-white p-4 rounded shadow">
+                {/* month controls */}
                 <div className="flex items-center justify-between mb-2">
                     <button
-                        onClick={() =>
-                            setMonthToShow((prev) =>
-                                new Date(prev.setMonth(prev.getMonth() - 1))
-                            )
-                        }
+                        onClick={() => setMonthToShow((prev) => subMonths(prev, 1))}
                         className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                     >
                         {t("calendar.prev")}
@@ -1460,17 +1482,14 @@
                         {format(monthToShow, "MMMM yyyy", { locale })}
                     </h3>
                     <button
-                        onClick={() =>
-                            setMonthToShow((prev) =>
-                                new Date(prev.setMonth(prev.getMonth() + 1))
-                            )
-                        }
+                        onClick={() => setMonthToShow((prev) => addMonths(prev, 1))}
                         className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                     >
                         {t("calendar.next")}
                     </button>
                 </div>
     
+                {/* weekday headers */}
                 <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
                     {weekdayLabels.map((lbl) => (
                         <div key={lbl}>{lbl}</div>
@@ -1598,26 +1617,21 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
     // frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
-    
     import React from "react";
     import PropTypes from "prop-types";
     import { format, addDays, subDays, isSameDay } from "date-fns";
-    import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = {
-        en: enUS,
-        es: esLocale,
-        ca: caLocale,
-    };
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10);
     
     export default function BookingsCompactView({
                                                     mode,
                                                     rangeDays,
+                                                    offset,
+                                                    onOffsetChange,
                                                     selectedDate = null,
                                                     onSelectDay,
                                                     bookings,
@@ -1630,259 +1644,346 @@
         const days  = [];
     
         if (mode === "future") {
-            for (let i = 0; i < rangeDays; i++) {
+            for (let i = offset; i < offset + rangeDays; i++) {
                 days.push(addDays(today, i));
             }
         } else {
-            for (let i = 1; i <= rangeDays; i++) {
+            for (let i = 1 + offset; i <= rangeDays + offset; i++) {
                 days.push(subDays(today, i));
             }
         }
     
-        function getDayStats(day) {
+        const getDayStats = (day) => {
             const key = format(day, "yyyy-MM-dd", { locale });
-            const dayBookings = bookings.filter((b) => {
-                const bd = b.table_availability?.date || b.date;
-                return bd === key;
-            });
+            const dayBookings = bookings.filter((b) => getBookingDate(b) === key);
             const totalClients = dayBookings.reduce(
                 (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
                 0
             );
-            return {
-                bookingsCount: dayBookings.length,
-                totalClients,
-            };
-        }
+            return { bookings: dayBookings.length, clients: totalClients };
+        };
     
         return (
-            <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow">
-                {days.map((day) => {
-                    const { bookingsCount, totalClients } = getDayStats(day);
-                    const isSel = selectedDate && isSameDay(day, selectedDate);
-                    const bg    = isSel ? "bg-blue-600" : "bg-gray-100";
-                    const txt   = isSel ? "text-white" : "text-gray-800";
+            <div className="relative">
+                {/* arrows */}
+                <button
+                    onClick={() => onOffsetChange(offset - 1)}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
+                    aria-label="Previous window"
+                >
+                    ‹
+                </button>
+                <button
+                    onClick={() => onOffsetChange(offset + 1)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
+                    aria-label="Next window"
+                >
+                    ›
+                </button>
     
-                    return (
-                        <button
-                            key={day.toISOString()}
-                            onClick={() => onSelectDay(day)}
-                            className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
-                            title={format(day, "EEEE, MMMM d, yyyy", { locale })}
-                        >
-                            <span className="text-xs font-semibold">
-                                {format(day, "E", { locale })}
-                            </span>
-                            <span className="text-xl font-bold">
-                                {format(day, "d", { locale })}
-                            </span>
-                            <span className="text-xs">
-                                {format(day, "MMMM", { locale })}
-                            </span>
-                            <span className="mt-1 text-xs">
-                                {bookingsCount} {t("calendar.badgeBookings")}
-                            </span>
-                            <span className="text-xs">
-                                {totalClients} {t("calendar.badgeClients")}
-                            </span>
-                        </button>
-                    );
-                })}
+                <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow mx-6">
+                    {days.map((day) => {
+                        const { bookings: bc, clients } = getDayStats(day);
+                        const isSel = selectedDate && isSameDay(day, selectedDate);
+                        const bg    = isSel ? "bg-blue-600" : "bg-gray-100";
+                        const txt   = isSel ? "text-white"  : "text-gray-800";
+    
+                        return (
+                            <button
+                                key={day.toISOString()}
+                                onClick={() => onSelectDay(day)}
+                                className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded hover:bg-blue-200 transition`}
+                                title={format(day, "EEEE, MMMM d, yyyy", { locale })}
+                            >
+                                <span className="text-xs font-semibold">
+                                    {format(day, "E", { locale })}
+                                </span>
+                                <span className="text-xl font-bold">
+                                    {format(day, "d", { locale })}
+                                </span>
+                                <span className="text-xs">
+                                    {format(day, "MMM", { locale })}
+                                </span>
+                                <span className="mt-1 text-[10px]">
+                                    {bc} {t("calendar.badgeBookings")}
+                                </span>
+                                <span className="text-[10px]">
+                                    {clients} {t("calendar.badgeClients")}
+                                </span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         );
     }
     
     BookingsCompactView.propTypes = {
-        mode:         PropTypes.oneOf(["future", "past"]).isRequired,
-        rangeDays:    PropTypes.number.isRequired,
-        selectedDate: PropTypes.instanceOf(Date),
-        onSelectDay:  PropTypes.func.isRequired,
-        bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
+        mode:            PropTypes.oneOf(["future", "past"]).isRequired,
+        rangeDays:       PropTypes.number.isRequired,
+        offset:          PropTypes.number.isRequired,
+        onOffsetChange:  PropTypes.func.isRequired,
+        selectedDate:    PropTypes.instanceOf(Date),
+        onSelectDay:     PropTypes.func.isRequired,
+        bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
-    // frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
-    
-    import React, { useState, useEffect } from "react";
+    // src/components/admin/sharedBookings/BookingsOverview.jsx
+    import React, { useState, useEffect, useMemo } from "react";
     import PropTypes from "prop-types";
     import {
         format,
         addDays,
         subDays,
         parseISO,
-        differenceInCalendarDays,
+        startOfMonth,
+        endOfMonth,
+        startOfDay,
     } from "date-fns";
     
     import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-    import BookingsCompactView from "./BookingsCompactView";
-    import BookingsCalendarView from "./BookingsCalendarView";
-    import BookingsChart from "./BookingsChart";
-    import DaySchedule from "./DaySchedule";
-    import AddBookingModal from "../currentBookings/AddBookingModal";
+    import BookingsCompactView   from "./BookingsCompactView";
+    import BookingsCalendarView  from "./BookingsCalendarView";
+    import BookingsChart         from "./BookingsChart";
+    import DaySchedule           from "./DaySchedule";
+    import AddBookingModal       from "../currentBookings/AddBookingModal";
     import { translate, getLanguage } from "../../../services/i18n";
     
+    /* helper ― consistent “yyyy-MM-dd” string */
     const ymd = (d) => format(d, "yyyy-MM-dd");
     
-    export default function BookingsOverview({ mode, bookings }) {
+    export default function BookingsOverview({
+                                                 mode,
+                                                 bookings,
+                                                 showChart   = true,
+                                                 allowDrill  = true,
+                                                 onWindowChange = () => {},
+                                             }) {
+        /* ───────── i18n ───────── */
         const lang = getLanguage();
-        const t    = (key, vars) => translate(lang, key, vars);
+        const t    = (k, v) => translate(lang, k, v);
     
-        const today     = new Date();
-        const [rangeDays, setRangeDays] = useState(7);
-        const [view, setView]           = useState("compact");
-        const [selDay, setSelDay]       = useState(null);
-        const [ta, setTA]               = useState({});
+        /* ───────── constants ───────── */
+        const rangeDays = 7;
+        const today     = useMemo(() => startOfDay(new Date()), []);   // stable “today”
+    
+        /* ───────── local state ───────── */
+        const [offset,    setOffset]    = useState(0);        // window offset
+        const [view,      setView]      = useState("compact"); // compact | calendar
+        const [selDay,    setSelDay]    = useState(null);     // drilled-in date
+        const [ta,        setTA]        = useState({});       // table availability
         const [loadingTA, setLoadingTA] = useState(false);
         const [showModal, setShowModal] = useState(false);
     
-        const start = mode === "future" ? today : subDays(today, rangeDays);
-        const end   = mode === "future" ? addDays(today, rangeDays) : today;
+        /* ───────── window boundaries ───────── */
+        const compactStart = useMemo(
+            () =>
+                mode === "future"
+                    ? addDays(today, offset)
+                    : subDays(today, rangeDays + offset),
+            [mode, today, offset]
+        );
+        const compactEnd = useMemo(
+            () =>
+                mode === "future"
+                    ? addDays(compactStart, rangeDays - 1)
+                    : subDays(today, 1 + offset),
+            [mode, compactStart, today, offset]
+        );
     
+        /* ───────── helpers ───────── */
+        const inFuture = (d) => d >= today;
+        const inPast   = (d) => d <  today;
+    
+        /* ╭─────────────────────────────────────────────────────────╮
+           │ bookings slices (memoised → stable reference)           │
+           ╰─────────────────────────────────────────────────────────╯ */
+        const compactFiltered = useMemo(
+            () =>
+                bookings.filter((b) => {
+                    const d = parseISO(b.table_availability?.date || b.date);
+                    return d >= compactStart && d <= compactEnd;
+                }),
+            [bookings, compactStart, compactEnd]
+        );
+    
+        const calendarBookings = useMemo(
+            () =>
+                bookings.filter((b) => {
+                    const d = parseISO(b.table_availability?.date || b.date);
+                    return mode === "future" ? inFuture(d) : inPast(d);
+                }),
+            [bookings, mode, today]
+        );
+    
+        /* which set to expose to MetricsDashboard for KPIs */
+        const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
+    
+        /* ╭─────────────────────────────────────────────────────────╮
+           │ notify parent when statsBookings **content** changes    │
+           ╰─────────────────────────────────────────────────────────╯ */
         useEffect(() => {
-            if (view === "compact" && rangeDays !== 7) {
-                setView("calendar");
-            }
-        }, [view, rangeDays]);
+            onWindowChange(statsBookings);
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [statsBookings]);         // safe – memo gives stable reference unless real diff
     
-        useEffect(() => {
-            (async () => {
-                setLoadingTA(true);
-                try {
-                    const [lunch, dinner] = await Promise.all([
-                        fetchTableAvailabilityRange(ymd(start), ymd(end), "lunch"),
-                        fetchTableAvailabilityRange(ymd(start), ymd(end), "dinner"),
-                    ]);
-                    const merged = {};
-                    [lunch, dinner].forEach((src) =>
-                        Object.entries(src).forEach(([d, info]) => {
-                            merged[d] = merged[d]
-                                ? { ...merged[d], ...info }
-                                : info;
-                        })
-                    );
-                    setTA(merged);
-                } catch {
-                    setTA({});
-                } finally {
-                    setLoadingTA(false);
-                }
-            })();
-        }, [mode, rangeDays]);
-    
-        const filtered = bookings.filter((b) => {
-            const dateStr = b.table_availability?.date || b.date;
-            const d       = parseISO(dateStr);
-            if (mode === "future" && differenceInCalendarDays(d, today) <= 0) return false;
-            if (mode === "past"   && differenceInCalendarDays(d, today) >= 0) return false;
-            return d >= start && d <= end;
-        });
-    
-        const totalBookings = filtered.length;
-        const totalClients  = filtered.reduce(
+        const totalBookings = statsBookings.length;
+        const totalClients  = statsBookings.reduce(
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
             0
         );
     
+        /* ╭─────────────────────────────────────────────────────────╮
+           │ Fetch table availability for the visible window         │
+           ╰─────────────────────────────────────────────────────────╯ */
+    
+        /*  stringify dates so dependency identity is stable  */
+        const viewWinStart = useMemo(
+            () =>
+                view === "calendar"
+                    ? startOfMonth(addDays(today, offset))
+                    : compactStart,
+            [view, today, offset, compactStart]
+        );
+        const viewWinEnd = useMemo(
+            () =>
+                view === "calendar"
+                    ? endOfMonth(viewWinStart)
+                    : compactEnd,
+            [view, viewWinStart, compactEnd]
+        );
+        const winStartStr = ymd(viewWinStart);
+        const winEndStr   = ymd(viewWinEnd);
+    
+        useEffect(() => {
+            let cancelled = false;
+            setLoadingTA(true);
+    
+            Promise.all([
+                fetchTableAvailabilityRange(winStartStr, winEndStr, "lunch"),
+                fetchTableAvailabilityRange(winStartStr, winEndStr, "dinner"),
+            ])
+                .then(([lunch, dinner]) => {
+                    if (cancelled) return;
+                    /* merge */
+                    const merged = {};
+                    [lunch, dinner].forEach((src) =>
+                        Object.entries(src).forEach(([d, info]) => {
+                            merged[d] = merged[d] ? { ...merged[d], ...info } : info;
+                        })
+                    );
+                    setTA(merged);
+                })
+                .catch(() => !cancelled && setTA({}))
+                .finally(() => !cancelled && setLoadingTA(false));
+    
+            return () => void (cancelled = true);
+        }, [winStartStr, winEndStr, view]);  // ← primitive deps, no endless loop
+    
+        /* ensure TA for drilled-in day inside calendar view (once) */
+        useEffect(() => {
+            if (!selDay || view !== "calendar") return;
+            const key = ymd(selDay);
+            if (ta[key]) return; // already present
+    
+            (async () => {
+                try {
+                    const [lunch, dinner] = await Promise.all([
+                        fetchTableAvailabilityRange(key, key, "lunch"),
+                        fetchTableAvailabilityRange(key, key, "dinner"),
+                    ]);
+                    setTA((prev) => ({
+                        ...prev,
+                        [key]: { ...(lunch[key] || {}), ...(dinner[key] || {}) },
+                    }));
+                } catch {
+                    /* swallow */
+                }
+            })();
+        }, [selDay, view, ta]);
+    
+        /* manual booking saved → refresh full page */
         const handleSaved = () => {
             setShowModal(false);
             window.location.reload();
         };
     
+        /* ───────── UI ───────── */
         return (
             <div className="p-6 bg-white rounded shadow space-y-6">
-                {/* Header */}
+                {/* header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold">
-                            {mode === "future"
-                                ? t("overview.futureBookings")
-                                : t("overview.pastBookings")}
+                        <h2 className="text-2xl font-bold capitalize">
+                            {t(`overview.${mode}Bookings`)}
                         </h2>
                         <p className="text-sm text-gray-500">
                             {t("overview.dataWindow", {
-                                start: ymd(start),
-                                end:   ymd(end),
+                                start: winStartStr,
+                                end:   winEndStr,
                             })}
                         </p>
                     </div>
-                    <div>
-                        <select
-                            className="border rounded p-1"
-                            value={view}
-                            onChange={(e) => setView(e.target.value)}
-                        >
-                            {rangeDays === 7 && (
-                                <option value="compact">{t("admin.compact")}</option>
-                            )}
-                            <option value="calendar">{t("admin.calendar")}</option>
-                        </select>
-                    </div>
+    
+                    <select
+                        className="border rounded p-1"
+                        value={view}
+                        onChange={(e) => setView(e.target.value)}
+                    >
+                        <option value="compact">{t("admin.compact")}</option>
+                        <option value="calendar">{t("admin.calendar")}</option>
+                    </select>
                 </div>
     
-                {/* Totals */}
+                {/* stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-blue-50 p-3 rounded text-center">
-                        <p className="text-xs text-gray-600">{t("overview.bookings30d")}</p>
+                        <p className="text-xs text-gray-600">
+                            {t("overview.bookings30d")}
+                        </p>
                         <p className="text-xl font-bold">{totalBookings}</p>
                     </div>
                     <div className="bg-green-50 p-3 rounded text-center">
-                        <p className="text-xs text-gray-600">{t("overview.guests30d")}</p>
+                        <p className="text-xs text-gray-600">
+                            {t("overview.guests30d")}
+                        </p>
                         <p className="text-xl font-bold">{totalClients}</p>
                     </div>
                 </div>
     
-                {/* List view */}
-                {view === "compact" && (
+                {/* list view */}
+                {view === "compact" ? (
                     <BookingsCompactView
                         mode={mode}
-                        rangeDays={7}
-                        selectedDate={selDay}
-                        onSelectDay={setSelDay}
-                        bookings={filtered}
+                        rangeDays={rangeDays}
+                        offset={offset}
+                        onOffsetChange={setOffset}
+                        selectedDate={allowDrill ? selDay : null}
+                        onSelectDay={allowDrill ? setSelDay : () => {}}
+                        bookings={statsBookings}
                     />
-                )}
-                {view === "calendar" && (
+                ) : (
                     <BookingsCalendarView
-                        selectedDate={selDay}
-                        onSelectDay={setSelDay}
-                        bookings={filtered}
+                        selectedDate={allowDrill ? selDay : null}
+                        onSelectDay={allowDrill ? setSelDay : () => {}}
+                        bookings={calendarBookings}
                     />
                 )}
     
-                {/* Chart controls */}
-                <div className="flex justify-end mt-6 mb-2">
-                    <select
-                        className="border rounded p-1"
-                        value={rangeDays}
-                        onChange={(e) => setRangeDays(Number(e.target.value))}
-                    >
-                        {mode === "future" ? (
-                            <>
-                                <option value={7}>{t("overview.upcomingRange", { n: 7 })}</option>
-                                <option value={30}>{t("overview.upcomingRange", { n: 30 })}</option>
-                                <option value={90}>{t("overview.upcomingRange", { n: 90 })}</option>
-                            </>
-                        ) : (
-                            <>
-                                <option value={7}>{t("overview.pastRange", { n: 7 })}</option>
-                                <option value={30}>{t("overview.pastRange", { n: 30 })}</option>
-                                <option value={90}>{t("overview.pastRange", { n: 90 })}</option>
-                            </>
-                        )}
-                    </select>
-                </div>
+                {/* chart */}
+                {showChart && (
+                    <BookingsChart
+                        key={`${mode}-${offset}-${view}`}
+                        bookings={statsBookings}
+                        startDate={compactStart}
+                        days={rangeDays}
+                    />
+                )}
     
-                {/* Chart */}
-                <BookingsChart
-                    key={`${mode}-${rangeDays}`}
-                    bookings={filtered}
-                    startDate={start}
-                    days={rangeDays}
-                />
-    
-                {/* Day drill-in */}
-                {selDay && (
+                {/* drill-in panel */}
+                {allowDrill && selDay && (
                     <div className="mt-4 relative">
                         {mode === "future" && (
                             <button
@@ -1894,7 +1995,7 @@
                         )}
                         <DaySchedule
                             selectedDate={selDay}
-                            bookings={filtered}
+                            bookings={bookings}
                             tableAvailability={ta}
                             onClose={() => setSelDay(null)}
                             enableZoom
@@ -1902,8 +2003,8 @@
                     </div>
                 )}
     
-                {/* Manual add */}
-                {showModal && selDay && (
+                {/* manual-add modal */}
+                {allowDrill && showModal && selDay && (
                     <AddBookingModal
                         dateObj={selDay}
                         onClose={() => setShowModal(false)}
@@ -1915,30 +2016,26 @@
     }
     
     BookingsOverview.propTypes = {
-        mode:     PropTypes.oneOf(["future", "past"]).isRequired,
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        mode:            PropTypes.oneOf(["future", "past"]).isRequired,
+        bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
+        showChart:       PropTypes.bool,
+        allowDrill:      PropTypes.bool,
+        onWindowChange:  PropTypes.func,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/DaySchedule.jsx
     // frontend/src/components/admin/sharedBookings/DaySchedule.jsx
-    
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import { format } from "date-fns";
-    import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     import TableUsage from "./TableUsage";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = {
-        en: enUS,
-        es: esLocale,
-        ca: caLocale,
-    };
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10);
     
     export default function DaySchedule({
                                             selectedDate,
@@ -1951,7 +2048,6 @@
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
-        // **Re-added** showFloor state:
         const [showFloor, setShowFloor] = useState(false);
     
         if (!selectedDate) return null;
@@ -1979,9 +2075,7 @@
                                 : "text-gray-700"
                         }
                     >
-                        {dayInfo === "closed"
-                            ? "CLOSED"
-                            : t("schedule.noBookings")}
+                        {dayInfo === "closed" ? "CLOSED" : t("schedule.noBookings")}
                     </p>
                 </div>
             );
@@ -1995,14 +2089,10 @@
         roundKeys.forEach((rk) => {
             roundBookings[rk] = bookings
                 .filter((b) => {
-                    const d = b.table_availability?.date;
-                    if (d !== dateStr) return false;
+                    if (getBookingDate(b) !== dateStr) return false;
                     if (rk.includes("first")) return b.reserved_time < "15:00:00";
                     if (rk.includes("second"))
-                        return (
-                            b.reserved_time >= "15:00:00" &&
-                            b.reserved_time < "20:00:00"
-                        );
+                        return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
                     return b.reserved_time >= "20:00:00";
                 })
                 .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
@@ -2010,7 +2100,7 @@
     
         const fullStock = { 2: 0, 4: 0, 6: 0 };
         roundKeys.forEach((rk) => {
-            const avail = dayInfo[rk]?.availability || {};
+            const avail  = dayInfo[rk]?.availability || {};
             const booked = {};
             (roundBookings[rk] || []).forEach((bk) => {
                 const cap = bk.table_availability?.capacity || 0;
@@ -2044,9 +2134,7 @@
                                 onClick={() => setShowFloor((v) => !v)}
                                 className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
                             >
-                                {showFloor
-                                    ? t("admin.hideFloor")
-                                    : t("admin.expandFloor")}
+                                {showFloor ? t("admin.hideFloor") : t("admin.expandFloor")}
                             </button>
                         )}
                         <button
@@ -3516,24 +3604,21 @@
     import {
         IconCalendarClock,
         IconClock,
-        IconHistory,
         IconChartBar,
         IconLogout,
-        IconRefresh,
     } from "@tabler/icons-react";
     
-    import LanguagePicker      from "../components/admin/utils/LanguagePicker.jsx";
+    import LanguagePicker       from "../components/admin/utils/LanguagePicker.jsx";
     import { fetchAllBookings } from "../services/bookingService";
-    import CurrentBookings     from "../components/admin/currentBookings/CurrentBookings";
-    import BookingsOverview    from "../components/admin/sharedBookings/BookingsOverview";
-    import StatsGrid           from "../components/admin/metrics/StatsGrid";
-    import AlgorithmTester     from "../components/admin/algorithmTest/AlgorithmTester";
+    import CurrentBookings      from "../components/admin/currentBookings/CurrentBookings";
+    import BookingsOverview     from "../components/admin/sharedBookings/BookingsOverview";
+    import AlgorithmTester      from "../components/admin/algorithmTest/AlgorithmTester";
+    import MetricsDashboard     from "../components/admin/metrics/MetricsDashboard";
     import { translate, setLanguage } from "../services/i18n";
     
     const navMeta = [
         { key: "current", icon: IconClock },
         { key: "future",  icon: IconCalendarClock },
-        { key: "past",    icon: IconHistory },
         { key: "metrics", icon: IconChartBar },
         { key: "tester",  icon: IconChartBar },
     ];
@@ -3561,10 +3646,12 @@
             setLoading(true);
             try {
                 const data = await fetchAllBookings();
-                setBookings(Array.isArray(data) ? data : []);
+                if (Array.isArray(data)) {
+                    setBookings(data);
+                }
             } catch (err) {
-                console.error(err);
-                setBookings([]);
+                console.error("Failed to fetch bookings:", err);
+                // retain previous bookings on error
             } finally {
                 setLoading(false);
             }
@@ -3597,19 +3684,12 @@
                         <BookingsOverview
                             mode="future"
                             bookings={bookings}
-                            onDataRefresh={loadBookings}
-                        />
-                    );
-                case "past":
-                    return (
-                        <BookingsOverview
-                            mode="past"
-                            bookings={bookings}
-                            onDataRefresh={loadBookings}
+                            showChart={false}
+                            allowDrill={true}
                         />
                     );
                 case "metrics":
-                    return <StatsGrid bookings={bookings} />;
+                    return <MetricsDashboard bookings={bookings} />;
                 case "tester":
                     return (
                         <AlgorithmTester
@@ -3622,7 +3702,7 @@
             }
         };
     
-        // ─── version from Vite env (instead of process.env) ───
+        // ─── version from Vite env ───
         const version = import.meta.env.VITE_APP_VERSION || "1.0.3";
     
         return (
@@ -3631,9 +3711,9 @@
                 <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                     <div className="border-b">
                         <div className="flex items-center justify-between p-4">
-                <span className="text-xl font-semibold">
-                  {t("admin.title")}
-                </span>
+                            <span className="text-xl font-semibold">
+                                {t("admin.title")}
+                            </span>
                             <code className="text-sm text-gray-500">
                                 {t("admin.versionPrefix")}{version}
                             </code>
@@ -3660,14 +3740,8 @@
                         ))}
                     </div>
     
-                    <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t space-y-2">
-                        <button
-                            onClick={loadBookings}
-                            className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
-                        >
-                            <IconRefresh className="mr-3 h-5 w-5 text-gray-400" />
-                            {t("admin.refresh")}
-                        </button>
+                    {/* ─── Logout (refresh removed) ─── */}
+                    <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t">
                         <button
                             onClick={logout}
                             className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
@@ -3890,34 +3964,71 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/bookingService.js
     import axios from "axios";
-    axios.defaults.baseURL = "";                       // proxy via Vite
+    axios.defaults.baseURL = ""; // proxy via Vite
     
-    /* Availability helpers – unchanged */
-    export async function fetchAvailableTimeSlots(params){
-        const { data } = await axios.get("/api/table-availability",{ params });
+    /* ──────────────────────────────────────────────
+       Simple in-memory cache that deduplicates calls
+       to /api/table-availability-range.              ───────────────────────────────────────────── */
+    const _taCache = new Map();
+    const buildKey = (start, end, meal) => `${start}|${end}|${meal}`;
+    
+    export async function fetchTableAvailabilityRange(
+        start,
+        end,
+        mealType = "lunch"
+    ) {
+        const key = buildKey(start, end, mealType);
+        const hit = _taCache.get(key);
+    
+        /* ① return cached result (resolved) */
+        if (hit?.status === "resolved") return hit.data;
+    
+        /* ② attach to the pending promise if already in flight */
+        if (hit?.status === "pending") return hit.promise;
+    
+        /* ③ otherwise perform the request and cache both the
+              pending promise and (when it resolves) the data     */
+        const promise = axios
+            .get("/api/table-availability-range", {
+                params: { start, end, mealType },
+            })
+            .then((res) => {
+                _taCache.set(key, { status: "resolved", data: res.data });
+                return res.data;
+            })
+            .catch((err) => {
+                /* remove the entry so a later retry is possible */
+                _taCache.delete(key);
+                throw err;
+            });
+    
+        _taCache.set(key, { status: "pending", promise });
+        return promise;
+    }
+    
+    /* ──────────────────────────────────────────────
+       Other booking-related helpers (unchanged)      ───────────────────────────────────────────── */
+    export async function fetchAvailableTimeSlots(params) {
+        const { data } = await axios.get("/api/table-availability", { params });
         return data;
     }
-    export async function fetchTableAvailabilityRange(start,end,mealType="lunch"){
-        const { data } = await axios.get("/api/table-availability-range",{
-            params:{ start,end,mealType }
-        });
-        return data;
-    }
     
-    /* CRUD bookings */
-    export async function fetchAllBookings(){
+    export async function fetchAllBookings() {
         const { data } = await axios.get("/api/bookings");
         return data.data;
     }
-    export async function createBooking(payload){
-        const { data } = await axios.post("/api/bookings",payload);
+    
+    export async function createBooking(payload) {
+        const { data } = await axios.post("/api/bookings", payload);
         return data;
     }
-    export async function updateBooking(id,payload){
-        const { data } = await axios.patch(`/api/bookings/${id}`,payload);
+    
+    export async function updateBooking(id, payload) {
+        const { data } = await axios.patch(`/api/bookings/${id}`, payload);
         return data;
     }
-    export async function deleteBooking(id){
+    
+    export async function deleteBooking(id) {
         const { data } = await axios.delete(`/api/bookings/${id}`);
         return data;
     }

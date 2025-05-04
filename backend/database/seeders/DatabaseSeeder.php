@@ -13,7 +13,8 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             TableAvailabilitySeeder::class,
-            BookingSeeder::class, // demo seeder – disabled via config when needed
+            BookingSeeder::class,           // heavier random bookings now
+            ReallocateBookingsSeeder::class // then re-seat them for minimal waste
         ]);
     }
 }

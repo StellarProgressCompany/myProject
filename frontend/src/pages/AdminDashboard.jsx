@@ -6,24 +6,21 @@ import { useNavigate } from "react-router-dom";
 import {
     IconCalendarClock,
     IconClock,
-    IconHistory,
     IconChartBar,
     IconLogout,
-    IconRefresh,
 } from "@tabler/icons-react";
 
-import LanguagePicker      from "../components/admin/utils/LanguagePicker.jsx";
+import LanguagePicker       from "../components/admin/utils/LanguagePicker.jsx";
 import { fetchAllBookings } from "../services/bookingService";
-import CurrentBookings     from "../components/admin/currentBookings/CurrentBookings";
-import BookingsOverview    from "../components/admin/sharedBookings/BookingsOverview";
-import StatsGrid           from "../components/admin/metrics/StatsGrid";
-import AlgorithmTester     from "../components/admin/algorithmTest/AlgorithmTester";
+import CurrentBookings      from "../components/admin/currentBookings/CurrentBookings";
+import BookingsOverview     from "../components/admin/sharedBookings/BookingsOverview";
+import AlgorithmTester      from "../components/admin/algorithmTest/AlgorithmTester";
+import MetricsDashboard     from "../components/admin/metrics/MetricsDashboard";
 import { translate, setLanguage } from "../services/i18n";
 
 const navMeta = [
     { key: "current", icon: IconClock },
     { key: "future",  icon: IconCalendarClock },
-    { key: "past",    icon: IconHistory },
     { key: "metrics", icon: IconChartBar },
     { key: "tester",  icon: IconChartBar },
 ];
@@ -51,10 +48,12 @@ export default function AdminDashboard() {
         setLoading(true);
         try {
             const data = await fetchAllBookings();
-            setBookings(Array.isArray(data) ? data : []);
+            if (Array.isArray(data)) {
+                setBookings(data);
+            }
         } catch (err) {
-            console.error(err);
-            setBookings([]);
+            console.error("Failed to fetch bookings:", err);
+            // retain previous bookings on error
         } finally {
             setLoading(false);
         }
@@ -87,19 +86,12 @@ export default function AdminDashboard() {
                     <BookingsOverview
                         mode="future"
                         bookings={bookings}
-                        onDataRefresh={loadBookings}
-                    />
-                );
-            case "past":
-                return (
-                    <BookingsOverview
-                        mode="past"
-                        bookings={bookings}
-                        onDataRefresh={loadBookings}
+                        showChart={false}
+                        allowDrill={true}
                     />
                 );
             case "metrics":
-                return <StatsGrid bookings={bookings} />;
+                return <MetricsDashboard bookings={bookings} />;
             case "tester":
                 return (
                     <AlgorithmTester
@@ -112,7 +104,7 @@ export default function AdminDashboard() {
         }
     };
 
-    // ─── version from Vite env (instead of process.env) ───
+    // ─── version from Vite env ───
     const version = import.meta.env.VITE_APP_VERSION || "1.0.3";
 
     return (
@@ -121,9 +113,9 @@ export default function AdminDashboard() {
             <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                 <div className="border-b">
                     <div className="flex items-center justify-between p-4">
-            <span className="text-xl font-semibold">
-              {t("admin.title")}
-            </span>
+                        <span className="text-xl font-semibold">
+                            {t("admin.title")}
+                        </span>
                         <code className="text-sm text-gray-500">
                             {t("admin.versionPrefix")}{version}
                         </code>
@@ -150,14 +142,8 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t space-y-2">
-                    <button
-                        onClick={loadBookings}
-                        className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                        <IconRefresh className="mr-3 h-5 w-5 text-gray-400" />
-                        {t("admin.refresh")}
-                    </button>
+                {/* ─── Logout (refresh removed) ─── */}
+                <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t">
                     <button
                         onClick={logout}
                         className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"

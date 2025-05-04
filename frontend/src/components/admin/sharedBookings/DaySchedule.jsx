@@ -1,21 +1,14 @@
 // frontend/src/components/admin/sharedBookings/DaySchedule.jsx
-
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { format } from "date-fns";
-import {
-    enUS,
-    es as esLocale,
-    ca as caLocale,
-} from "date-fns/locale";
+import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
 import TableUsage from "./TableUsage";
 import { translate, getLanguage } from "../../../services/i18n";
 
-const localeMap = {
-    en: enUS,
-    es: esLocale,
-    ca: caLocale,
-};
+const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+const getBookingDate = (b) =>
+    (b.table_availability?.date || b.date || "").slice(0, 10);
 
 export default function DaySchedule({
                                         selectedDate,
@@ -28,7 +21,6 @@ export default function DaySchedule({
     const t      = (k, p) => translate(lang, k, p);
     const locale = localeMap[lang] || enUS;
 
-    // **Re-added** showFloor state:
     const [showFloor, setShowFloor] = useState(false);
 
     if (!selectedDate) return null;
@@ -56,9 +48,7 @@ export default function DaySchedule({
                             : "text-gray-700"
                     }
                 >
-                    {dayInfo === "closed"
-                        ? "CLOSED"
-                        : t("schedule.noBookings")}
+                    {dayInfo === "closed" ? "CLOSED" : t("schedule.noBookings")}
                 </p>
             </div>
         );
@@ -72,14 +62,10 @@ export default function DaySchedule({
     roundKeys.forEach((rk) => {
         roundBookings[rk] = bookings
             .filter((b) => {
-                const d = b.table_availability?.date;
-                if (d !== dateStr) return false;
+                if (getBookingDate(b) !== dateStr) return false;
                 if (rk.includes("first")) return b.reserved_time < "15:00:00";
                 if (rk.includes("second"))
-                    return (
-                        b.reserved_time >= "15:00:00" &&
-                        b.reserved_time < "20:00:00"
-                    );
+                    return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
                 return b.reserved_time >= "20:00:00";
             })
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
@@ -87,7 +73,7 @@ export default function DaySchedule({
 
     const fullStock = { 2: 0, 4: 0, 6: 0 };
     roundKeys.forEach((rk) => {
-        const avail = dayInfo[rk]?.availability || {};
+        const avail  = dayInfo[rk]?.availability || {};
         const booked = {};
         (roundBookings[rk] || []).forEach((bk) => {
             const cap = bk.table_availability?.capacity || 0;
@@ -121,9 +107,7 @@ export default function DaySchedule({
                             onClick={() => setShowFloor((v) => !v)}
                             className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
                         >
-                            {showFloor
-                                ? t("admin.hideFloor")
-                                : t("admin.expandFloor")}
+                            {showFloor ? t("admin.hideFloor") : t("admin.expandFloor")}
                         </button>
                     )}
                     <button

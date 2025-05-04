@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\TableAvailabilityController;
 use App\Http\Controllers\ClosedDayController;
+use App\Http\Controllers\OpenDayController;
 use App\Http\Controllers\SystemSettingController;
 
 /* Root */
@@ -26,6 +27,8 @@ Route::delete('/bookings/{booking}', [BookingController::class,'destroy']);
 /* Operational settings */
 Route::get ('/closed-days',        [ClosedDayController::class,'index']);
 Route::post('/closed-days/toggle', [ClosedDayController::class,'toggle']);
+Route::get ( '/open-days',         [OpenDayController::class, 'index' ] );
+Route::post( '/open-days/toggle',  [OpenDayController::class, 'toggle'] );
 
 Route::get ('/settings/booking-open-from', [SystemSettingController::class,'show']);
 Route::put ('/settings/booking-open-from', [SystemSettingController::class,'update']);

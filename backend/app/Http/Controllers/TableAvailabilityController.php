@@ -9,6 +9,7 @@ use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
+use App\Services\CalendarService;
 
 /**
  * Table-availability endpoints
@@ -18,13 +19,21 @@ class TableAvailabilityController extends Controller
     private const CLOSED_INDICATOR  = 'closed';
     private const BLOCKED_INDICATOR = 'blocked';
 
+    private CalendarService $calendar;
+
+    public function __construct(CalendarService $calendar)
+    {
+        $this->calendar = $calendar;
+    }
+
+    /*────────────────── helpers ──────────────────*/
     private function minutesStep(): int
     {
         $step = Config::get('restaurant.slot_step');
         if ($step === null) {
             throw new \RuntimeException('Missing config: restaurant.slot_step');
         }
-        return (int)$step;
+        return (int) $step;
     }
 
     private function serviceSchedule(): array
@@ -34,94 +43,92 @@ class TableAvailabilityController extends Controller
 
     private function buildTimeGrid(string $start, string $end): array
     {
-        [$sh,$sm] = array_map('intval', explode(':',$start));
-        [$eh,$em] = array_map('intval', explode(':',$end));
+        [$sh, $sm] = array_map('intval', explode(':', $start));
+        [$eh, $em] = array_map('intval', explode(':', $end));
 
-        $slots=[];
-        for($m=$sh*60+$sm; $m<=$eh*60+$em; $m+=$this->minutesStep()){
-            $slots[]=sprintf('%02d:%02d', intdiv($m,60), $m%60);
+        $slots = [];
+        for ($m = $sh * 60 + $sm; $m <= $eh * 60 + $em; $m += $this->minutesStep()) {
+            $slots[] = sprintf('%02d:%02d', intdiv($m, 60), $m % 60);
         }
         return $slots;
     }
 
-    private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings=null)
+    private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings = null)
     {
-        if($allBookings===null){
-            $ids=$tableAvailabilities->pluck('id');
-            $allBookings=Booking::whereIn('table_availability_id',$ids)->get();
+        if ($allBookings === null) {
+            $ids         = $tableAvailabilities->pluck('id');
+            $allBookings = Booking::whereIn('table_availability_id', $ids)->get();
         }
 
-        $caps     = Config::get('restaurant.capacities',[2,4,6]);
+        $caps     = Config::get('restaurant.capacities', [2, 4, 6]);
         $isSecond = in_array(
             Config::get('restaurant.rounds.lunch.second_round.start'),
-            $roundTimes,true
+            $roundTimes,
+            true
         );
 
-        $availability=[];
-        foreach($caps as $cap){
-            $taRow  =$tableAvailabilities->firstWhere('capacity',$cap);
-            $seeded =$taRow?->available_count ?? 0;
-            $booked =$allBookings
-                ->where('table_availability_id',$taRow?->id)
-                ->filter(function($b) use($roundTimes,$isSecond){
-                    if(in_array($b->reserved_time,$roundTimes,true)){
+        $availability = [];
+        foreach ($caps as $cap) {
+            $taRow  = $tableAvailabilities->firstWhere('capacity', $cap);
+            $seeded = $taRow?->available_count ?? 0;
+            $booked = $allBookings
+                ->where('table_availability_id', $taRow?->id)
+                ->filter(function ($b) use ($roundTimes, $isSecond) {
+                    if (in_array($b->reserved_time, $roundTimes, true)) {
                         return true;
                     }
                     return $isSecond && $b->long_stay && $b->reserved_time < $roundTimes[0];
                 })
                 ->count();
 
-            $availability["$cap"]=max($seeded-$booked,0);
+            $availability["$cap"] = max($seeded - $booked, 0);
         }
 
         return $availability;
     }
 
+    /*────────────────── endpoints ──────────────────*/
     public function index(Request $request)
     {
-        $date     = trim($request->query('date',''));
-        $mealType = trim($request->query('mealType',''));
+        $date     = trim($request->query('date', ''));
+        $mealType = trim($request->query('mealType', ''));
 
-        if(!$date || !in_array($mealType,['lunch','dinner'],true)){
-            return response()->json([],400);
+        if (! $date || ! in_array($mealType, ['lunch', 'dinner'], true)) {
+            return response()->json([], 400);
         }
 
-        // manually closed?
-        if(ClosedDay::where('date',$date)->exists()){
-            return response()->json(self::CLOSED_INDICATOR);
+        /* always guarantee stock exists */
+        $this->calendar->ensureStockForDate($date);
+
+        /* shortcut indicators */
+        if (! $this->calendar->isOpen($date)) {
+            if (ClosedDay::where('date', $date)->exists()) {
+                return response()->json(self::CLOSED_INDICATOR);
+            }
+            $openFrom = SystemSetting::getValue('booking_open_from');
+            if ($openFrom && $date < $openFrom) {
+                return response()->json(self::BLOCKED_INDICATOR);
+            }
         }
 
-        // before booking-open-from?
-        $openFrom = SystemSetting::getValue('booking_open_from');
-        if($openFrom && $date < $openFrom){
-            return response()->json(self::BLOCKED_INDICATOR);
-        }
-
-        // weekly schedule
-        $dow            = Carbon::parse($date)->dayOfWeek;
-        $serviceAllowed = in_array($mealType,$this->serviceSchedule()[$dow] ?? [],true);
-        if(!$serviceAllowed){
-            return response()->json(self::CLOSED_INDICATOR);
-        }
-
-        $rows = TableAvailability::where('date',$date)
-            ->where('meal_type',$mealType)
+        $rows = TableAvailability::where('date', $date)
+            ->where('meal_type', $mealType)
             ->get()
             ->keyBy('capacity');
 
-        if($rows->isEmpty()){
+        if ($rows->isEmpty()) {
             return response()->json([]);
         }
 
         $roundCfg = Config::get("restaurant.rounds.$mealType");
         $payload  = [];
 
-        foreach($roundCfg as $key=>$def){
-            $times         = $this->buildTimeGrid($def['start'],$def['end']);
+        foreach ($roundCfg as $key => $def) {
+            $times         = $this->buildTimeGrid($def['start'], $def['end']);
             $payload[$key] = [
-                'time'         =>$def['start'],
-                'availability' =>$this->computeRoundAvailability($rows,$times),
-                'note'         =>$def['note'],
+                'time'         => $def['start'],
+                'availability' => $this->computeRoundAvailability($rows, $times),
+                'note'         => $def['note'],
             ];
         }
 
@@ -134,22 +141,27 @@ class TableAvailabilityController extends Controller
         $end      = $request->query('end');
         $mealType = $request->query('mealType');
 
-        if(!$start||!$end||!in_array($mealType,['lunch','dinner'],true)){
-            return response()->json(['error'=>'Missing parameters (start,end,mealType)'],400);
+        if (! $start || ! $end || ! in_array($mealType, ['lunch', 'dinner'], true)) {
+            return response()->json(['error' => 'Missing parameters (start,end,mealType)'], 400);
         }
 
         $startDate = Carbon::parse($start);
         $endDate   = Carbon::parse($end);
-        if($endDate->lt($startDate)){
-            return response()->json(['error'=>'end must be after start'],400);
+        if ($endDate->lt($startDate)) {
+            return response()->json(['error' => 'end must be after start'], 400);
         }
 
-        $rows = TableAvailability::whereBetween('date',[$start,$end])
-            ->where('meal_type',$mealType)
+        /* seed each date before querying */
+        for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
+            $this->calendar->ensureStockForDate($d->format('Y-m-d'));
+        }
+
+        $rows = TableAvailability::whereBetween('date', [$start, $end])
+            ->where('meal_type', $mealType)
             ->get();
 
         $availabilityIds = $rows->pluck('id');
-        $bookings        = Booking::whereIn('table_availability_id',$availabilityIds)->get();
+        $bookings        = Booking::whereIn('table_availability_id', $availabilityIds)->get();
 
         $roundCfg = Config::get("restaurant.rounds.$mealType");
         $schedule = $this->serviceSchedule();
@@ -157,16 +169,16 @@ class TableAvailabilityController extends Controller
         $results  = [];
 
         $cursor = $startDate->copy();
-        while($cursor->lte($endDate)){
+        while ($cursor->lte($endDate)) {
             $dateStr = $cursor->format('Y-m-d');
 
-            if(ClosedDay::where('date',$dateStr)->exists()){
+            if (ClosedDay::where('date', $dateStr)->exists()) {
                 $results[$dateStr] = self::CLOSED_INDICATOR;
                 $cursor->addDay();
                 continue;
             }
 
-            if($openFrom && $dateStr < $openFrom){
+            if ($openFrom && $dateStr < $openFrom) {
                 $results[$dateStr] = self::BLOCKED_INDICATOR;
                 $cursor->addDay();
                 continue;
@@ -174,31 +186,31 @@ class TableAvailabilityController extends Controller
 
             $dow         = $cursor->dayOfWeek;
             $servedMeals = $schedule[$dow] ?? [];
-            if(empty($servedMeals)){
+            if (empty($servedMeals)) {
                 $results[$dateStr] = self::CLOSED_INDICATOR;
                 $cursor->addDay();
                 continue;
             }
-            if(!in_array($mealType,$servedMeals,true)){
+            if (! in_array($mealType, $servedMeals, true)) {
                 $results[$dateStr] = [];
                 $cursor->addDay();
                 continue;
             }
 
-            $dayRows = $rows->where('date',$dateStr);
-            if($dayRows->isEmpty()){
+            $dayRows = $rows->where('date', $dateStr);
+            if ($dayRows->isEmpty()) {
                 $results[$dateStr] = [];
                 $cursor->addDay();
                 continue;
             }
 
             $payload = [];
-            foreach($roundCfg as $key=>$def){
-                $grid = $this->buildTimeGrid($def['start'],$def['end']);
+            foreach ($roundCfg as $key => $def) {
+                $grid = $this->buildTimeGrid($def['start'], $def['end']);
                 $payload[$key] = [
-                    'time'         =>$def['start'],
-                    'availability'=>$this->computeRoundAvailability($dayRows,$grid,$bookings),
-                    'note'        =>$def['note'],
+                    'time'         => $def['start'],
+                    'availability' => $this->computeRoundAvailability($dayRows, $grid, $bookings),
+                    'note'         => $def['note'],
                 ];
             }
             $results[$dateStr] = $payload;

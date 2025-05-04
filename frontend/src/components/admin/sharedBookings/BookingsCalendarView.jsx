@@ -13,31 +13,31 @@ import {
     isSameMonth,
     isSameDay,
 } from "date-fns";
-import {
-    enUS,
-    es as esLocale,
-    ca as caLocale,
-} from "date-fns/locale";
+import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
 
 import { getDayMealTypes } from "../../../services/datePicker";
 import { translate, getLanguage } from "../../../services/i18n";
 
 const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-const BOOKING_WINDOW_DAYS = 30;            // days in advance that bookings are allowed
+const BOOKING_WINDOW_DAYS = 30;
 
 export default function BookingsCalendarView({
                                                  selectedDate = null,
                                                  onSelectDay,
                                                  bookings,
+                                                 closedDays = [],
+                                                 openDays   = [],
                                              }) {
     const lang   = getLanguage();
     const t      = (k, p) => translate(lang, k, p);
     const locale = localeMap[lang] || enUS;
 
     const [monthToShow, setMonthToShow] = useState(new Date());
-    const today = new Date();
+    const today      = new Date();
+    const closedSet  = new Set(closedDays);
+    const openSet    = new Set(openDays);          /* ⇠ NEW */
 
-    /* ───────── helpers ───────── */
+    /* helpers */
     const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
         format(
             addDays(startOfWeek(new Date(), { weekStartsOn: 1, locale }), i),
@@ -52,7 +52,7 @@ export default function BookingsCalendarView({
     const gridEnd    = endOfWeek(monthEnd,   { weekStartsOn: 1, locale });
 
     const getDayStats = (date) => {
-        const key   = format(date, "yyyy-MM-dd", { locale });
+        const key   = format(date, "yyyy-MM-dd");
         const dayBk = bookings.filter(
             (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
         );
@@ -63,22 +63,29 @@ export default function BookingsCalendarView({
         return { bookings: dayBk.length, clients: tot };
     };
 
-    /* quick status helpers (for colouring) */
-    const isClosed = (d) => getDayMealTypes(d.getDay()).length === 0;
+    /* colour helpers */
+    const isClosed = (d) => {
+        const key = format(d, "yyyy-MM-dd");
+        if (openSet.has(key)) return false;                 // ← exception overrides
+        return (
+            closedSet.has(key) ||
+            getDayMealTypes(d.getDay()).length === 0
+        );
+    };
     const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
 
-    /* ───────── build calendar grid ───────── */
+    /* build grid */
     const rows = [];
     let dayPtr = gridStart;
     while (dayPtr <= gridEnd) {
         const week = [];
         for (let i = 0; i < 7; i++) {
-            const d = dayPtr;
+            const d  = dayPtr;
             const { bookings: bc, clients } = getDayStats(d);
             const inMonth  = isSameMonth(d, monthToShow);
             const selected = selectedDate && isSameDay(d, selectedDate);
 
-            /* colouring logic */
+            /* colour classes */
             let bg  = "bg-white";
             let txt = inMonth ? "text-gray-800" : "text-gray-400";
 
@@ -166,4 +173,6 @@ BookingsCalendarView.propTypes = {
     selectedDate: PropTypes.instanceOf(Date),
     onSelectDay:  PropTypes.func.isRequired,
     bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
+    closedDays:   PropTypes.arrayOf(PropTypes.string),
+    openDays:     PropTypes.arrayOf(PropTypes.string),   // ← NEW
 };

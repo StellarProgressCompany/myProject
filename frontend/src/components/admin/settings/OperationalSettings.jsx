@@ -1,15 +1,44 @@
-import React, { useState } from "react";
+// frontend/src/components/admin/settings/OperationalSettings.jsx
+/* eslint-disable react/prop-types */
+import React, { useState, useEffect, useCallback } from "react";
+import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import BookingsCalendarView from "../sharedBookings/BookingsCalendarView";
-import {
-    closeSpecificDay,
-    openBookingWindowUntil,
-} from "../../../services/settingsService.js";
-import { translate } from "../../../services/i18n";
 
-/**
- * ✔ little tick after a successful action
- */
+import BookingsCalendarView from "../sharedBookings/BookingsCalendarView";
+import { clearAvailabilityCache } from "../../../services/bookingService";
+import { getDayMealTypes } from "../../../services/datePicker";
+import { translate, getLanguage } from "../../../services/i18n";
+
+/* HTTP helpers ───────────────────────────── */
+async function toggleClosedDay(dateYMD) {
+    await fetch("/api/closed-days/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateYMD }),
+    });
+}
+
+async function toggleOpenDay(dateYMD) {
+    await fetch("/api/open-days/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ date: dateYMD }),
+    });
+}
+
+async function fetchClosedDays() {
+    const r = await fetch("/api/closed-days");
+    const j = await r.json();
+    return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+}
+
+async function fetchOpenDays() {
+    const r = await fetch("/api/open-days");
+    const j = await r.json();
+    return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+}
+
+/* ✔ little tick after a successful action */
 const SuccessTick = ({ id }) => (
     <AnimatePresence mode="wait">
         <motion.div
@@ -25,26 +54,25 @@ const SuccessTick = ({ id }) => (
     </AnimatePresence>
 );
 
-/**
- * ▶ animated progress button
- */
+/* ▶ Animated progress button (generic) */
 function ProgressButton({
                             colour = "blue",
                             idleLabel,
                             loadingLabel,
                             successLabel,
                             onClick,
+                            disabled = false,
                         }) {
     const [state, setState] = useState("idle"); // idle | loading | success
     const [progress, setProgress] = useState(0);
-    const timerRef = React.useRef(null);
+    const timer = React.useRef(null);
 
     React.useEffect(() => {
         if (state !== "loading") return;
-        timerRef.current = setInterval(() => {
+        timer.current = setInterval(() => {
             setProgress((p) => (p < 95 ? p + 1 : p));
         }, 25);
-        return () => clearInterval(timerRef.current);
+        return () => clearInterval(timer.current);
     }, [state]);
 
     const start = () => {
@@ -52,7 +80,7 @@ function ProgressButton({
         setState("loading");
     };
     const finish = () => {
-        clearInterval(timerRef.current);
+        clearInterval(timer.current);
         setProgress(100);
         setState("success");
         setTimeout(() => {
@@ -61,14 +89,15 @@ function ProgressButton({
         }, 1500);
     };
 
-    const handleClick = async () => {
-        if (state === "loading") return;
+    const handle = async () => {
+        if (state === "loading" || disabled) return;
         try {
             start();
             await onClick();
             finish();
         } catch (e) {
-            clearInterval(timerRef.current);
+            clearInterval(timer.current);
+            console.error(e);
             setState("idle");
             setProgress(0);
             alert(e?.response?.data?.error || "Action failed");
@@ -84,9 +113,9 @@ function ProgressButton({
 
     return (
         <button
-            onClick={handleClick}
-            disabled={state === "loading"}
-            className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-60 ${colourClasses}`}
+            onClick={handle}
+            disabled={state === "loading" || disabled}
+            className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-50 ${colourClasses}`}
         >
       <span className="relative z-10">
         {state === "idle" && idleLabel}
@@ -105,35 +134,84 @@ function ProgressButton({
     );
 }
 
-/**
- * Operational settings panel
- */
+/*──────────────────────────────────────────────
+  Operational settings – Open / Close specific days
+──────────────────────────────────────────────*/
 export default function OperationalSettings({ bookings = [] }) {
-    const [lang] = useState(() => localStorage.getItem("adminLang") || "ca");
+    /* i18n */
+    const lang = getLanguage();
     const t = (k, v) => translate(lang, k, v);
 
+    /* component state */
     const [selDate, setSelDate] = useState(null);
     const [blip, setBlip] = useState(null);
+    const [closedDays, setClosed] = useState([]);
+    const [openDays, setOpen] = useState([]);
 
-    // filter to only today or future bookings for calendar badges
+    /* future-bookings slice for calendar */
     const todayYMD = new Date().toISOString().slice(0, 10);
     const futureBookings = bookings.filter((b) => {
         const d = (b.table_availability?.date || b.date || "").slice(0, 10);
         return d >= todayYMD;
     });
 
-    const closeDay = async () => {
-        if (!selDate) return;
-        await closeSpecificDay(selDate.toISOString().slice(0, 10));
-        setBlip("close");
-        setTimeout(() => setBlip(null), 1600);
-    };
+    /* fetch helpers */
+    const refreshClosed = useCallback(async () => {
+        setClosed(await fetchClosedDays());
+    }, []);
+    const refreshOpen = useCallback(async () => {
+        setOpen(await fetchOpenDays());
+    }, []);
 
-    const openWindow = async () => {
+    useEffect(() => {
+        refreshClosed();
+        refreshOpen();
+    }, [refreshClosed, refreshOpen]);
+
+    /* derive flags */
+    const ymd = selDate ? format(selDate, "yyyy-MM-dd") : null;
+    const scheduleClosed =
+        selDate && getDayMealTypes(selDate.getDay()).length === 0;
+    const exceptionallyClosed = selDate && closedDays.includes(ymd);
+    const exceptionallyOpen = selDate && openDays.includes(ymd);
+
+    /* overall closed? */
+    const isClosedNow =
+        (scheduleClosed && !exceptionallyOpen) || exceptionallyClosed;
+
+    /* filter out any “open” exceptions so they don’t stay red */
+    const closedEffective = closedDays.filter((d) => !openDays.includes(d));
+
+    /* permissions */
+    const canClose =
+        selDate && !exceptionallyClosed && !scheduleClosed;
+    const canOpen =
+        selDate &&
+        ((scheduleClosed && !exceptionallyOpen) || exceptionallyClosed);
+
+    /* handlers */
+    const doClose = async () => {
         if (!selDate) return;
-        await openBookingWindowUntil(selDate.toISOString().slice(0, 10));
+        await toggleClosedDay(ymd);
+        await refreshClosed();
+        clearAvailabilityCache();
+        setBlip("close");
+        setTimeout(() => setBlip(null), 1500);
+    };
+    const doOpen = async () => {
+        if (!selDate) return;
+        if (scheduleClosed && !exceptionallyOpen) {
+            /* add open-exception */
+            await toggleOpenDay(ymd);
+            await refreshOpen();
+        } else {
+            /* undo manual close */
+            await toggleClosedDay(ymd);
+            await refreshClosed();
+        }
+        clearAvailabilityCache();
         setBlip("open");
-        setTimeout(() => setBlip(null), 1600);
+        setTimeout(() => setBlip(null), 1500);
     };
 
     return (
@@ -144,25 +222,35 @@ export default function OperationalSettings({ bookings = [] }) {
                 selectedDate={selDate}
                 onSelectDay={setSelDate}
                 bookings={futureBookings}
+                closedDays={closedEffective}
+                openDays={openDays}
             />
 
             <div className="flex gap-4">
                 <ProgressButton
                     colour="red"
                     idleLabel={t("settings.closeDay")}
-                    loadingLabel={t("settings.closed")}
+                    loadingLabel={t("settings.closing")}
                     successLabel={t("settings.successClosed")}
-                    onClick={closeDay}
+                    onClick={doClose}
+                    disabled={!canClose}
                 />
-
                 <ProgressButton
-                    colour="blue"
-                    idleLabel={t("settings.openUntil")}
-                    loadingLabel={t("settings.save")}
-                    successLabel={t("settings.successWindow")}
-                    onClick={openWindow}
+                    colour="green"
+                    idleLabel={t("settings.openDay")}
+                    loadingLabel={t("settings.opening")}
+                    successLabel={t("settings.successOpened")}
+                    onClick={doOpen}
+                    disabled={!canOpen}
                 />
             </div>
+
+            {selDate && (
+                <p className="text-sm text-gray-600">
+                    <strong>{format(selDate, "PPP")}</strong> –{" "}
+                    {isClosedNow ? t("settings.closed") : t("settings.open")}
+                </p>
+            )}
         </div>
     );
 }

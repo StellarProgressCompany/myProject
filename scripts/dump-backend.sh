@@ -22,6 +22,9 @@ FILES=(
   "backend/app/Http/Controllers/BookingController.php"
   "backend/app/Http/Controllers/Controller.php"
   "backend/app/Http/Controllers/TableAvailabilityController.php"
+  "backend/app/Http/Controllers/OpenDayController.php"
+  "backend/app/Http/Controllers/ClosedDayController.php"
+  "backend/app/Http/Controllers/SystemSettingController.php"
 
   # resources
   "backend/app/Http/Resources/BookingDetailResource.php"
@@ -39,9 +42,13 @@ FILES=(
   "backend/app/Models/BookingDetail.php"
   "backend/app/Models/TableAvailability.php"
   "backend/app/Models/User.php"
+  "backend/app/Models/ClosedDay.php"
+  "backend/app/Models/OpenDay.php"
+  "backend/app/Models/SystemSetting.php"
 
-  # only BookingAlgorithmService remains
+  # services
   "backend/app/Services/BookingAlgorithmService.php"
+  "backend/app/Services/CalendarService.php"
 
   # migrations
   "backend/database/migrations/2025_02_03_191203_create_table_availabilities_table.php"
@@ -49,6 +56,11 @@ FILES=(
   "backend/database/migrations/2025_02_26_163537_create_booking_details_table.php"
   "backend/database/migrations/2025_02_27_174815_create_jobs_table.php"
   "backend/database/migrations/2025_04_20_143322_add_long_stay_to_bookings_table.php"
+  "backend/database/migrations/2025_05_04_155326_create_closed_days_table.php"
+  "backend/database/migrations/2025_05_04_155330_create_system_settings_table.php"
+  "backend/database/migrations/2025_05_04_182837_create_calendar_overrides_table.php"
+  "backend/database/migrations/2025_05_04_184511_create_open_days_table.php"
+
 
   # seeders
   "backend/database/seeders/BookingSeeder.php"

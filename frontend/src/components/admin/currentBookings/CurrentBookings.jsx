@@ -2,6 +2,10 @@
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays } from "date-fns";
+import {
+    IconChevronLeft,
+    IconChevronRight,
+} from "@tabler/icons-react";
 import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
 
 import AddBookingModal from "./AddBookingModal";
@@ -94,18 +98,20 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
             {/* header + controls */}
             <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                 <h2 className="text-xl font-bold">{title}</h2>
-                <div className="space-x-2">
+                <div className="space-x-2 flex items-center">
                     <button
                         onClick={() => setOffset((o) => o - 1)}
-                        className="px-2 py-1 border rounded"
+                        className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                        aria-label={t("calendar.prev")}
                     >
-                        ◀
+                        <IconChevronLeft className="w-5 h-5 text-gray-500" />
                     </button>
                     <button
                         onClick={() => setOffset((o) => o + 1)}
-                        className="px-2 py-1 border rounded"
+                        className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                        aria-label={t("calendar.next")}
                     >
-                        ▶
+                        <IconChevronRight className="w-5 h-5 text-gray-500" />
                     </button>
                     <button
                         onClick={() => setIsAdding(true)}

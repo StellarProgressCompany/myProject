@@ -22,50 +22,23 @@ export default function DaySchedule({
     const locale = localeMap[lang] || enUS;
 
     const [showFloor, setShowFloor] = useState(false);
-
     if (!selectedDate) return null;
 
-    const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
-    const dayInfo = tableAvailability[dateStr];
+    const dateStr   = format(selectedDate, "yyyy-MM-dd");
+    const dayInfo   = tableAvailability[dateStr];
+    const indicator = typeof dayInfo === "string" ? dayInfo : null; // "closed" | "blocked"
+    const dayObj    = indicator ? {} : (dayInfo || {});
 
-    if (!dayInfo || dayInfo === "closed") {
-        return (
-            <div className="mt-6 border rounded bg-white p-4 shadow">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-bold">
-                        {t("schedule.header", {
-                            date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
-                        })}
-                    </h3>
-                    <button onClick={onClose} className="text-sm text-red-500 underline">
-                        {t("admin.close")}
-                    </button>
-                </div>
-                <p
-                    className={
-                        dayInfo === "closed"
-                            ? "text-red-600 font-semibold"
-                            : "text-gray-700"
-                    }
-                >
-                    {dayInfo === "closed" ? "CLOSED" : t("schedule.noBookings")}
-                </p>
-            </div>
-        );
-    }
-
-    const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
-        (rk) => rk in dayInfo
-    );
+    /* fixed round keys so we can still show bookings on closed / blocked days */
+    const roundKeys = ["first_round", "second_round", "dinner_round"];
 
     const roundBookings = {};
     roundKeys.forEach((rk) => {
         roundBookings[rk] = bookings
             .filter((b) => {
                 if (getBookingDate(b) !== dateStr) return false;
-                if (rk.includes("first")) return b.reserved_time < "15:00:00";
-                if (rk.includes("second"))
-                    return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
+                if (rk.includes("first"))  return b.reserved_time < "15:00:00";
+                if (rk.includes("second")) return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
                 return b.reserved_time >= "20:00:00";
             })
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
@@ -73,14 +46,14 @@ export default function DaySchedule({
 
     const fullStock = { 2: 0, 4: 0, 6: 0 };
     roundKeys.forEach((rk) => {
-        const avail  = dayInfo[rk]?.availability || {};
-        const booked = {};
-        (roundBookings[rk] || []).forEach((bk) => {
+        const avail = dayObj[rk]?.availability || {};
+        const bookedCounts = {};
+        roundBookings[rk].forEach((bk) => {
             const cap = bk.table_availability?.capacity || 0;
-            booked[cap] = (booked[cap] || 0) + 1;
+            bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
         });
         [2, 4, 6].forEach((cap) => {
-            const totalHere = (avail[cap] || 0) + (booked[cap] || 0);
+            const totalHere = (avail[cap] || 0) + (bookedCounts[cap] || 0);
             fullStock[cap] = Math.max(fullStock[cap], totalHere);
         });
     });
@@ -119,6 +92,18 @@ export default function DaySchedule({
                 </div>
             </div>
 
+            {indicator && (
+                <p
+                    className={
+                        indicator === "closed"
+                            ? "text-red-600 font-semibold mb-4"
+                            : "text-yellow-600 font-semibold mb-4"
+                    }
+                >
+                    {indicator.toUpperCase()}
+                </p>
+            )}
+
             {roundKeys.map((rk) => {
                 const { lbl, bg } = prettyRound(rk);
                 const rows        = roundBookings[rk] || [];
@@ -144,16 +129,9 @@ export default function DaySchedule({
                                 </thead>
                                 <tbody>
                                 {rows.map((bk) => (
-                                    <tr
-                                        key={bk.id}
-                                        className={`${bg} hover:bg-yellow-50 transition`}
-                                    >
-                                        <td className="px-3 py-2">
-                                            {bk.reserved_time.slice(0, 5)}
-                                        </td>
-                                        <td className="px-3 py-2 truncate max-w-[160px]">
-                                            {bk.full_name}
-                                        </td>
+                                    <tr key={bk.id} className={`${bg} hover:bg-yellow-50 transition`}>
+                                        <td className="px-3 py-2">{bk.reserved_time.slice(0, 5)}</td>
+                                        <td className="px-3 py-2 truncate max-w-[160px]">{bk.full_name}</td>
                                         <td className="px-3 py-2">
                                             {bk.total_adults + bk.total_kids}
                                         </td>
@@ -162,17 +140,11 @@ export default function DaySchedule({
                                 </tbody>
                             </table>
                         ) : (
-                            <p className="text-gray-500 mb-3">
-                                {t("schedule.noBookings")}
-                            </p>
+                            <p className="text-gray-500 mb-3">{t("schedule.noBookings")}</p>
                         )}
 
                         {showFloor && (
-                            <TableUsage
-                                capacityTotals={fullStock}
-                                bookings={rows}
-                                expanded
-                            />
+                            <TableUsage capacityTotals={fullStock} bookings={rows} expanded />
                         )}
                     </div>
                 );

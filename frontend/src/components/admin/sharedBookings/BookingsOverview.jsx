@@ -12,55 +12,59 @@ import {
 } from "date-fns";
 
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-import BookingsCompactView   from "./BookingsCompactView";
-import BookingsCalendarView  from "./BookingsCalendarView";
-import BookingsChart         from "./BookingsChart";
-import DaySchedule           from "./DaySchedule";
-import AddBookingModal       from "../currentBookings/AddBookingModal";
+import BookingsCompactView  from "./BookingsCompactView";
+import BookingsCalendarView from "./BookingsCalendarView";
+import BookingsChart        from "./BookingsChart";
+import DaySchedule          from "./DaySchedule";
+import AddBookingModal      from "../currentBookings/AddBookingModal";
 import { translate, getLanguage } from "../../../services/i18n";
 
-/* helper ― consistent “yyyy-MM-dd” string */
+/* helper – stable “YYYY-MM-DD” */
 const ymd = (d) => format(d, "yyyy-MM-dd");
 
 export default function BookingsOverview({
-                                             mode,
+                                             mode,               // "future" | "past"
                                              bookings,
-                                             showChart   = true,
-                                             allowDrill  = true,
-                                             /* new controlled-view props */
-                                             view:         controlledView,
-                                             hideViewToggle = false,
-                                             onViewChange   = () => {},
-                                             onWindowChange = () => {},
+                                             showChart        = true,
+                                             allowDrill       = true,
+                                             view:            controlledView,
+                                             hideViewToggle   = false,
+                                             onViewChange     = () => {},
+                                             onWindowChange   = () => {},
                                          }) {
-    /* ───────── i18n ───────── */
+    /* ────── i18n ────── */
     const lang = getLanguage();
     const t    = (k, v) => translate(lang, k, v);
 
-    /* ───────── constants ───────── */
+    /* ────── constants ────── */
     const rangeDays = 7;
-    const today     = useMemo(() => startOfDay(new Date()), []);   // stable “today”
+    const today     = useMemo(() => startOfDay(new Date()), []);
 
-    /* ───────── local view state (uncontrolled) ───────── */
-    const [viewState, setViewState] = useState("compact");
+    /* ────── local state ────── */
+    const [viewState, setViewState]   = useState("compact");
     const view = controlledView ?? viewState;
 
     const changeView = (v) => {
-        if (controlledView !== undefined) {
-            onViewChange(v);
-        } else {
-            setViewState(v);
-        }
+        if (controlledView !== undefined) onViewChange(v);
+        else                              setViewState(v);
     };
 
-    /* ───────── offset / selection ───────── */
-    const [offset,    setOffset]    = useState(0);        // window offset
-    const [selDay,    setSelDay]    = useState(null);     // drilled-in date
-    const [ta,        setTA]        = useState({});       // table availability
+    const [offset,    setOffset]    = useState(0);
+    const [selDay,    setSelDay]    = useState(null);
+    const [ta,        setTA]        = useState({});
     const [loadingTA, setLoadingTA] = useState(false);
-    const [showModal, setShowModal] = useState(false);
 
-    /* ───────── window boundaries ───────── */
+    /* CLOSED-DAYS support */
+    const [closedDays, setClosedDays] = useState([]);
+
+    useEffect(() => {
+        fetch("/api/closed-days")
+            .then((r) => r.json())
+            .then((arr) => Array.isArray(arr) && setClosedDays(arr))
+            .catch(() => setClosedDays([]));
+    }, []);
+
+    /* ────── window boundaries ────── */
     const compactStart = useMemo(
         () =>
             mode === "future"
@@ -80,9 +84,7 @@ export default function BookingsOverview({
     const inFuture = (d) => d >= today;
     const inPast   = (d) => d <  today;
 
-    /* ╭─────────────────────────────────────────────────────────╮
-       │ bookings slices                                         │
-       ╰─────────────────────────────────────────────────────────╯ */
+    /* bookings slices */
     const compactFiltered = useMemo(
         () =>
             bookings.filter((b) => {
@@ -101,40 +103,30 @@ export default function BookingsOverview({
         [bookings, mode, today]
     );
 
-    /* window used for metrics */
     const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
 
-    /* notify parent when statsBookings changes */
-    useEffect(() => {
-        onWindowChange(statsBookings);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [statsBookings]);
+    /* notify parent */
+    useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]); // eslint-disable-line
 
+    /* KPI counters */
     const totalBookings = statsBookings.length;
     const totalClients  = statsBookings.reduce(
         (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
 
-    /* ╭─────────────────────────────────────────────────────────╮
-       │ Fetch table availability for the visible window         │
-       ╰─────────────────────────────────────────────────────────╯ */
+    /* ────── table-availability payload for the visible window ────── */
     const viewWinStart = useMemo(
         () =>
-            view === "calendar"
-                ? startOfMonth(addDays(today, offset))
-                : compactStart,
+            view === "calendar" ? startOfMonth(addDays(today, offset)) : compactStart,
         [view, today, offset, compactStart]
     );
-    const viewWinEnd = useMemo(
-        () =>
-            view === "calendar"
-                ? endOfMonth(viewWinStart)
-                : compactEnd,
+    const viewWinEnd   = useMemo(
+        () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
         [view, viewWinStart, compactEnd]
     );
-    const winStartStr = ymd(viewWinStart);
-    const winEndStr   = ymd(viewWinEnd);
+    const winStartStr  = ymd(viewWinStart);
+    const winEndStr    = ymd(viewWinEnd);
 
     useEffect(() => {
         let cancelled = false;
@@ -160,7 +152,7 @@ export default function BookingsOverview({
         return () => void (cancelled = true);
     }, [winStartStr, winEndStr, view]);
 
-    /* ensure TA for drilled-in day inside calendar view (once) */
+    /* ensure TA present for drilled-in day */
     useEffect(() => {
         if (!selDay || view !== "calendar") return;
         const key = ymd(selDay);
@@ -180,13 +172,11 @@ export default function BookingsOverview({
         })();
     }, [selDay, view, ta]);
 
-    /* manual booking saved → refresh full page */
-    const handleSaved = () => {
-        setShowModal(false);
-        window.location.reload();
-    };
+    /* manual add */
+    const [showModal, setShowModal] = useState(false);
+    const handleSaved = () => { setShowModal(false); window.location.reload(); };
 
-    /* ───────── UI ───────── */
+    /* ────── UI ────── */
     return (
         <div className="p-6 bg-white rounded shadow space-y-6">
             {/* header */}
@@ -196,10 +186,7 @@ export default function BookingsOverview({
                         {t(`overview.${mode}Bookings`)}
                     </h2>
                     <p className="text-sm text-gray-500">
-                        {t("overview.dataWindow", {
-                            start: winStartStr,
-                            end:   winEndStr,
-                        })}
+                        {t("overview.dataWindow", { start: winStartStr, end: winEndStr })}
                     </p>
                 </div>
 
@@ -215,23 +202,19 @@ export default function BookingsOverview({
                 )}
             </div>
 
-            {/* stats */}
+            {/* KPI cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">
-                        {t("overview.bookings")}
-                    </p>
+                    <p className="text-xs text-gray-600">{t("overview.bookings")}</p>
                     <p className="text-xl font-bold">{totalBookings}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded text-center">
-                    <p className="text-xs text-gray-600">
-                        {t("overview.guests")}
-                    </p>
+                    <p className="text-xs text-gray-600">{t("overview.guests")}</p>
                     <p className="text-xl font-bold">{totalClients}</p>
                 </div>
             </div>
 
-            {/* list view */}
+            {/* list / calendar */}
             {view === "compact" ? (
                 <BookingsCompactView
                     mode={mode}
@@ -241,12 +224,14 @@ export default function BookingsOverview({
                     selectedDate={allowDrill ? selDay : null}
                     onSelectDay={allowDrill ? setSelDay : () => {}}
                     bookings={statsBookings}
+                    closedDays={closedDays}
                 />
             ) : (
                 <BookingsCalendarView
                     selectedDate={allowDrill ? selDay : null}
                     onSelectDay={allowDrill ? setSelDay : () => {}}
                     bookings={calendarBookings}
+                    closedDays={closedDays}
                 />
             )}
 
@@ -260,7 +245,7 @@ export default function BookingsOverview({
                 />
             )}
 
-            {/* drill-in panel */}
+            {/* drilled-in schedule */}
             {allowDrill && selDay && (
                 <div className="mt-4 relative">
                     {mode === "future" && (

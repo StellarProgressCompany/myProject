@@ -3,6 +3,9 @@
     ├── app/Http/Controllers/BookingController.php
     ├── app/Http/Controllers/Controller.php
     ├── app/Http/Controllers/TableAvailabilityController.php
+    ├── app/Http/Controllers/OpenDayController.php
+    ├── app/Http/Controllers/ClosedDayController.php
+    ├── app/Http/Controllers/SystemSettingController.php
     ├── app/Http/Resources/BookingDetailResource.php
     ├── app/Http/Resources/BookingResource.php
     ├── app/Http/Resources/TableAvailabilityResource.php
@@ -14,12 +17,20 @@
     ├── app/Models/BookingDetail.php
     ├── app/Models/TableAvailability.php
     ├── app/Models/User.php
+    ├── app/Models/ClosedDay.php
+    ├── app/Models/OpenDay.php
+    ├── app/Models/SystemSetting.php
     ├── app/Services/BookingAlgorithmService.php
+    ├── app/Services/CalendarService.php
     ├── database/migrations/2025_02_03_191203_create_table_availabilities_table.php
     ├── database/migrations/2025_02_04_115733_create_bookings_table.php
     ├── database/migrations/2025_02_26_163537_create_booking_details_table.php
     ├── database/migrations/2025_02_27_174815_create_jobs_table.php
     ├── database/migrations/2025_04_20_143322_add_long_stay_to_bookings_table.php
+    ├── database/migrations/2025_05_04_155326_create_closed_days_table.php
+    ├── database/migrations/2025_05_04_155330_create_system_settings_table.php
+    ├── database/migrations/2025_05_04_182837_create_calendar_overrides_table.php
+    ├── database/migrations/2025_05_04_184511_create_open_days_table.php
     ├── database/seeders/BookingSeeder.php
     ├── database/seeders/DatabaseSeeder.php
     ├── database/seeders/TableAvailabilitySeeder.php
@@ -115,6 +126,8 @@ backend/app/Http/Controllers/BookingController.php
     use App\Models\Booking;
     use App\Models\BookingDetail;
     use App\Models\TableAvailability;
+    use App\Models\ClosedDay;
+    use App\Models\SystemSetting;
     use Illuminate\Http\Request;
     use Illuminate\Support\Facades\DB;
     use Illuminate\Support\Facades\Mail;
@@ -126,26 +139,20 @@ backend/app/Http/Controllers/BookingController.php
     
     class BookingController extends Controller
     {
-        /* ───────────────────────────────────────────────────── */
-        /* Return every booking (admin list)                    */
-        /* ───────────────────────────────────────────────────── */
         public function index()
         {
             $bookings = Booking::with('tableAvailability')
-                ->orderBy('created_at', 'desc')
+                ->orderBy('created_at','desc')
                 ->get();
     
-            return response()->json(['data' => $bookings]);
+            return response()->json(['data'=>$bookings]);
         }
     
-        /* ───────────────────────────────────────────────────── */
-        /* Create a new booking                                 */
-        /* ───────────────────────────────────────────────────── */
         public function store(Request $request)
         {
             $validated = $request->validate([
                 'date'             => 'required|date_format:Y-m-d',
-                'meal_type'        => 'required|in:lunch,dinner',   // ★ new – was missing
+                'meal_type'        => 'required|in:lunch,dinner',
                 'reserved_time'    => 'required|date_format:H:i:s',
                 'total_adults'     => 'required|integer|min:1',
                 'total_kids'       => 'required|integer|min:0',
@@ -158,10 +165,24 @@ backend/app/Http/Controllers/BookingController.php
                 'long_stay'        => 'boolean',
             ]);
     
+            // ❌ before-open date check
+            $openFrom = SystemSetting::getValue('booking_open_from');
+            if ($openFrom && $validated['date'] < $openFrom) {
+                return response()->json([
+                    'error' => 'Bookings are not yet open for this date.'
+                ], 400);
+            }
+    
+            // ❌ manually closed-day check
+            if (ClosedDay::where('date',$validated['date'])->exists()) {
+                return response()->json([
+                    'error' => 'The restaurant is closed on the selected date.'
+                ], 400);
+            }
+    
             $partySize = $validated['total_adults'] + $validated['total_kids'];
             $longStay  = $validated['long_stay'] ?? false;
     
-            /* five-zone / SAA allocation */
             $algo   = new BookingAlgorithmService();
             $assign = $algo->tryAllocate(
                 $validated['date'],
@@ -172,61 +193,51 @@ backend/app/Http/Controllers/BookingController.php
             );
     
             if (isset($assign['error'])) {
-                return response()->json(['error' => $assign['error']], 400);
+                return response()->json(['error'=>$assign['error']], 400);
             }
     
-            /* ───── persist – ONE master row + N-1 details ───── */
             return DB::transaction(function () use ($validated, $assign, $longStay) {
-    
-                $master = null;   // main booking row (first table)
+                $master = null;
                 foreach ($assign as $i => $slot) {
-    
-                    /* fetch the static TableAvailability row (no stock mutation) */
-                    $ta = TableAvailability::where('date', $validated['date'])
-                        ->where('meal_type', $validated['meal_type'])
-                        ->where('capacity', $slot['capacity'])
+                    $ta = TableAvailability::where('date',$validated['date'])
+                        ->where('meal_type',$validated['meal_type'])
+                        ->where('capacity',$slot['capacity'])
                         ->firstOrFail();
     
-                    /* first table = master booking row */
-                    if ($i === 0) {
+                    if ($i===0) {
                         $master = Booking::create([
-                            'table_availability_id' => $ta->id,
-                            'reserved_time'         => $validated['reserved_time'],
-                            'total_adults'          => $validated['total_adults'],
-                            'total_kids'            => $validated['total_kids'],
-                            'full_name'             => $validated['full_name'],
-                            'phone'                 => $validated['phone'] ?? null,
-                            'email'                 => $validated['email'] ?? null,
-                            'special_requests'      => $validated['special_requests'] ?? null,
-                            'gdpr_consent'          => $validated['gdpr_consent'] ?? false,
-                            'marketing_opt_in'      => $validated['marketing_opt_in'] ?? false,
-                            'long_stay'             => $longStay,
+                            'table_availability_id'=> $ta->id,
+                            'reserved_time'        => $validated['reserved_time'],
+                            'total_adults'         => $validated['total_adults'],
+                            'total_kids'           => $validated['total_kids'],
+                            'full_name'            => $validated['full_name'],
+                            'phone'                => $validated['phone'] ?? null,
+                            'email'                => $validated['email'] ?? null,
+                            'special_requests'     => $validated['special_requests'] ?? null,
+                            'gdpr_consent'         => $validated['gdpr_consent'] ?? false,
+                            'marketing_opt_in'     => $validated['marketing_opt_in'] ?? false,
+                            'long_stay'            => $longStay,
                         ]);
-                    }
-                    /* extra tables = BookingDetail rows */
-                    else {
+                    } else {
                         BookingDetail::create([
-                            'booking_id'             => $master->id,
-                            'table_availability_id'  => $ta->id,
-                            'capacity'               => $slot['capacity'],
-                            'extra_chair'            => (bool) ($slot['extra_chair'] ?? false),
+                            'booking_id'            => $master->id,
+                            'table_availability_id' => $ta->id,
+                            'capacity'              => $slot['capacity'],
+                            'extra_chair'           => (bool)($slot['extra_chair'] ?? false),
                         ]);
                     }
                 }
     
-                /* ── e-mails (only once – master booking) ── */
                 if ($master->email) {
                     Mail::to($master->email)
                         ->send(new BookingConfirmationMail($master));
-    
-                    $mealDT = Carbon::parse("{$master->tableAvailability->date} {$master->reserved_time}");
+                    $mealDT = Carbon::parse("$master->tableAvailability->date $master->reserved_time");
                     $remind = $mealDT->copy()->subHours(24);
                     $survey = $mealDT->copy()->addHours(3);
     
                     if ($remind->isFuture()) {
                         Mail::to($master->email)->later($remind, new BookingReminderMail($master));
                     } else {
-                        // si es menos de 24 h, envía el recordatorio de inmediato
                         Mail::to($master->email)->send(new BookingReminderMail($master));
                     }
     
@@ -236,37 +247,32 @@ backend/app/Http/Controllers/BookingController.php
                 }
     
                 return response()->json([
-                    'message' => 'Booked successfully!',
-                    'data'    => $master->load(['tableAvailability', 'details']),
-                ], 201);
+                    'message'=>'Booked successfully!',
+                    'data'=> $master->load(['tableAvailability','details'])
+                ],201);
             });
         }
     
-        /* PATCH /api/bookings/{id} */
         public function update(Request $request, Booking $booking)
         {
-            $booking->update(
-                $request->validate([
-                    'reserved_time' => 'sometimes|date_format:H:i:s',
-                    'total_adults'  => 'sometimes|integer|min:1',
-                    'total_kids'    => 'sometimes|integer|min:0',
-                    'full_name'     => 'sometimes|string',
-                    'phone'         => 'sometimes|nullable|string',
-                ])
-            );
+            $booking->update($request->validate([
+                'reserved_time'=>'sometimes|date_format:H:i:s',
+                'total_adults' =>'sometimes|integer|min:1',
+                'total_kids'   =>'sometimes|integer|min:0',
+                'full_name'    =>'sometimes|string',
+                'phone'        =>'sometimes|nullable|string',
+            ]));
     
             return response()->json([
-                'message' => 'booking updated',
-                'data'    => $booking->fresh('tableAvailability'),
+                'message'=>'booking updated',
+                'data'   =>$booking->fresh('tableAvailability')
             ]);
         }
     
-        /* DELETE /api/bookings/{id} */
         public function destroy(Booking $booking)
         {
             $booking->delete();
-    
-            return response()->json(['message' => 'booking deleted']);
+            return response()->json(['message'=>'booking deleted']);
         }
     }
 
@@ -293,25 +299,29 @@ backend/app/Http/Controllers/TableAvailabilityController.php
     
     use App\Models\TableAvailability;
     use App\Models\Booking;
+    use App\Models\ClosedDay;
+    use App\Models\SystemSetting;
     use Illuminate\Http\Request;
     use Illuminate\Support\Carbon;
     use Illuminate\Support\Facades\Config;
+    use App\Services\CalendarService;
     
     /**
      * Table-availability endpoints
      */
     class TableAvailabilityController extends Controller
     {
-        /* -------------------------------------------------------------
-         | Constants
-         * ------------------------------------------------------------*/
-        /** Indicator returned for days when the restaurant is fully closed */
-        private const CLOSED_INDICATOR = 'closed';
+        private const CLOSED_INDICATOR  = 'closed';
+        private const BLOCKED_INDICATOR = 'blocked';
     
-        /* -------------------------------------------------------------
-         | Helpers
-         * ------------------------------------------------------------*/
-        /** Minutes between successive booking slots (fail-fast if missing) */
+        private CalendarService $calendar;
+    
+        public function __construct(CalendarService $calendar)
+        {
+            $this->calendar = $calendar;
+        }
+    
+        /*────────────────── helpers ──────────────────*/
         private function minutesStep(): int
         {
             $step = Config::get('restaurant.slot_step');
@@ -321,13 +331,11 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return (int) $step;
         }
     
-        /** Weekly service schedule (0 = Sun … 6 = Sat) from the dataset */
         private function serviceSchedule(): array
         {
             return Config::get('restaurant_dataset.service_schedule', []);
         }
     
-        /** Build a HH:MM grid between two times (inclusive) */
         private function buildTimeGrid(string $start, string $end): array
         {
             [$sh, $sm] = array_map('intval', explode(':', $start));
@@ -340,7 +348,6 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return $slots;
         }
     
-        /** Seat-availability computer for a single service round */
         private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings = null)
         {
             if ($allBookings === null) {
@@ -348,11 +355,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                 $allBookings = Booking::whereIn('table_availability_id', $ids)->get();
             }
     
-            $caps = Config::get('restaurant.capacities');
-            if ($caps === null) {
-                throw new \RuntimeException('Missing config: restaurant.capacities');
-            }
-    
+            $caps     = Config::get('restaurant.capacities', [2, 4, 6]);
             $isSecond = in_array(
                 Config::get('restaurant.rounds.lunch.second_round.start'),
                 $roundTimes,
@@ -361,15 +364,14 @@ backend/app/Http/Controllers/TableAvailabilityController.php
     
             $availability = [];
             foreach ($caps as $cap) {
-                $taRow   = $tableAvailabilities->firstWhere('capacity', $cap);
-                $seeded  = $taRow?->available_count ?? 0;
-                $booked  = $allBookings
+                $taRow  = $tableAvailabilities->firstWhere('capacity', $cap);
+                $seeded = $taRow?->available_count ?? 0;
+                $booked = $allBookings
                     ->where('table_availability_id', $taRow?->id)
                     ->filter(function ($b) use ($roundTimes, $isSecond) {
                         if (in_array($b->reserved_time, $roundTimes, true)) {
                             return true;
                         }
-                        // spill-over from 1st → 2nd lunch (long-stay)
                         return $isSecond && $b->long_stay && $b->reserved_time < $roundTimes[0];
                     })
                     ->count();
@@ -380,27 +382,30 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return $availability;
         }
     
-        /* -------------------------------------------------------------
-         | GET /api/table-availability?date=YYYY-MM-DD&mealType=lunch|dinner
-         * ------------------------------------------------------------*/
+        /*────────────────── endpoints ──────────────────*/
         public function index(Request $request)
         {
             $date     = trim($request->query('date', ''));
             $mealType = trim($request->query('mealType', ''));
     
-            if (!$date || !in_array($mealType, ['lunch', 'dinner'], true)) {
+            if (! $date || ! in_array($mealType, ['lunch', 'dinner'], true)) {
                 return response()->json([], 400);
             }
     
-            // ── honour weekly service schedule ─────────────────────────
-            $dow            = Carbon::parse($date)->dayOfWeek;
-            $serviceAllowed = in_array($mealType, $this->serviceSchedule()[$dow] ?? [], true);
+            /* always guarantee stock exists */
+            $this->calendar->ensureStockForDate($date);
     
-            if (!$serviceAllowed) {
-                return response()->json(self::CLOSED_INDICATOR);
+            /* shortcut indicators */
+            if (! $this->calendar->isOpen($date)) {
+                if (ClosedDay::where('date', $date)->exists()) {
+                    return response()->json(self::CLOSED_INDICATOR);
+                }
+                $openFrom = SystemSetting::getValue('booking_open_from');
+                if ($openFrom && $date < $openFrom) {
+                    return response()->json(self::BLOCKED_INDICATOR);
+                }
             }
     
-            // ── fetch availability rows ───────────────────────────────
             $rows = TableAvailability::where('date', $date)
                 ->where('meal_type', $mealType)
                 ->get()
@@ -425,16 +430,13 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return response()->json($payload);
         }
     
-        /* -------------------------------------------------------------
-         | GET /api/table-availability-range?start=YYYY-MM-DD&end=YYYY-MM-DD&mealType=…
-         * ------------------------------------------------------------*/
-        public function range(Request $request): \Illuminate\Http\JsonResponse
+        public function range(Request $request)
         {
             $start    = $request->query('start');
             $end      = $request->query('end');
             $mealType = $request->query('mealType');
     
-            if (!$start || !$end || !in_array($mealType, ['lunch', 'dinner'], true)) {
+            if (! $start || ! $end || ! in_array($mealType, ['lunch', 'dinner'], true)) {
                 return response()->json(['error' => 'Missing parameters (start,end,mealType)'], 400);
             }
     
@@ -444,6 +446,11 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                 return response()->json(['error' => 'end must be after start'], 400);
             }
     
+            /* seed each date before querying */
+            for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
+                $this->calendar->ensureStockForDate($d->format('Y-m-d'));
+            }
+    
             $rows = TableAvailability::whereBetween('date', [$start, $end])
                 ->where('meal_type', $mealType)
                 ->get();
@@ -451,25 +458,35 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             $availabilityIds = $rows->pluck('id');
             $bookings        = Booking::whereIn('table_availability_id', $availabilityIds)->get();
     
-            $roundCfg   = Config::get("restaurant.rounds.$mealType");
-            $schedule   = $this->serviceSchedule();
-            $results    = [];
+            $roundCfg = Config::get("restaurant.rounds.$mealType");
+            $schedule = $this->serviceSchedule();
+            $openFrom = SystemSetting::getValue('booking_open_from');
+            $results  = [];
     
             $cursor = $startDate->copy();
             while ($cursor->lte($endDate)) {
-                $dateStr     = $cursor->format('Y-m-d');
-                $dow         = $cursor->dayOfWeek;
-                $servedMeals = $schedule[$dow] ?? [];
+                $dateStr = $cursor->format('Y-m-d');
     
-                /* closed all day */
-                if (empty($servedMeals)) {
+                if (ClosedDay::where('date', $dateStr)->exists()) {
                     $results[$dateStr] = self::CLOSED_INDICATOR;
                     $cursor->addDay();
                     continue;
                 }
     
-                /* meal type not offered that day */
-                if (!in_array($mealType, $servedMeals, true)) {
+                if ($openFrom && $dateStr < $openFrom) {
+                    $results[$dateStr] = self::BLOCKED_INDICATOR;
+                    $cursor->addDay();
+                    continue;
+                }
+    
+                $dow         = $cursor->dayOfWeek;
+                $servedMeals = $schedule[$dow] ?? [];
+                if (empty($servedMeals)) {
+                    $results[$dateStr] = self::CLOSED_INDICATOR;
+                    $cursor->addDay();
+                    continue;
+                }
+                if (! in_array($mealType, $servedMeals, true)) {
                     $results[$dateStr] = [];
                     $cursor->addDay();
                     continue;
@@ -484,7 +501,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
     
                 $payload = [];
                 foreach ($roundCfg as $key => $def) {
-                    $grid          = $this->buildTimeGrid($def['start'], $def['end']);
+                    $grid = $this->buildTimeGrid($def['start'], $def['end']);
                     $payload[$key] = [
                         'time'         => $def['start'],
                         'availability' => $this->computeRoundAvailability($dayRows, $grid, $bookings),
@@ -492,11 +509,150 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                     ];
                 }
                 $results[$dateStr] = $payload;
-    
                 $cursor->addDay();
             }
     
             return response()->json($results);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Controllers/OpenDayController.php
+    <?php
+    
+    namespace App\Http\Controllers;
+    
+    use App\Models\OpenDay;
+    use Illuminate\Http\Request;
+    use App\Services\CalendarService;
+    
+    class OpenDayController extends Controller
+    {
+        private CalendarService $calendar;
+    
+        public function __construct(CalendarService $calendar)
+        {
+            $this->calendar = $calendar;
+        }
+    
+        /** GET /api/open-days */
+        public function index()
+        {
+            return response()->json(
+                OpenDay::orderBy('date')->pluck('date')
+            );
+        }
+    
+        /** POST /api/open-days/toggle  { date: YYYY-MM-DD } */
+        public function toggle(Request $request)
+        {
+            $date = $request->validate([
+                'date' => 'required|date_format:Y-m-d',
+            ])['date'];
+    
+            $existing = OpenDay::find($date);
+    
+            if ($existing) {
+                // remove open-exception
+                $existing->delete();
+                $state = 'removed';
+            } else {
+                // add open-exception and make sure stock exists
+                OpenDay::create(['date' => $date]);
+                $this->calendar->ensureStockForDate($date);
+                $state = 'added';
+            }
+    
+            return response()->json(compact('date', 'state'));
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Controllers/ClosedDayController.php
+    <?php
+    
+    namespace App\Http\Controllers;
+    
+    use App\Models\ClosedDay;
+    use Illuminate\Http\Request;
+    use App\Services\CalendarService;
+    
+    class ClosedDayController extends Controller
+    {
+        private CalendarService $calendar;
+    
+        public function __construct(CalendarService $calendar)
+        {
+            $this->calendar = $calendar;
+        }
+    
+        /** GET /api/closed-days */
+        public function index()
+        {
+            return response()->json(
+                ClosedDay::orderBy('date')->pluck('date')
+            );
+        }
+    
+        /** POST /api/closed-days/toggle {date} */
+        public function toggle(Request $request)
+        {
+            $date = $request->validate([
+                'date' => 'required|date_format:Y-m-d',
+            ])['date'];
+    
+            $existing = ClosedDay::find($date);
+    
+            if ($existing) {
+                // RE-OPEN day: delete flag and regenerate stock
+                $existing->delete();
+                $this->calendar->ensureStockForDate($date);
+                $state = 'opened';
+            } else {
+                // CLOSE day: create flag (no further action)
+                ClosedDay::create(['date' => $date]);
+                $state = 'closed';
+            }
+    
+            return response()->json([
+                'date'  => $date,
+                'state' => $state,
+            ]);
+        }
+    }
+
+––––––––––––––––––––––––
+backend/app/Http/Controllers/SystemSettingController.php
+    <?php
+    
+    namespace App\Http\Controllers;
+    
+    use App\Models\SystemSetting;
+    use Illuminate\Http\Request;
+    
+    /**
+     * Currently only exposes “booking_open_from”
+     */
+    class SystemSettingController extends Controller
+    {
+        /** GET /api/settings/booking-open-from */
+        public function show()
+        {
+            return response()->json([
+                'booking_open_from' => SystemSetting::getValue('booking_open_from'),
+            ]);
+        }
+    
+        /** PUT /api/settings/booking-open-from */
+        public function update(Request $request)
+        {
+            $date = $request->validate([
+                'booking_open_from' => 'required|date_format:Y-m-d',
+            ])['booking_open_from'];
+    
+            SystemSetting::setValue('booking_open_from', $date);
+    
+            return response()->json(['booking_open_from' => $date]);
         }
     }
 
@@ -1018,6 +1174,77 @@ backend/app/Models/User.php
     }
 
 ––––––––––––––––––––––––
+backend/app/Models/ClosedDay.php
+    <?php
+    
+    namespace App\Models;
+    
+    use Illuminate\Database\Eloquent\Model;
+    
+    /**
+     * Simple key-only model that stores a date when the whole
+     * restaurant is closed (e.g. public holiday).
+     */
+    class ClosedDay extends Model
+    {
+        public $timestamps     = false;
+        protected $primaryKey  = 'date';
+        public    $incrementing = false;
+        protected $keyType     = 'string';
+    
+        protected $fillable = ['date'];
+    }
+
+––––––––––––––––––––––––
+backend/app/Models/OpenDay.php
+    <?php
+    
+    namespace App\Models;
+    
+    use Illuminate\Database\Eloquent\Model;
+    
+    class OpenDay extends Model
+    {
+        public $incrementing = false;
+        public $timestamps   = true;
+        protected $primaryKey = 'date';
+        protected $keyType    = 'string';      // “YYYY-MM-DD”
+        protected $fillable   = ['date'];
+    }
+
+––––––––––––––––––––––––
+backend/app/Models/SystemSetting.php
+    <?php
+    
+    namespace App\Models;
+    
+    use Illuminate\Database\Eloquent\Model;
+    
+    /**
+     * Generic key-value store for runtime-tunable settings
+     */
+    class SystemSetting extends Model
+    {
+        public    $timestamps   = false;
+        protected $primaryKey   = 'key';
+        public    $incrementing = false;
+        protected $keyType      = 'string';
+    
+        protected $fillable = ['key','value'];
+    
+        public static function getValue(string $key, mixed $default = null): mixed
+        {
+            $row = static::find($key);
+            return $row?->value ?? $default;
+        }
+    
+        public static function setValue(string $key, string $value): void
+        {
+            static::updateOrCreate(['key'=>$key], ['value'=>$value]);
+        }
+    }
+
+––––––––––––––––––––––––
 backend/app/Services/BookingAlgorithmService.php
     <?php
     
@@ -1196,6 +1423,74 @@ backend/app/Services/BookingAlgorithmService.php
     }
 
 ––––––––––––––––––––––––
+backend/app/Services/CalendarService.php
+    <?php
+    
+    namespace App\Services;
+    
+    use App\Models\TableAvailability;
+    use App\Models\ClosedDay;
+    use App\Models\OpenDay;
+    use App\Models\SystemSetting;
+    use Illuminate\Support\Carbon;
+    use Illuminate\Support\Facades\Config;
+    
+    class CalendarService
+    {
+        /**
+         * Create TableAvailability rows for $date if they don't exist.
+         */
+        public function ensureStockForDate(string $date): void
+        {
+            if (TableAvailability::where('date', $date)->exists()) {
+                return;   // already seeded
+            }
+    
+            $dow       = Carbon::parse($date)->dayOfWeek;           // 0=Sun…6=Sat
+            $mealTypes = Config::get("restaurant_dataset.service_schedule.{$dow}", []);
+    
+            foreach ($mealTypes as $meal) {
+                foreach (Config::get('restaurant_dataset.table_types', []) as $type) {
+                    TableAvailability::create([
+                        'date'            => $date,
+                        'meal_type'       => $meal,
+                        'capacity'        => $type['capacity'],
+                        'available_count' => $type['available_count'],
+                    ]);
+                }
+            }
+        }
+    
+        /**
+         * True ⇢ restaurant should accept bookings on $date.
+         */
+        public function isOpen(string $date): bool
+        {
+            /* 1) explicit manual close beats everything */
+            if (ClosedDay::where('date', $date)->exists()) {
+                return false;
+            }
+    
+            /* 2) explicit manual open beats weekly schedule */
+            if (OpenDay::where('date', $date)->exists()) {
+                return true;
+            }
+    
+            /* 3) global booking-window not yet open? */
+            $openFrom = SystemSetting::getValue('booking_open_from');
+            if ($openFrom && $date < $openFrom) {
+                return false;
+            }
+    
+            /* 4) fall back to weekly service_schedule */
+            $dow   = Carbon::parse($date)->dayOfWeek;
+            $meals = Config::get("restaurant_dataset.service_schedule.{$dow}", []);
+    
+            return ! empty($meals);
+        }
+    }
+
+––––––––––––––––––––––––
 backend/database/migrations/2025_02_03_191203_create_table_availabilities_table.php
     <?php
     
@@ -1360,6 +1655,114 @@ backend/database/migrations/2025_04_20_143322_add_long_stay_to_bookings_table.ph
             Schema::table('bookings', function (Blueprint $table) {
                 $table->dropColumn('long_stay');
             });
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_05_04_155326_create_closed_days_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        public function up(): void
+        {
+            Schema::create('closed_days', function (Blueprint $table) {
+                /* one row per date → PK */
+                $table->date('date')->primary();
+            });
+        }
+    
+        public function down(): void
+        {
+            Schema::dropIfExists('closed_days');
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_05_04_155330_create_system_settings_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        public function up(): void
+        {
+            Schema::create('system_settings', function (Blueprint $table) {
+                $table->string('key')->primary();   // e.g. booking_open_from
+                $table->string('value');
+            });
+        }
+    
+        public function down(): void
+        {
+            Schema::dropIfExists('system_settings');
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_05_04_182837_create_calendar_overrides_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        /**
+         * Create the table.
+         */
+        public function up(): void
+        {
+            Schema::create('calendar_overrides', function (Blueprint $table) {
+                /* one row per date → PK */
+                $table->date('date')->primary();
+    
+                /*
+                 * 'open'  → force-open this date even if the weekly schedule says closed
+                 * 'closed'→ force-close this date even if the weekly schedule says open
+                 */
+                $table->enum('state', ['open', 'closed']);
+            });
+        }
+    
+        /**
+         * Drop the table.
+         */
+        public function down(): void
+        {
+            Schema::dropIfExists('calendar_overrides');
+        }
+    };
+
+––––––––––––––––––––––––
+backend/database/migrations/2025_05_04_184511_create_open_days_table.php
+    <?php
+    
+    use Illuminate\Database\Migrations\Migration;
+    use Illuminate\Database\Schema\Blueprint;
+    use Illuminate\Support\Facades\Schema;
+    
+    return new class extends Migration
+    {
+        public function up(): void
+        {
+            Schema::create('open_days', function (Blueprint $table) {
+                $table->date('date')->primary();        // YYYY-MM-DD
+                $table->timestamps();
+            });
+        }
+    
+        public function down(): void
+        {
+            Schema::dropIfExists('open_days');
         }
     };
 
@@ -1535,22 +1938,34 @@ backend/routes/api.php
     use Illuminate\Support\Facades\Route;
     use App\Http\Controllers\BookingController;
     use App\Http\Controllers\TableAvailabilityController;
+    use App\Http\Controllers\ClosedDayController;
+    use App\Http\Controllers\OpenDayController;
+    use App\Http\Controllers\SystemSettingController;
     
     /* Root */
-    Route::get('/', fn () => response()->json(['message' => 'API root']));
+    Route::get('/', fn()=>response()->json(['message'=>'API root']));
     
     /* Auth stub */
-    Route::middleware('auth:sanctum')->get('/user', fn (Request $r) => $r->user());
+    Route::middleware('auth:sanctum')->get('/user', fn(Request $r)=>$r->user());
     
     /* Availability */
-    Route::get('/table-availability',        [TableAvailabilityController::class, 'index']);
-    Route::get('/table-availability-range',  [TableAvailabilityController::class, 'range']);
+    Route::get('/table-availability',       [TableAvailabilityController::class,'index']);
+    Route::get('/table-availability-range', [TableAvailabilityController::class,'range']);
     
-    /* currentBookings */
-    Route::get   ('/bookings',          [BookingController::class, 'index']);
-    Route::post  ('/bookings',          [BookingController::class, 'store']);
-    Route::patch ('/bookings/{booking}',[BookingController::class, 'update']);
-    Route::delete('/bookings/{booking}',[BookingController::class, 'destroy']);
+    /* Bookings CRUD */
+    Route::get   ('/bookings',           [BookingController::class,'index']);
+    Route::post  ('/bookings',           [BookingController::class,'store']);
+    Route::patch ('/bookings/{booking}', [BookingController::class,'update']);
+    Route::delete('/bookings/{booking}', [BookingController::class,'destroy']);
+    
+    /* Operational settings */
+    Route::get ('/closed-days',        [ClosedDayController::class,'index']);
+    Route::post('/closed-days/toggle', [ClosedDayController::class,'toggle']);
+    Route::get ( '/open-days',         [OpenDayController::class, 'index' ] );
+    Route::post( '/open-days/toggle',  [OpenDayController::class, 'toggle'] );
+    
+    Route::get ('/settings/booking-open-from', [SystemSettingController::class,'show']);
+    Route::put ('/settings/booking-open-from', [SystemSettingController::class,'update']);
 
 ––––––––––––––––––––––––
 backend/config/mail.php
@@ -1782,7 +2197,7 @@ backend/config/restaurant_dataset.php
         | How far ahead to pre-generate stock (in days)
         |--------------------------------------------------------------------------
         */
-        'seeding_horizon_days' => 30,
+        'seeding_horizon_days' => 90,   // ← updated from 30 → 90
     
         /*
         |--------------------------------------------------------------------------
@@ -1825,7 +2240,7 @@ backend/config/restaurant_dataset.php
     
         /*
         |--------------------------------------------------------------------------
-        | Demo booking (turn off in production) (enabled => false si no vull que em posi reservas random per probar).
+        | Demo booking (turn off in production)
         |--------------------------------------------------------------------------
         */
         'demo_booking' => [

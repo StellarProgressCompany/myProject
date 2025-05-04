@@ -105,12 +105,15 @@ export default {
     settings: {
         bookingWindowFrom: "Acceptar reserves a partir de",
         closeDay:          "Tancar un dia",
+        openDay:           "Obrir un dia",
         openUntil:         "Obrir reserves fins a aquest dia",
         save:              "Desa",
         closed:            "Tancat (clic per obrir)",
         open:              "Obert (clic per tancar)",
         chooseDay:         "Tria un dia",
-        successClosed:     "Dia tancat",
-        successWindow:     "Finestra de reserves actualitzada",
+        successClosed:     "Dia tancat!",
+        successOpened:     "Dia obert!",
+        closing:           "Tancant…",
+        opening:           "Obrint…",
     },
 };

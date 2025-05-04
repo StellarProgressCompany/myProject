@@ -1,11 +1,20 @@
 import axios from "axios";
 axios.defaults.baseURL = ""; // proxy via Vite
 
-/* ──────────────────────────────────────────────
-   Simple in-memory cache that deduplicates calls
-   to /api/table-availability-range.              ───────────────────────────────────────────── */
+/*──────────────────────────────────────────────
+  Simple in-memory cache for table availability
+──────────────────────────────────────────────*/
 const _taCache = new Map();
 const buildKey = (start, end, meal) => `${start}|${end}|${meal}`;
+
+/**
+ * Clear every cached /api/table-availability-range response.
+ * Call this after any action (e.g. closing/opening a day)
+ * that could invalidate previously-fetched data.
+ */
+export function clearAvailabilityCache() {
+    _taCache.clear();
+}
 
 export async function fetchTableAvailabilityRange(
     start,
@@ -15,14 +24,10 @@ export async function fetchTableAvailabilityRange(
     const key = buildKey(start, end, mealType);
     const hit = _taCache.get(key);
 
-    /* ① return cached result (resolved) */
     if (hit?.status === "resolved") return hit.data;
 
-    /* ② attach to the pending promise if already in flight */
     if (hit?.status === "pending") return hit.promise;
 
-    /* ③ otherwise perform the request and cache both the
-          pending promise and (when it resolves) the data     */
     const promise = axios
         .get("/api/table-availability-range", {
             params: { start, end, mealType },
@@ -32,7 +37,6 @@ export async function fetchTableAvailabilityRange(
             return res.data;
         })
         .catch((err) => {
-            /* remove the entry so a later retry is possible */
             _taCache.delete(key);
             throw err;
         });
@@ -41,8 +45,9 @@ export async function fetchTableAvailabilityRange(
     return promise;
 }
 
-/* ──────────────────────────────────────────────
-   Other booking-related helpers (unchanged)      ───────────────────────────────────────────── */
+/*──────────────────────────────────────────────
+  Other booking-related helpers
+──────────────────────────────────────────────*/
 export async function fetchAvailableTimeSlots(params) {
     const { data } = await axios.get("/api/table-availability", { params });
     return data;

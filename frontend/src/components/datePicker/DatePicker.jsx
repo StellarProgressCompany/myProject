@@ -23,11 +23,27 @@ export default function DatePicker({
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [availabilityMap, setAvailabilityMap] = useState({});
     const [isFetchingRange, setIsFetchingRange] = useState(false);
+    const [closedDays, setClosedDays] = useState([]);
 
     const today = new Date();
     const maxDate = addDays(today, 30);
 
-    // ---------------- compact → next 7 days ----------------
+    // ─── fetch exceptional closed days ──────────────────────
+    useEffect(() => {
+        (async () => {
+            try {
+                const { data } = await axios.get(`${API_URL}/closed-days`);
+                const normalized = Array.isArray(data)
+                    ? data.map((d) => d.slice(0, 10))
+                    : [];
+                setClosedDays(normalized);
+            } catch (e) {
+                console.error("Failed to fetch closed days:", e);
+            }
+        })();
+    }, []);
+
+    // ─── compact → next 7 days ─────────────────────────────
     useEffect(() => {
         if (viewMode !== "compact") return;
         (async () => {
@@ -61,7 +77,7 @@ export default function DatePicker({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [viewMode]);
 
-    // ---------------- calendar → full month ----------------
+    // ─── calendar → full month ─────────────────────────────
     useEffect(() => {
         if (viewMode !== "calendar") return;
         (async () => {
@@ -125,6 +141,7 @@ export default function DatePicker({
                     selectedDate={selectedDate}
                     onDateSelect={onDateSelect}
                     availabilityMap={availabilityMap}
+                    closedDays={closedDays}
                 />
             ) : (
                 <Calendar
@@ -135,6 +152,7 @@ export default function DatePicker({
                     selectedDate={selectedDate}
                     onDateSelect={onDateSelect}
                     availabilityMap={availabilityMap}
+                    closedDays={closedDays}
                 />
             )}
         </div>

@@ -11,7 +11,7 @@ return [
     | How far ahead to pre-generate stock (in days)
     |--------------------------------------------------------------------------
     */
-    'seeding_horizon_days' => 30,
+    'seeding_horizon_days' => 90,   // ← updated from 30 → 90
 
     /*
     |--------------------------------------------------------------------------
@@ -54,7 +54,7 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | Demo booking (turn off in production) (enabled => false si no vull que em posi reservas random per probar).
+    | Demo booking (turn off in production)
     |--------------------------------------------------------------------------
     */
     'demo_booking' => [

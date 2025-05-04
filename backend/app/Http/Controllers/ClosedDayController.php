@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\ClosedDay;
 use Illuminate\Http\Request;
+use App\Services\CalendarService;
 
-/**
- * AJAX helper for the admin “operational settings” panel.
- */
 class ClosedDayController extends Controller
 {
+    private CalendarService $calendar;
+
+    public function __construct(CalendarService $calendar)
+    {
+        $this->calendar = $calendar;
+    }
+
     /** GET /api/closed-days */
     public function index()
     {
@@ -28,9 +33,12 @@ class ClosedDayController extends Controller
         $existing = ClosedDay::find($date);
 
         if ($existing) {
+            // RE-OPEN day: delete flag and regenerate stock
             $existing->delete();
+            $this->calendar->ensureStockForDate($date);
             $state = 'opened';
         } else {
+            // CLOSE day: create flag (no further action)
             ClosedDay::create(['date' => $date]);
             $state = 'closed';
         }

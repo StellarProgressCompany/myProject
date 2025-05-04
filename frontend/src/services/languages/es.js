@@ -105,12 +105,15 @@ export default {
     settings: {
         bookingWindowFrom: "Aceptar reservas a partir de",
         closeDay:          "Cerrar un día",
+        openDay:           "Abrir un día",
         openUntil:         "Abrir reservas hasta ese día",
         save:              "Guardar",
         closed:            "Cerrado (clic para abrir)",
         open:              "Abierto (clic para cerrar)",
         chooseDay:         "Elige un día",
         successClosed:     "Día cerrado",
-        successWindow:     "Ventana de reserva actualizada",
+        successOpened:     "¡Día abierto!",
+        closing:           "Cerrando…",
+        opening:           "Abriendo…",
     },
 };

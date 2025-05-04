@@ -624,6 +624,10 @@
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format, addDays } from "date-fns";
+    import {
+        IconChevronLeft,
+        IconChevronRight,
+    } from "@tabler/icons-react";
     import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     
     import AddBookingModal from "./AddBookingModal";
@@ -716,18 +720,20 @@
                 {/* header + controls */}
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                     <h2 className="text-xl font-bold">{title}</h2>
-                    <div className="space-x-2">
+                    <div className="space-x-2 flex items-center">
                         <button
                             onClick={() => setOffset((o) => o - 1)}
-                            className="px-2 py-1 border rounded"
+                            className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                            aria-label={t("calendar.prev")}
                         >
-                            ◀
+                            <IconChevronLeft className="w-5 h-5 text-gray-500" />
                         </button>
                         <button
                             onClick={() => setOffset((o) => o + 1)}
-                            className="px-2 py-1 border rounded"
+                            className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                            aria-label={t("calendar.next")}
                         >
-                            ▶
+                            <IconChevronRight className="w-5 h-5 text-gray-500" />
                         </button>
                         <button
                             onClick={() => setIsAdding(true)}
@@ -1351,14 +1357,45 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/settings/OperationalSettings.jsx
-    import React, { useState, useRef, useEffect } from "react";
+    // frontend/src/components/admin/settings/OperationalSettings.jsx
+    /* eslint-disable react/prop-types */
+    import React, { useState, useEffect, useCallback } from "react";
+    import { format } from "date-fns";
     import { motion, AnimatePresence } from "framer-motion";
+    
     import BookingsCalendarView from "../sharedBookings/BookingsCalendarView";
-    import {
-        closeSpecificDay,
-        openBookingWindowUntil,
-    } from "../../../services/settingsService.js";
-    import { translate } from "../../../services/i18n";
+    import { clearAvailabilityCache } from "../../../services/bookingService";
+    import { getDayMealTypes } from "../../../services/datePicker";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    /* HTTP helpers ───────────────────────────── */
+    async function toggleClosedDay(dateYMD) {
+        await fetch("/api/closed-days/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: dateYMD }),
+        });
+    }
+    
+    async function toggleOpenDay(dateYMD) {
+        await fetch("/api/open-days/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: dateYMD }),
+        });
+    }
+    
+    async function fetchClosedDays() {
+        const r = await fetch("/api/closed-days");
+        const j = await r.json();
+        return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+    }
+    
+    async function fetchOpenDays() {
+        const r = await fetch("/api/open-days");
+        const j = await r.json();
+        return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+    }
     
     /* ✔ little tick after a successful action */
     const SuccessTick = ({ id }) => (
@@ -1376,73 +1413,74 @@
         </AnimatePresence>
     );
     
-    /* ▶ animated progress button (inlined for brevity) */
+    /* ▶ Animated progress button (generic) */
     function ProgressButton({
                                 colour = "blue",
                                 idleLabel,
                                 loadingLabel,
                                 successLabel,
                                 onClick,
+                                disabled = false,
                             }) {
-        const [state, setState]       = useState("idle");     // idle | loading | success
-        const [progress, setProgress] = useState(0);          // 0-100
-        const timerRef = useRef(null);
+        const [state, setState] = useState("idle"); // idle | loading | success
+        const [progress, setProgress] = useState(0);
+        const timer = React.useRef(null);
     
-        /* drive the fake progress bar while “loading” */
-        useEffect(() => {
+        React.useEffect(() => {
             if (state !== "loading") return;
-            timerRef.current = setInterval(() => {
+            timer.current = setInterval(() => {
                 setProgress((p) => (p < 95 ? p + 1 : p));
             }, 25);
-            return () => clearInterval(timerRef.current);
+            return () => clearInterval(timer.current);
         }, [state]);
     
-        /* helpers */
-        const start  = () => { setProgress(0); setState("loading"); };
+        const start = () => {
+            setProgress(0);
+            setState("loading");
+        };
         const finish = () => {
-            clearInterval(timerRef.current);
+            clearInterval(timer.current);
             setProgress(100);
             setState("success");
-            setTimeout(() => { setState("idle"); setProgress(0); }, 1500);
+            setTimeout(() => {
+                setState("idle");
+                setProgress(0);
+            }, 1500);
         };
     
-        /* click handler wrapper */
-        const handleClick = async () => {
-            if (state === "loading") return;
+        const handle = async () => {
+            if (state === "loading" || disabled) return;
             try {
                 start();
-                await onClick();          // async work
+                await onClick();
                 finish();
             } catch (e) {
-                clearInterval(timerRef.current);
+                clearInterval(timer.current);
+                console.error(e);
                 setState("idle");
                 setProgress(0);
                 alert(e?.response?.data?.error || "Action failed");
             }
         };
     
-        /* visual helpers */
         const baseClr = state === "success" ? "green" : colour;
         const colourClasses = {
-            blue:   "bg-blue-600 hover:bg-blue-700",
-            red:    "bg-red-600  hover:bg-red-700",
-            green:  "bg-green-600 hover:bg-green-700",
+            blue: "bg-blue-600 hover:bg-blue-700",
+            red: "bg-red-600 hover:bg-red-700",
+            green: "bg-green-600 hover:bg-green-700",
         }[baseClr];
     
         return (
             <button
-                onClick={handleClick}
-                disabled={state === "loading"}
-                className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-60 ${colourClasses}`}
+                onClick={handle}
+                disabled={state === "loading" || disabled}
+                className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-50 ${colourClasses}`}
             >
-                {/* label */}
-                <span className="relative z-10">
-            {state === "idle"    && idleLabel}
-                    {state === "loading" && loadingLabel}
-                    {state === "success" && successLabel}
+          <span className="relative z-10">
+            {state === "idle" && idleLabel}
+              {state === "loading" && loadingLabel}
+              {state === "success" && successLabel}
           </span>
-    
-                {/* progress bar */}
                 {state === "loading" && (
                     <motion.span
                         style={{ scaleX: progress / 100 }}
@@ -1455,61 +1493,123 @@
         );
     }
     
-    export default function OperationalSettings() {
+    /*──────────────────────────────────────────────
+      Operational settings – Open / Close specific days
+    ──────────────────────────────────────────────*/
+    export default function OperationalSettings({ bookings = [] }) {
         /* i18n */
-        const [lang] = useState(() => localStorage.getItem("adminLang") || "ca");
-        const t      = (k, v) => translate(lang, k, v);
+        const lang = getLanguage();
+        const t = (k, v) => translate(lang, k, v);
     
-        /* selected calendar date */
+        /* component state */
         const [selDate, setSelDate] = useState(null);
+        const [blip, setBlip] = useState(null);
+        const [closedDays, setClosed] = useState([]);
+        const [openDays, setOpen] = useState([]);
     
-        /* success blips (one for each action) */
-        const [blip, setBlip] = useState(null);  // "close" | "open" | null
+        /* future-bookings slice for calendar */
+        const todayYMD = new Date().toISOString().slice(0, 10);
+        const futureBookings = bookings.filter((b) => {
+            const d = (b.table_availability?.date || b.date || "").slice(0, 10);
+            return d >= todayYMD;
+        });
     
-        /* actions */
-        const closeDay = async () => {
+        /* fetch helpers */
+        const refreshClosed = useCallback(async () => {
+            setClosed(await fetchClosedDays());
+        }, []);
+        const refreshOpen = useCallback(async () => {
+            setOpen(await fetchOpenDays());
+        }, []);
+    
+        useEffect(() => {
+            refreshClosed();
+            refreshOpen();
+        }, [refreshClosed, refreshOpen]);
+    
+        /* derive flags */
+        const ymd = selDate ? format(selDate, "yyyy-MM-dd") : null;
+        const scheduleClosed =
+            selDate && getDayMealTypes(selDate.getDay()).length === 0;
+        const exceptionallyClosed = selDate && closedDays.includes(ymd);
+        const exceptionallyOpen = selDate && openDays.includes(ymd);
+    
+        /* overall closed? */
+        const isClosedNow =
+            (scheduleClosed && !exceptionallyOpen) || exceptionallyClosed;
+    
+        /* filter out any “open” exceptions so they don’t stay red */
+        const closedEffective = closedDays.filter((d) => !openDays.includes(d));
+    
+        /* permissions */
+        const canClose =
+            selDate && !exceptionallyClosed && !scheduleClosed;
+        const canOpen =
+            selDate &&
+            ((scheduleClosed && !exceptionallyOpen) || exceptionallyClosed);
+    
+        /* handlers */
+        const doClose = async () => {
             if (!selDate) return;
-            await closeSpecificDay(selDate.toISOString().slice(0, 10));
+            await toggleClosedDay(ymd);
+            await refreshClosed();
+            clearAvailabilityCache();
             setBlip("close");
-            setTimeout(() => setBlip(null), 1600);
+            setTimeout(() => setBlip(null), 1500);
         };
-    
-        const openWindow = async () => {
+        const doOpen = async () => {
             if (!selDate) return;
-            await openBookingWindowUntil(selDate.toISOString().slice(0, 10));
+            if (scheduleClosed && !exceptionallyOpen) {
+                /* add open-exception */
+                await toggleOpenDay(ymd);
+                await refreshOpen();
+            } else {
+                /* undo manual close */
+                await toggleClosedDay(ymd);
+                await refreshClosed();
+            }
+            clearAvailabilityCache();
             setBlip("open");
-            setTimeout(() => setBlip(null), 1600);
+            setTimeout(() => setBlip(null), 1500);
         };
     
         return (
             <div className="relative space-y-6">
                 {blip && <SuccessTick id={blip} />}
     
-                {/* colour-coded month calendar (no drill-in) */}
                 <BookingsCalendarView
                     selectedDate={selDate}
                     onSelectDay={setSelDate}
-                    bookings={[]}
+                    bookings={futureBookings}
+                    closedDays={closedEffective}
+                    openDays={openDays}
                 />
     
-                {/* action buttons */}
                 <div className="flex gap-4">
                     <ProgressButton
                         colour="red"
                         idleLabel={t("settings.closeDay")}
-                        loadingLabel={t("settings.closed")}
+                        loadingLabel={t("settings.closing")}
                         successLabel={t("settings.successClosed")}
-                        onClick={closeDay}
+                        onClick={doClose}
+                        disabled={!canClose}
                     />
-    
                     <ProgressButton
-                        colour="blue"
-                        idleLabel={t("settings.openUntil")}
-                        loadingLabel={t("settings.save")}
-                        successLabel={t("settings.successWindow")}
-                        onClick={openWindow}
+                        colour="green"
+                        idleLabel={t("settings.openDay")}
+                        loadingLabel={t("settings.opening")}
+                        successLabel={t("settings.successOpened")}
+                        onClick={doOpen}
+                        disabled={!canOpen}
                     />
                 </div>
+    
+                {selDate && (
+                    <p className="text-sm text-gray-600">
+                        <strong>{format(selDate, "PPP")}</strong> –{" "}
+                        {isClosedNow ? t("settings.closed") : t("settings.open")}
+                    </p>
+                )}
             </div>
         );
     }
@@ -1531,31 +1631,31 @@
         isSameMonth,
         isSameDay,
     } from "date-fns";
-    import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     
     import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
     const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-    const BOOKING_WINDOW_DAYS = 30;            // days in advance that bookings are allowed
+    const BOOKING_WINDOW_DAYS = 30;
     
     export default function BookingsCalendarView({
                                                      selectedDate = null,
                                                      onSelectDay,
                                                      bookings,
+                                                     closedDays = [],
+                                                     openDays   = [],
                                                  }) {
         const lang   = getLanguage();
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
         const [monthToShow, setMonthToShow] = useState(new Date());
-        const today = new Date();
+        const today      = new Date();
+        const closedSet  = new Set(closedDays);
+        const openSet    = new Set(openDays);          /* ⇠ NEW */
     
-        /* ───────── helpers ───────── */
+        /* helpers */
         const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
             format(
                 addDays(startOfWeek(new Date(), { weekStartsOn: 1, locale }), i),
@@ -1570,7 +1670,7 @@
         const gridEnd    = endOfWeek(monthEnd,   { weekStartsOn: 1, locale });
     
         const getDayStats = (date) => {
-            const key   = format(date, "yyyy-MM-dd", { locale });
+            const key   = format(date, "yyyy-MM-dd");
             const dayBk = bookings.filter(
                 (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
             );
@@ -1581,22 +1681,29 @@
             return { bookings: dayBk.length, clients: tot };
         };
     
-        /* quick status helpers (for colouring) */
-        const isClosed = (d) => getDayMealTypes(d.getDay()).length === 0;
+        /* colour helpers */
+        const isClosed = (d) => {
+            const key = format(d, "yyyy-MM-dd");
+            if (openSet.has(key)) return false;                 // ← exception overrides
+            return (
+                closedSet.has(key) ||
+                getDayMealTypes(d.getDay()).length === 0
+            );
+        };
         const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
     
-        /* ───────── build calendar grid ───────── */
+        /* build grid */
         const rows = [];
         let dayPtr = gridStart;
         while (dayPtr <= gridEnd) {
             const week = [];
             for (let i = 0; i < 7; i++) {
-                const d = dayPtr;
+                const d  = dayPtr;
                 const { bookings: bc, clients } = getDayStats(d);
                 const inMonth  = isSameMonth(d, monthToShow);
                 const selected = selectedDate && isSameDay(d, selectedDate);
     
-                /* colouring logic */
+                /* colour classes */
                 let bg  = "bg-white";
                 let txt = inMonth ? "text-gray-800" : "text-gray-400";
     
@@ -1684,6 +1791,8 @@
         selectedDate: PropTypes.instanceOf(Date),
         onSelectDay:  PropTypes.func.isRequired,
         bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
+        closedDays:   PropTypes.arrayOf(PropTypes.string),
+        openDays:     PropTypes.arrayOf(PropTypes.string),   // ← NEW
     };
 
 ––––––––––––––––––––––––
@@ -1799,11 +1908,11 @@
     import React from "react";
     import PropTypes from "prop-types";
     import { format, addDays, subDays, isSameDay } from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+        IconChevronLeft,
+        IconChevronRight,
+    } from "@tabler/icons-react";
     
     import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
@@ -1819,26 +1928,26 @@
                                                     selectedDate = null,
                                                     onSelectDay,
                                                     bookings,
+                                                    closedDays = [],
                                                 }) {
         const lang   = getLanguage();
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
-        const today = new Date();
-        const days  = [];
+        const today     = new Date();
+        const closedSet = new Set(closedDays);
     
+        const days = [];
         if (mode === "future") {
-            for (let i = offset; i < offset + rangeDays; i++) {
+            for (let i = offset; i < offset + rangeDays; i++)
                 days.push(addDays(today, i));
-            }
         } else {
-            for (let i = 1 + offset; i <= rangeDays + offset; i++) {
+            for (let i = 1 + offset; i <= rangeDays + offset; i++)
                 days.push(subDays(today, i));
-            }
         }
     
         const getDayStats = (day) => {
-            const key = format(day, "yyyy-MM-dd", { locale });
+            const key = format(day, "yyyy-MM-dd");
             const dayBookings = bookings.filter(
                 (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
             );
@@ -1849,28 +1958,30 @@
             return { bookings: dayBookings.length, clients: totalClients };
         };
     
-        const isClosed   = (d) => getDayMealTypes(d.getDay()).length === 0;
-        const isBlocked  = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
+        const isClosed = (d) =>
+            closedSet.has(format(d, "yyyy-MM-dd")) ||
+            getDayMealTypes(d.getDay()).length === 0;
+        const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
     
         return (
             <div className="relative">
                 {/* arrows */}
                 <button
                     onClick={() => onOffsetChange(offset - 1)}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
-                    aria-label="Previous window"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100"
+                    aria-label={t("calendar.prev")}
                 >
-                    ‹
+                    <IconChevronLeft className="w-5 h-5" />
                 </button>
                 <button
                     onClick={() => onOffsetChange(offset + 1)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
-                    aria-label="Next window"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100"
+                    aria-label={t("calendar.next")}
                 >
-                    ›
+                    <IconChevronRight className="w-5 h-5" />
                 </button>
     
-                <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow mx-6">
+                <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow mx-8">
                     {days.map((day) => {
                         const { bookings: bc, clients } = getDayStats(day);
                         const isSel = selectedDate && isSameDay(day, selectedDate);
@@ -1930,6 +2041,7 @@
         selectedDate:    PropTypes.instanceOf(Date),
         onSelectDay:     PropTypes.func.isRequired,
         bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
+        closedDays:      PropTypes.arrayOf(PropTypes.string),
     };
 
 ––––––––––––––––––––––––
@@ -1948,55 +2060,59 @@
     } from "date-fns";
     
     import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-    import BookingsCompactView   from "./BookingsCompactView";
-    import BookingsCalendarView  from "./BookingsCalendarView";
-    import BookingsChart         from "./BookingsChart";
-    import DaySchedule           from "./DaySchedule";
-    import AddBookingModal       from "../currentBookings/AddBookingModal";
+    import BookingsCompactView  from "./BookingsCompactView";
+    import BookingsCalendarView from "./BookingsCalendarView";
+    import BookingsChart        from "./BookingsChart";
+    import DaySchedule          from "./DaySchedule";
+    import AddBookingModal      from "../currentBookings/AddBookingModal";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    /* helper ― consistent “yyyy-MM-dd” string */
+    /* helper – stable “YYYY-MM-DD” */
     const ymd = (d) => format(d, "yyyy-MM-dd");
     
     export default function BookingsOverview({
-                                                 mode,
+                                                 mode,               // "future" | "past"
                                                  bookings,
-                                                 showChart   = true,
-                                                 allowDrill  = true,
-                                                 /* new controlled-view props */
-                                                 view:         controlledView,
-                                                 hideViewToggle = false,
-                                                 onViewChange   = () => {},
-                                                 onWindowChange = () => {},
+                                                 showChart        = true,
+                                                 allowDrill       = true,
+                                                 view:            controlledView,
+                                                 hideViewToggle   = false,
+                                                 onViewChange     = () => {},
+                                                 onWindowChange   = () => {},
                                              }) {
-        /* ───────── i18n ───────── */
+        /* ────── i18n ────── */
         const lang = getLanguage();
         const t    = (k, v) => translate(lang, k, v);
     
-        /* ───────── constants ───────── */
+        /* ────── constants ────── */
         const rangeDays = 7;
-        const today     = useMemo(() => startOfDay(new Date()), []);   // stable “today”
+        const today     = useMemo(() => startOfDay(new Date()), []);
     
-        /* ───────── local view state (uncontrolled) ───────── */
-        const [viewState, setViewState] = useState("compact");
+        /* ────── local state ────── */
+        const [viewState, setViewState]   = useState("compact");
         const view = controlledView ?? viewState;
     
         const changeView = (v) => {
-            if (controlledView !== undefined) {
-                onViewChange(v);
-            } else {
-                setViewState(v);
-            }
+            if (controlledView !== undefined) onViewChange(v);
+            else                              setViewState(v);
         };
     
-        /* ───────── offset / selection ───────── */
-        const [offset,    setOffset]    = useState(0);        // window offset
-        const [selDay,    setSelDay]    = useState(null);     // drilled-in date
-        const [ta,        setTA]        = useState({});       // table availability
+        const [offset,    setOffset]    = useState(0);
+        const [selDay,    setSelDay]    = useState(null);
+        const [ta,        setTA]        = useState({});
         const [loadingTA, setLoadingTA] = useState(false);
-        const [showModal, setShowModal] = useState(false);
     
-        /* ───────── window boundaries ───────── */
+        /* CLOSED-DAYS support */
+        const [closedDays, setClosedDays] = useState([]);
+    
+        useEffect(() => {
+            fetch("/api/closed-days")
+                .then((r) => r.json())
+                .then((arr) => Array.isArray(arr) && setClosedDays(arr))
+                .catch(() => setClosedDays([]));
+        }, []);
+    
+        /* ────── window boundaries ────── */
         const compactStart = useMemo(
             () =>
                 mode === "future"
@@ -2016,9 +2132,7 @@
         const inFuture = (d) => d >= today;
         const inPast   = (d) => d <  today;
     
-        /* ╭─────────────────────────────────────────────────────────╮
-           │ bookings slices                                         │
-           ╰─────────────────────────────────────────────────────────╯ */
+        /* bookings slices */
         const compactFiltered = useMemo(
             () =>
                 bookings.filter((b) => {
@@ -2037,40 +2151,30 @@
             [bookings, mode, today]
         );
     
-        /* window used for metrics */
         const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
     
-        /* notify parent when statsBookings changes */
-        useEffect(() => {
-            onWindowChange(statsBookings);
-            // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [statsBookings]);
+        /* notify parent */
+        useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]); // eslint-disable-line
     
+        /* KPI counters */
         const totalBookings = statsBookings.length;
         const totalClients  = statsBookings.reduce(
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
             0
         );
     
-        /* ╭─────────────────────────────────────────────────────────╮
-           │ Fetch table availability for the visible window         │
-           ╰─────────────────────────────────────────────────────────╯ */
+        /* ────── table-availability payload for the visible window ────── */
         const viewWinStart = useMemo(
             () =>
-                view === "calendar"
-                    ? startOfMonth(addDays(today, offset))
-                    : compactStart,
+                view === "calendar" ? startOfMonth(addDays(today, offset)) : compactStart,
             [view, today, offset, compactStart]
         );
-        const viewWinEnd = useMemo(
-            () =>
-                view === "calendar"
-                    ? endOfMonth(viewWinStart)
-                    : compactEnd,
+        const viewWinEnd   = useMemo(
+            () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
             [view, viewWinStart, compactEnd]
         );
-        const winStartStr = ymd(viewWinStart);
-        const winEndStr   = ymd(viewWinEnd);
+        const winStartStr  = ymd(viewWinStart);
+        const winEndStr    = ymd(viewWinEnd);
     
         useEffect(() => {
             let cancelled = false;
@@ -2096,7 +2200,7 @@
             return () => void (cancelled = true);
         }, [winStartStr, winEndStr, view]);
     
-        /* ensure TA for drilled-in day inside calendar view (once) */
+        /* ensure TA present for drilled-in day */
         useEffect(() => {
             if (!selDay || view !== "calendar") return;
             const key = ymd(selDay);
@@ -2116,13 +2220,11 @@
             })();
         }, [selDay, view, ta]);
     
-        /* manual booking saved → refresh full page */
-        const handleSaved = () => {
-            setShowModal(false);
-            window.location.reload();
-        };
+        /* manual add */
+        const [showModal, setShowModal] = useState(false);
+        const handleSaved = () => { setShowModal(false); window.location.reload(); };
     
-        /* ───────── UI ───────── */
+        /* ────── UI ────── */
         return (
             <div className="p-6 bg-white rounded shadow space-y-6">
                 {/* header */}
@@ -2132,10 +2234,7 @@
                             {t(`overview.${mode}Bookings`)}
                         </h2>
                         <p className="text-sm text-gray-500">
-                            {t("overview.dataWindow", {
-                                start: winStartStr,
-                                end:   winEndStr,
-                            })}
+                            {t("overview.dataWindow", { start: winStartStr, end: winEndStr })}
                         </p>
                     </div>
     
@@ -2151,23 +2250,19 @@
                     )}
                 </div>
     
-                {/* stats */}
+                {/* KPI cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-blue-50 p-3 rounded text-center">
-                        <p className="text-xs text-gray-600">
-                            {t("overview.bookings")}
-                        </p>
+                        <p className="text-xs text-gray-600">{t("overview.bookings")}</p>
                         <p className="text-xl font-bold">{totalBookings}</p>
                     </div>
                     <div className="bg-green-50 p-3 rounded text-center">
-                        <p className="text-xs text-gray-600">
-                            {t("overview.guests")}
-                        </p>
+                        <p className="text-xs text-gray-600">{t("overview.guests")}</p>
                         <p className="text-xl font-bold">{totalClients}</p>
                     </div>
                 </div>
     
-                {/* list view */}
+                {/* list / calendar */}
                 {view === "compact" ? (
                     <BookingsCompactView
                         mode={mode}
@@ -2177,12 +2272,14 @@
                         selectedDate={allowDrill ? selDay : null}
                         onSelectDay={allowDrill ? setSelDay : () => {}}
                         bookings={statsBookings}
+                        closedDays={closedDays}
                     />
                 ) : (
                     <BookingsCalendarView
                         selectedDate={allowDrill ? selDay : null}
                         onSelectDay={allowDrill ? setSelDay : () => {}}
                         bookings={calendarBookings}
+                        closedDays={closedDays}
                     />
                 )}
     
@@ -2196,7 +2293,7 @@
                     />
                 )}
     
-                {/* drill-in panel */}
+                {/* drilled-in schedule */}
                 {allowDrill && selDay && (
                     <div className="mt-4 relative">
                         {mode === "future" && (
@@ -2266,50 +2363,23 @@
         const locale = localeMap[lang] || enUS;
     
         const [showFloor, setShowFloor] = useState(false);
-    
         if (!selectedDate) return null;
     
-        const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
-        const dayInfo = tableAvailability[dateStr];
+        const dateStr   = format(selectedDate, "yyyy-MM-dd");
+        const dayInfo   = tableAvailability[dateStr];
+        const indicator = typeof dayInfo === "string" ? dayInfo : null; // "closed" | "blocked"
+        const dayObj    = indicator ? {} : (dayInfo || {});
     
-        if (!dayInfo || dayInfo === "closed") {
-            return (
-                <div className="mt-6 border rounded bg-white p-4 shadow">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold">
-                            {t("schedule.header", {
-                                date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
-                            })}
-                        </h3>
-                        <button onClick={onClose} className="text-sm text-red-500 underline">
-                            {t("admin.close")}
-                        </button>
-                    </div>
-                    <p
-                        className={
-                            dayInfo === "closed"
-                                ? "text-red-600 font-semibold"
-                                : "text-gray-700"
-                        }
-                    >
-                        {dayInfo === "closed" ? "CLOSED" : t("schedule.noBookings")}
-                    </p>
-                </div>
-            );
-        }
-    
-        const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
-            (rk) => rk in dayInfo
-        );
+        /* fixed round keys so we can still show bookings on closed / blocked days */
+        const roundKeys = ["first_round", "second_round", "dinner_round"];
     
         const roundBookings = {};
         roundKeys.forEach((rk) => {
             roundBookings[rk] = bookings
                 .filter((b) => {
                     if (getBookingDate(b) !== dateStr) return false;
-                    if (rk.includes("first")) return b.reserved_time < "15:00:00";
-                    if (rk.includes("second"))
-                        return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
+                    if (rk.includes("first"))  return b.reserved_time < "15:00:00";
+                    if (rk.includes("second")) return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
                     return b.reserved_time >= "20:00:00";
                 })
                 .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
@@ -2317,14 +2387,14 @@
     
         const fullStock = { 2: 0, 4: 0, 6: 0 };
         roundKeys.forEach((rk) => {
-            const avail  = dayInfo[rk]?.availability || {};
-            const booked = {};
-            (roundBookings[rk] || []).forEach((bk) => {
+            const avail = dayObj[rk]?.availability || {};
+            const bookedCounts = {};
+            roundBookings[rk].forEach((bk) => {
                 const cap = bk.table_availability?.capacity || 0;
-                booked[cap] = (booked[cap] || 0) + 1;
+                bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
             });
             [2, 4, 6].forEach((cap) => {
-                const totalHere = (avail[cap] || 0) + (booked[cap] || 0);
+                const totalHere = (avail[cap] || 0) + (bookedCounts[cap] || 0);
                 fullStock[cap] = Math.max(fullStock[cap], totalHere);
             });
         });
@@ -2363,6 +2433,18 @@
                     </div>
                 </div>
     
+                {indicator && (
+                    <p
+                        className={
+                            indicator === "closed"
+                                ? "text-red-600 font-semibold mb-4"
+                                : "text-yellow-600 font-semibold mb-4"
+                        }
+                    >
+                        {indicator.toUpperCase()}
+                    </p>
+                )}
+    
                 {roundKeys.map((rk) => {
                     const { lbl, bg } = prettyRound(rk);
                     const rows        = roundBookings[rk] || [];
@@ -2388,16 +2470,9 @@
                                     </thead>
                                     <tbody>
                                     {rows.map((bk) => (
-                                        <tr
-                                            key={bk.id}
-                                            className={`${bg} hover:bg-yellow-50 transition`}
-                                        >
-                                            <td className="px-3 py-2">
-                                                {bk.reserved_time.slice(0, 5)}
-                                            </td>
-                                            <td className="px-3 py-2 truncate max-w-[160px]">
-                                                {bk.full_name}
-                                            </td>
+                                        <tr key={bk.id} className={`${bg} hover:bg-yellow-50 transition`}>
+                                            <td className="px-3 py-2">{bk.reserved_time.slice(0, 5)}</td>
+                                            <td className="px-3 py-2 truncate max-w-[160px]">{bk.full_name}</td>
                                             <td className="px-3 py-2">
                                                 {bk.total_adults + bk.total_kids}
                                             </td>
@@ -2406,17 +2481,11 @@
                                     </tbody>
                                 </table>
                             ) : (
-                                <p className="text-gray-500 mb-3">
-                                    {t("schedule.noBookings")}
-                                </p>
+                                <p className="text-gray-500 mb-3">{t("schedule.noBookings")}</p>
                             )}
     
                             {showFloor && (
-                                <TableUsage
-                                    capacityTotals={fullStock}
-                                    bookings={rows}
-                                    expanded
-                                />
+                                <TableUsage capacityTotals={fullStock} bookings={rows} expanded />
                             )}
                         </div>
                     );
@@ -3312,13 +3381,14 @@
         startOfWeek,
         endOfWeek,
         addDays,
+        subMonths,
+        addMonths,
+        isSameMonth,
         isSameDay,
         isBefore,
         isAfter,
-        subMonths,
-        addMonths,
     } from "date-fns";
-    import { sumAvailability, getDayMealTypes } from "../../services/datePicker.js";
+    import { getDayMealTypes } from "../../services/datePicker.js";
     
     export default function Calendar({
                                          currentMonth,
@@ -3328,7 +3398,11 @@
                                          selectedDate,
                                          onDateSelect,
                                          availabilityMap,
+                                         closedDays = [],
                                      }) {
+        // build a set for O(1) lookups
+        const closedSet = new Set(closedDays);
+    
         const renderDayHeaders = () => {
             return (
                 <div className="grid grid-cols-7 text-center font-bold mb-1">
@@ -3341,81 +3415,120 @@
     
         const monthStart = startOfMonth(currentMonth);
         const monthEnd   = endOfMonth(currentMonth);
-        const gridStart  = startOfWeek(monthStart, {weekStartsOn:1});
-        const gridEnd    = endOfWeek(monthEnd,   {weekStartsOn:1});
+        const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1 });
+        const gridEnd    = endOfWeek(monthEnd,   { weekStartsOn: 1 });
     
         const getStatus = (day) => {
-            if (isBefore(day, today)) return {status:"past", msg:"Date has passed"};
-            if (isAfter(day, maxDate)) return {status:"no-data", msg:"No tables available"};
+            const ds = format(day, "yyyy-MM-dd");
+    
+            if (isBefore(day, today)) {
+                return { status: "past", msg: "Date has passed" };
+            }
+            if (isAfter(day, maxDate)) {
+                return { status: "no-data", msg: "No tables available" };
+            }
+            if (closedSet.has(ds)) {
+                return { status: "closed", msg: "Closed" };
+            }
+    
             const mealTypes = getDayMealTypes(day.getDay());
-            if (mealTypes.length===0) return {status:"closed", msg:"Closed"};
-            const ds = format(day,"yyyy-MM-dd");
+            if (mealTypes.length === 0) {
+                return { status: "closed", msg: "Closed" };
+            }
+    
+            // if availabilityMap is missing this day, consider it loading
             const lunchKey = `${ds}_lunch`;
             const lunchData = availabilityMap[lunchKey];
-            if (lunchData===undefined) return {status:"loading", msg:"Loading..."};
-            if (lunchData===null) {
+            if (lunchData === undefined) {
+                return { status: "loading", msg: "Loading..." };
+            }
+            // if lunch is closed or full, check dinner if offered
+            if (lunchData === null) {
                 if (mealTypes.includes("dinner")) {
                     const dinnerData = availabilityMap[`${ds}_dinner`];
-                    if (dinnerData===undefined) return {status:"loading", msg:"Loading..."};
-                    if (sumAvailability(dinnerData)>0) return {status:"available", msg:""};
+                    if (dinnerData === undefined) {
+                        return { status: "loading", msg: "Loading..." };
+                    }
+                    const hasSpace = Object.values(dinnerData.dinner_round.availability || {}).reduce(
+                        (sum, v) => sum + v,
+                        0
+                    ) > 0;
+                    if (hasSpace) return { status: "available", msg: "" };
                 }
-                return {status:"closed", msg:"Closed"};
+                return { status: "closed", msg: "Closed" };
             }
-            const availCount = sumAvailability(lunchData);
-            if (availCount<=0) {
+            // if lunch has capacity
+            const availCount = Object.values(lunchData.first_round.availability || {}).reduce(
+                (sum, v) => sum + v, 0
+            ) + Object.values(lunchData.second_round.availability || {}).reduce(
+                (sum, v) => sum + v, 0
+            );
+            if (availCount <= 0) {
+                // same dinner fallback
                 if (mealTypes.includes("dinner")) {
                     const dinnerData = availabilityMap[`${ds}_dinner`];
-                    if (dinnerData===undefined) return {status:"loading", msg:"Loading..."};
-                    if (sumAvailability(dinnerData)>0) return {status:"available", msg:""};
+                    if (dinnerData === undefined) {
+                        return { status: "loading", msg: "Loading..." };
+                    }
+                    const hasSpace = Object.values(dinnerData.dinner_round.availability || {}).reduce(
+                        (sum, v) => sum + v,
+                        0
+                    ) > 0;
+                    if (hasSpace) return { status: "available", msg: "" };
                 }
-                return {status:"full", msg:"Full"};
+                return { status: "full", msg: "Full" };
             }
-            return {status:"available", msg:""};
+            return { status: "available", msg: "" };
         };
     
         const rows = [];
-        let day = gridStart;
-        while (day <= gridEnd) {
+        let dayPtr = gridStart;
+        while (dayPtr <= gridEnd) {
             const week = [];
-            for (let i=0; i<7; i++) {
-                const d = day;
-                const sel = isSameDay(d, selectedDate);
-                const {status,msg} = getStatus(d);
-                const disabled = ["past","closed","full","no-data"].includes(status);
+            for (let i = 0; i < 7; i++) {
+                const d = dayPtr;
+                const { status, msg } = getStatus(d);
+                const inMonth  = isSameMonth(d, monthStart);
+                const selected = selectedDate && isSameDay(d, selectedDate);
     
-                let bg="bg-gray-100", txt="text-gray-800";
-                if (status==="past")      { bg="bg-gray-300"; txt="text-gray-500 line-through"; }
-                else if (status==="closed"){ bg="bg-red-200"; txt="text-red-900"; }
-                else if (status==="full")  { bg="bg-red-300"; txt="text-red-900"; }
-                else if (status==="no-data"){ bg="bg-yellow-200"; txt="text-yellow-800"; }
-                if (sel) { bg="bg-blue-600"; txt="text-white"; }
+                let bg  = "bg-white";
+                let txt = inMonth ? "text-gray-800" : "text-gray-400";
+                if (status === "closed")   { bg = "bg-red-200";   txt = "text-red-800"; }
+                else if (status === "past")   { bg = "bg-gray-300";  txt = "text-gray-500 line-through"; }
+                else if (status === "no-data") { bg = "bg-yellow-100"; txt = "text-yellow-800"; }
+                else if (status === "full")   { bg = "bg-red-300";   txt = "text-red-900"; }
+                if (selected)                { bg = "bg-blue-600";   txt = "text-white"; }
     
                 week.push(
                     <button
                         key={d.toISOString()}
-                        onClick={()=>!disabled && onDateSelect(d)}
-                        disabled={disabled}
-                        className={`w-10 h-10 m-1 rounded flex items-center justify-center ${bg} ${txt} ${
-                            disabled?"cursor-not-allowed":"cursor-pointer"
-                        } transition hover:bg-blue-200`}
-                        title={msg||format(d,"EEEE, MMMM d, yyyy")}
+                        onClick={() => !["past","closed","full","no-data"].includes(status) && onDateSelect(d)}
+                        disabled={["past","closed","full","no-data"].includes(status)}
+                        className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex flex-col items-center justify-center hover:bg-blue-50 transition`}
+                        style={{ minWidth: 50 }}
+                        title={msg || format(d, "EEEE, MMMM d, yyyy")}
                     >
-                        {format(d,"d")}
+                        <span className="text-sm font-semibold">{format(d, "d")}</span>
+                        {status === "available" && null}
                     </button>
                 );
-    
-                day = addDays(day,1);
+                dayPtr = addDays(dayPtr, 1);
             }
-            rows.push(<div key={day.toISOString()} className="flex justify-center">{week}</div>);
+            rows.push(<div key={dayPtr.toISOString()} className="grid grid-cols-7">{week}</div>);
         }
     
         return (
-            <div>
-                <div className="flex justify-between items-center mb-2">
-                    <button onClick={()=>setCurrentMonth(m=>subMonths(m,1))}>&lt;</button>
-                    <div className="font-bold">{format(currentMonth,"MMMM yyyy")}</div>
-                    <button onClick={()=>setCurrentMonth(m=>addMonths(m,1))}>&gt;</button>
+            <div className="bg-white p-4 rounded shadow">
+                <div className="flex items-center justify-between mb-2">
+                    <button onClick={() => setCurrentMonth((m) => subMonths(m, 1))} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                        Prev
+                    </button>
+                    <h3 className="font-semibold">{format(currentMonth, "MMMM yyyy")}</h3>
+                    <button onClick={() => setCurrentMonth((m) => addMonths(m, 1))} className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300">
+                        Next
+                    </button>
                 </div>
+    
                 {renderDayHeaders()}
                 {rows}
             </div>
@@ -3423,13 +3536,14 @@
     }
     
     Calendar.propTypes = {
-        currentMonth:     PropTypes.instanceOf(Date).isRequired,
-        setCurrentMonth:  PropTypes.func.isRequired,
-        today:            PropTypes.instanceOf(Date).isRequired,
-        maxDate:          PropTypes.instanceOf(Date).isRequired,
-        selectedDate:     PropTypes.instanceOf(Date),
-        onDateSelect:     PropTypes.func.isRequired,
-        availabilityMap:  PropTypes.object.isRequired,
+        currentMonth:    PropTypes.instanceOf(Date).isRequired,
+        setCurrentMonth: PropTypes.func.isRequired,
+        today:           PropTypes.instanceOf(Date).isRequired,
+        maxDate:         PropTypes.instanceOf(Date).isRequired,
+        selectedDate:    PropTypes.instanceOf(Date),
+        onDateSelect:    PropTypes.func.isRequired,
+        availabilityMap: PropTypes.object.isRequired,
+        closedDays:      PropTypes.arrayOf(PropTypes.string),
     };
 
 ––––––––––––––––––––––––
@@ -3437,7 +3551,7 @@
     import React from "react";
     import PropTypes from "prop-types";
     import { format, addDays, isSameDay, isBefore, isAfter } from "date-fns";
-    import { getDayMealTypes, sumAvailability } from "../../services/datePicker.js";
+    import { getDayMealTypes } from "../../services/datePicker.js";
     
     export default function Compact({
                                         today,
@@ -3445,63 +3559,79 @@
                                         selectedDate,
                                         onDateSelect,
                                         availabilityMap,
+                                        closedDays = [],
                                     }) {
-        const days = Array.from({ length: 7 }, (_,i) => addDays(today,i));
+        const closedSet = new Set(closedDays);
+        const days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
     
         const getStatus = (d) => {
-            if (isBefore(d,today)) return {status:"past", msg:"Date has passed"};
-            if (isAfter(d,maxDate)) return {status:"no-data", msg:"No tables available"};
+            const ds = format(d, "yyyy-MM-dd");
+            if (isBefore(d, today)) return { status: "past", msg: "Date has passed" };
+            if (isAfter(d, maxDate)) return { status: "no-data", msg: "No tables available" };
+            if (closedSet.has(ds))  return { status: "closed", msg: "Closed" };
+    
             const mealTypes = getDayMealTypes(d.getDay());
-            if (mealTypes.length===0) return {status:"closed", msg:"Closed"};
-            const ds = format(d,"yyyy-MM-dd");
-            const l = availabilityMap[`${ds}_lunch`];
-            if (l===undefined) return {status:"loading", msg:"Loading..."};
-            if (l===null) {
+            if (mealTypes.length === 0) return { status: "closed", msg: "Closed" };
+    
+            const lunchKey = `${ds}_lunch`;
+            const l = availabilityMap[lunchKey];
+            if (l === undefined) return { status: "loading", msg: "Loading..." };
+            if (l === null) {
                 if (mealTypes.includes("dinner")) {
                     const dd = availabilityMap[`${ds}_dinner`];
-                    if (dd===undefined) return {status:"loading", msg:"Loading..."};
-                    if (sumAvailability(dd)>0) return {status:"available", msg:""};
+                    if (dd === undefined) return { status: "loading", msg: "Loading..." };
+                    const hasSpace = Object.values(dd.dinner_round.availability || {}).reduce(
+                        (sum, v) => sum + v,
+                        0
+                    ) > 0;
+                    if (hasSpace) return { status: "available", msg: "" };
                 }
-                return {status:"closed", msg:"Closed"};
+                return { status: "closed", msg: "Closed" };
             }
-            if (sumAvailability(l) <= 0) {
+            const availLunch = Object.values(l.first_round.availability || {}).reduce((sum, v) => sum + v, 0)
+                + Object.values(l.second_round.availability || {}).reduce((sum, v) => sum + v, 0);
+            if (availLunch <= 0) {
                 if (mealTypes.includes("dinner")) {
                     const dd = availabilityMap[`${ds}_dinner`];
-                    if (dd===undefined) return {status:"loading", msg:"Loading..."};
-                    if (sumAvailability(dd)>0) return {status:"available", msg:""};
+                    if (dd === undefined) return { status: "loading", msg: "Loading..." };
+                    const hasSpace = Object.values(dd.dinner_round.availability || {}).reduce(
+                        (sum, v) => sum + v,
+                        0
+                    ) > 0;
+                    if (hasSpace) return { status: "available", msg: "" };
                 }
-                return {status:"full", msg:"Full"};
+                return { status: "full", msg: "Full" };
             }
-            return {status:"available", msg:""};
+            return { status: "available", msg: "" };
         };
     
         return (
             <div className="flex space-x-2 overflow-x-auto p-2" role="list">
                 {days.map((d) => {
                     const sel = isSameDay(d, selectedDate);
-                    const {status,msg} = getStatus(d);
-                    const disabled = ["past","closed","full","no-data"].includes(status);
+                    const { status, msg } = getStatus(d);
+                    const disabled = ["past", "closed", "full", "no-data"].includes(status);
     
-                    let bg="bg-gray-100", txt="text-gray-800";
-                    if (status==="past")      { bg="bg-gray-300"; txt="text-gray-500 line-through"; }
-                    else if (status==="closed"){ bg="bg-red-200"; txt="text-red-900"; }
-                    else if (status==="full")  { bg="bg-red-300"; txt="text-red-900"; }
-                    else if (status==="no-data"){ bg="bg-yellow-200"; txt="text-yellow-800"; }
-                    if (sel) { bg="bg-blue-600"; txt="text-white"; }
+                    let bg = "bg-gray-100", txt = "text-gray-800";
+                    if (status === "past")      { bg = "bg-gray-300";  txt = "text-gray-500 line-through"; }
+                    else if (status === "closed"){ bg = "bg-red-200";   txt = "text-red-900"; }
+                    else if (status === "full")  { bg = "bg-red-300";   txt = "text-red-900"; }
+                    else if (status === "no-data"){ bg = "bg-yellow-200"; txt = "text-yellow-800"; }
+                    if (sel) { bg = "bg-blue-600"; txt = "text-white"; }
     
                     return (
                         <button
                             key={d.toISOString()}
-                            onClick={()=>!disabled && onDateSelect(d)}
+                            onClick={() => !disabled && onDateSelect(d)}
                             disabled={disabled}
                             className={`flex flex-col items-center w-16 py-2 rounded ${bg} ${txt} ${
-                                disabled?"cursor-not-allowed":"cursor-pointer"
+                                disabled ? "cursor-not-allowed" : "cursor-pointer"
                             } transition hover:bg-blue-200`}
-                            title={msg}
+                            title={msg || format(d, "EEEE, MMMM d, yyyy")}
                         >
-                            <span className="text-xs">{isSameDay(d,today) ? "Today" : format(d,"EEE")}</span>
-                            <span className="text-xl font-bold">{format(d,"d")}</span>
-                            <span className="text-xs">{format(d,"MMM")}</span>
+                            <span className="text-xs">{isSameDay(d, today) ? "Today" : format(d, "EEE")}</span>
+                            <span className="text-xl font-bold">{format(d, "d")}</span>
+                            <span className="text-xs">{format(d, "MMM")}</span>
                         </button>
                     );
                 })}
@@ -3515,6 +3645,7 @@
         selectedDate:    PropTypes.instanceOf(Date),
         onDateSelect:    PropTypes.func.isRequired,
         availabilityMap: PropTypes.object.isRequired,
+        closedDays:      PropTypes.arrayOf(PropTypes.string),
     };
 
 ––––––––––––––––––––––––
@@ -3544,11 +3675,27 @@
         const [currentMonth, setCurrentMonth] = useState(new Date());
         const [availabilityMap, setAvailabilityMap] = useState({});
         const [isFetchingRange, setIsFetchingRange] = useState(false);
+        const [closedDays, setClosedDays] = useState([]);
     
         const today = new Date();
         const maxDate = addDays(today, 30);
     
-        // ---------------- compact → next 7 days ----------------
+        // ─── fetch exceptional closed days ──────────────────────
+        useEffect(() => {
+            (async () => {
+                try {
+                    const { data } = await axios.get(`${API_URL}/closed-days`);
+                    const normalized = Array.isArray(data)
+                        ? data.map((d) => d.slice(0, 10))
+                        : [];
+                    setClosedDays(normalized);
+                } catch (e) {
+                    console.error("Failed to fetch closed days:", e);
+                }
+            })();
+        }, []);
+    
+        // ─── compact → next 7 days ─────────────────────────────
         useEffect(() => {
             if (viewMode !== "compact") return;
             (async () => {
@@ -3582,7 +3729,7 @@
             // eslint-disable-next-line react-hooks/exhaustive-deps
         }, [viewMode]);
     
-        // ---------------- calendar → full month ----------------
+        // ─── calendar → full month ─────────────────────────────
         useEffect(() => {
             if (viewMode !== "calendar") return;
             (async () => {
@@ -3646,6 +3793,7 @@
                         selectedDate={selectedDate}
                         onDateSelect={onDateSelect}
                         availabilityMap={availabilityMap}
+                        closedDays={closedDays}
                     />
                 ) : (
                     <Calendar
@@ -3656,6 +3804,7 @@
                         selectedDate={selectedDate}
                         onDateSelect={onDateSelect}
                         availabilityMap={availabilityMap}
+                        closedDays={closedDays}
                     />
                 )}
             </div>
@@ -4172,11 +4321,20 @@
     import axios from "axios";
     axios.defaults.baseURL = ""; // proxy via Vite
     
-    /* ──────────────────────────────────────────────
-       Simple in-memory cache that deduplicates calls
-       to /api/table-availability-range.              ───────────────────────────────────────────── */
+    /*──────────────────────────────────────────────
+      Simple in-memory cache for table availability
+    ──────────────────────────────────────────────*/
     const _taCache = new Map();
     const buildKey = (start, end, meal) => `${start}|${end}|${meal}`;
+    
+    /**
+     * Clear every cached /api/table-availability-range response.
+     * Call this after any action (e.g. closing/opening a day)
+     * that could invalidate previously-fetched data.
+     */
+    export function clearAvailabilityCache() {
+        _taCache.clear();
+    }
     
     export async function fetchTableAvailabilityRange(
         start,
@@ -4186,14 +4344,10 @@
         const key = buildKey(start, end, mealType);
         const hit = _taCache.get(key);
     
-        /* ① return cached result (resolved) */
         if (hit?.status === "resolved") return hit.data;
     
-        /* ② attach to the pending promise if already in flight */
         if (hit?.status === "pending") return hit.promise;
     
-        /* ③ otherwise perform the request and cache both the
-              pending promise and (when it resolves) the data     */
         const promise = axios
             .get("/api/table-availability-range", {
                 params: { start, end, mealType },
@@ -4203,7 +4357,6 @@
                 return res.data;
             })
             .catch((err) => {
-                /* remove the entry so a later retry is possible */
                 _taCache.delete(key);
                 throw err;
             });
@@ -4212,8 +4365,9 @@
         return promise;
     }
     
-    /* ──────────────────────────────────────────────
-       Other booking-related helpers (unchanged)      ───────────────────────────────────────────── */
+    /*──────────────────────────────────────────────
+      Other booking-related helpers
+    ──────────────────────────────────────────────*/
     export async function fetchAvailableTimeSlots(params) {
         const { data } = await axios.get("/api/table-availability", { params });
         return data;
@@ -4479,13 +4633,16 @@
         settings: {
             bookingWindowFrom: "Acceptar reserves a partir de",
             closeDay:          "Tancar un dia",
+            openDay:           "Obrir un dia",
             openUntil:         "Obrir reserves fins a aquest dia",
             save:              "Desa",
             closed:            "Tancat (clic per obrir)",
             open:              "Obert (clic per tancar)",
             chooseDay:         "Tria un dia",
-            successClosed:     "Dia tancat",
-            successWindow:     "Finestra de reserves actualitzada",
+            successClosed:     "Dia tancat!",
+            successOpened:     "Dia obert!",
+            closing:           "Tancant…",
+            opening:           "Obrint…",
         },
     };
 
@@ -4596,15 +4753,18 @@
         tableUsage: "Table Usage",
     
         settings: {
-            bookingWindowFrom: "Accept bookings from",  // kept for back-compat if referenced elsewhere
+            bookingWindowFrom: "Accept bookings from",
             closeDay:          "Close a day",
+            openDay:           "Open a day",
             openUntil:         "Open bookings until that day",
             save:              "Save",
             closed:            "Closed (click to open)",
             open:              "Open (click to close)",
             chooseDay:         "Choose a day",
             successClosed:     "Day closed!",
-            successWindow:     "Booking window updated!",
+            successOpened:     "Day opened!",
+            closing:           "Closing…",
+            opening:           "Opening…",
         },
     };
 
@@ -4717,13 +4877,16 @@
         settings: {
             bookingWindowFrom: "Aceptar reservas a partir de",
             closeDay:          "Cerrar un día",
+            openDay:           "Abrir un día",
             openUntil:         "Abrir reservas hasta ese día",
             save:              "Guardar",
             closed:            "Cerrado (clic para abrir)",
             open:              "Abierto (clic para cerrar)",
             chooseDay:         "Elige un día",
             successClosed:     "Día cerrado",
-            successWindow:     "Ventana de reserva actualizada",
+            successOpened:     "¡Día abierto!",
+            closing:           "Cerrando…",
+            opening:           "Abriendo…",
         },
     };
 

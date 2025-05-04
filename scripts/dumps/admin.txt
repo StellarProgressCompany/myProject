@@ -4,20 +4,21 @@
     ├── /frontend/src/components/admin/currentBookings/CurrentBookings.jsx
     ├── /frontend/src/components/admin/currentBookings/EditBookingModal.jsx
     ├── /frontend/src/components/admin/futureBookings/FutureBookings.jsx
+    ├── /frontend/src/components/admin/metrics/MetricsDashboard.jsx
     ├── /frontend/src/components/admin/metrics/StatsGrid.jsx
     ├── /frontend/src/components/admin/metrics/VisualizeBookings.jsx
-    ├── /frontend/src/components/admin/pastBookings/PastBookings.jsx
+    ├── /frontend/src/components/admin/settings/OperationalSettings.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsChart.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
     ├── /frontend/src/components/admin/sharedBookings/DaySchedule.jsx
     ├── /frontend/src/components/admin/sharedBookings/TableUsage.jsx
+    ├── /frontend/src/components/admin/utils/LanguagePicker.jsx
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
     // frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
-    // (unchanged – reproduced verbatim)
     
     import React, { useState, useEffect } from "react";
     import PropTypes from "prop-types";
@@ -33,10 +34,7 @@
         fetchTableAvailabilityRange,
     } from "../../../services/bookingService";
     import DaySchedule from "../sharedBookings/DaySchedule";
-    import { translate } from "../../../services/i18n";
-    
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
+    import { translate, getLanguage } from "../../../services/i18n";
     
     function SkeletonDaySchedule() {
         return (
@@ -50,6 +48,9 @@
     }
     
     export default function AlgorithmTester({ bookings = [], onRefresh = () => {} }) {
+        const lang = getLanguage();
+        const t    = (key, vars) => translate(lang, key, vars);
+    
         const todayISO = format(new Date(), "yyyy-MM-dd");
         const [sizesRaw, setSizesRaw]     = useState("");
         const [dateStr, setDateStr]       = useState(todayISO);
@@ -514,57 +515,61 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/CurrentBookings.jsx
     // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
-    // (unchanged – reproduced verbatim)
-    
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format, addDays } from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     
     import AddBookingModal from "./AddBookingModal";
     import EditBookingModal from "./EditBookingModal";
     import DaySchedule from "../sharedBookings/DaySchedule";
     import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-    import { translate } from "../../../services/i18n";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
+    /* ───────── helpers ───────── */
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10); // always "YYYY-MM-DD"
     
     function SkeletonDaySchedule() {
         return (
             <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
-                <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
-                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-6 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
             </div>
         );
     }
     
     export default function CurrentBookings({ bookings, onDataRefresh }) {
-        const [offset, setOffset] = useState(0);
-        const [isAdding, setIsAdding] = useState(false);
+        const lang   = getLanguage();
+        const t      = (key, vars) => translate(lang, key, vars);
+        const locale = localeMap[lang] || enUS;
+    
+        const [offset, setOffset]               = useState(0);
+        const [isAdding, setIsAdding]           = useState(false);
         const [editingBooking, setEditingBooking] = useState(null);
     
         const [tableAvailability, setTableAvailability] = useState({});
-        const [loadingTA, setLoadingTA] = useState(false);
+        const [loadingTA, setLoadingTA]                 = useState(false);
     
         const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
         const dateStr = format(dateObj, "yyyy-MM-dd");
     
+        /* bookings for the selected day */
         const todaysBookings = useMemo(
-            () =>
-                bookings.filter(
-                    (b) => (b.table_availability?.date || b.date) === dateStr
-                ),
+            () => bookings.filter((b) => getBookingDate(b) === dateStr),
             [bookings, dateStr]
         );
     
         const totalBookings = todaysBookings.length;
-        const totalClients = todaysBookings.reduce(
+        const totalClients  = todaysBookings.reduce(
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
             0
         );
     
+        /* ─── load table-availability for the chosen date ─── */
         useEffect(() => {
             let cancelled = false;
             setLoadingTA(true);
@@ -578,9 +583,7 @@
                     const merged = {};
                     [lunch, dinner].forEach((src) =>
                         Object.entries(src).forEach(([d, info]) => {
-                            merged[d] = merged[d]
-                                ? { ...merged[d], ...info }
-                                : info;
+                            merged[d] = merged[d] ? { ...merged[d], ...info } : info;
                         })
                     );
                     setTableAvailability(merged);
@@ -600,9 +603,7 @@
         const title =
             offset === 0
                 ? t("admin.today")
-                : offset === 1
-                    ? format(addDays(new Date(), 1), "EEEE, MMM d")
-                    : format(dateObj, "EEEE, MMM d");
+                : format(dateObj, "EEEE, MMMM d", { locale });
     
         return (
             <div className="bg-white p-4 rounded shadow">
@@ -682,7 +683,7 @@
     }
     
     CurrentBookings.propTypes = {
-        bookings: PropTypes.array.isRequired,
+        bookings:      PropTypes.array.isRequired,
         onDataRefresh: PropTypes.func.isRequired,
     };
 
@@ -850,131 +851,175 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/futureBookings/FutureBookings.jsx
     // frontend/src/components/admin/futureBookings/FutureBookings.jsx
-    // (unchanged – reproduced verbatim)
     
     import React from "react";
     import BookingsOverview from "../sharedBookings/BookingsOverview";
     
     // eslint-disable-next-line react/prop-types
     export default function FutureBookings({ bookings }) {
-        return <BookingsOverview mode="future" bookings={bookings} />;
+        return (
+            <BookingsOverview
+                mode="future"
+                bookings={bookings}
+                showChart={false}
+                allowDrill={true}
+            />
+        );
     }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/metrics/MetricsDashboard.jsx
+    // frontend/src/components/admin/metrics/MetricsDashboard.jsx
+    import React, { useState } from "react";
+    import PropTypes from "prop-types";
+    
+    import StatsGrid from "./StatsGrid";
+    import BookingsOverview from "../sharedBookings/BookingsOverview";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    export default function MetricsDashboard({ bookings }) {
+        const lang = getLanguage();
+        const t    = (k, p) => translate(lang, k, p);
+    
+        /* user-controlled window view */
+        const [view, setView] = useState("calendar");  // default to month view
+        const [windowBookings, setWindowBookings] = useState(bookings);
+    
+        return (
+            <div className="space-y-8">
+                {/* view selector */}
+                <div className="flex items-center space-x-4">
+                    <span className="text-sm font-semibold">{t("admin.calendar")} / {t("admin.compact")}:</span>
+                    <button
+                        onClick={() => setView("calendar")}
+                        className={`px-3 py-1 rounded ${view==="calendar" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                    >
+                        {t("admin.calendar")}
+                    </button>
+                    <button
+                        onClick={() => setView("compact")}
+                        className={`px-3 py-1 rounded ${view==="compact" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                    >
+                        {t("admin.compact")}
+                    </button>
+                </div>
+    
+                {/* KPI grid for the selected window */}
+                <StatsGrid bookings={windowBookings} />
+    
+                {/* bookings explorer (past-mode) */}
+                <BookingsOverview
+                    mode="past"
+                    bookings={bookings}
+                    showChart={true}
+                    allowDrill={false}
+                    view={view}
+                    hideViewToggle     /* hide internal selector */
+                    onViewChange={setView}
+                    onWindowChange={setWindowBookings}
+                />
+            </div>
+        );
+    }
+    
+    MetricsDashboard.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/metrics/StatsGrid.jsx
     // frontend/src/components/admin/metrics/StatsGrid.jsx
-    // (unchanged – reproduced verbatim)
-    
     import React, { useMemo } from "react";
     import PropTypes from "prop-types";
     import {
-        IconArrowDownRight,
-        IconArrowUpRight,
         IconCalendarStats,
         IconUsers,
         IconLayoutGrid,
-        IconTrendingUp,
+        IconTrophy,
     } from "@tabler/icons-react";
-    import { parseISO, subDays } from "date-fns";
-    import { translate } from "../../../services/i18n";
+    import { parseISO } from "date-fns";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
-    
-    /* crunch the last-30-days stats */
     function computeMetrics(bookings) {
-        const today = new Date();
-        const startCurr = subDays(today, 30);
-        const startPrev = subDays(today, 60);
-    
-        let currBookings = 0,
-            prevBookings = 0,
-            currGuests   = 0,
-            prevGuests   = 0,
-            uniqueGuests = new Set();
+        let totalBookings = 0;
+        let totalGuests   = 0;
+        const uniqueGuests = new Set();
+        const perDayGuests = {};
     
         bookings.forEach((b) => {
             const dateStr = b.table_availability?.date || b.date;
             if (!dateStr) return;
-            const d = parseISO(dateStr);
+    
             const guests = (b.total_adults || 0) + (b.total_kids || 0);
+            totalBookings += 1;
+            totalGuests   += guests;
+    
+            /* per-day count */
+            const dKey = parseISO(dateStr).toISOString().slice(0,10);
+            perDayGuests[dKey] = (perDayGuests[dKey] || 0) + guests;
+    
+            /* unique guest counted by full name (fallback id) */
             uniqueGuests.add(b.full_name?.trim() || `#${b.id}`);
-            if (d >= startCurr && d <= today) {
-                currBookings++;
-                currGuests += guests;
-            } else if (d >= startPrev && d < startCurr) {
-                prevBookings++;
-                prevGuests += guests;
-            }
         });
     
-        const bookingDiff = prevBookings === 0
-            ? 100
-            : ((currBookings - prevBookings) / prevBookings) * 100;
-        const guestDiff = prevGuests === 0
-            ? 100
-            : ((currGuests - prevGuests) / prevGuests) * 100;
+        const peakGuests = Object.values(perDayGuests).reduce(
+            (m, v) => Math.max(m, v),
+            0
+        );
     
         return {
-            currBookings,
-            currGuests,
+            totalBookings,
+            totalGuests,
             uniqueGuests: uniqueGuests.size,
-            avgGuests: currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
-            bookingDiff: bookingDiff.toFixed(0),
-            guestDiff: guestDiff.toFixed(0),
+            avgGuests:    totalBookings === 0 ? 0 : (totalGuests / totalBookings).toFixed(1),
+            peakGuests,
         };
     }
     
-    const icons = {
-        calendar: IconCalendarStats,
-        users:    IconUsers,
-        grid:     IconLayoutGrid,
-        trend:    IconTrendingUp,
-    };
-    
     export default function StatsGrid({ bookings = [] }) {
+        const lang = getLanguage();
+        const t    = (k, vars) => translate(lang, k, vars);
+    
         const m = useMemo(() => computeMetrics(bookings), [bookings]);
     
         const data = [
             {
                 key:   "bookings",
-                title: t("overview.bookings30d"),
-                icon:  icons.calendar,
-                value: m.currBookings,
-                diff:  m.bookingDiff,
+                title: t("overview.bookings"),
+                icon:  IconCalendarStats,
+                value: m.totalBookings,
             },
             {
                 key:   "guests",
-                title: t("overview.guests30d"),
-                icon:  icons.users,
-                value: m.currGuests,
-                diff:  m.guestDiff,
+                title: t("overview.guests"),
+                icon:  IconUsers,
+                value: m.totalGuests,
             },
             {
                 key:   "avg",
                 title: t("overview.avgGuests"),
-                icon:  icons.grid,
+                icon:  IconLayoutGrid,
                 value: m.avgGuests,
-                diff:  0,
+            },
+            {
+                key:   "peak",
+                title: t("overview.peakDayGuests"),
+                icon:  IconTrophy,
+                value: m.peakGuests,
             },
             {
                 key:   "unique",
                 title: t("overview.uniqueNames"),
-                icon:  icons.trend,
+                icon:  IconUsers,
                 value: m.uniqueGuests,
-                diff:  0,
             },
         ];
     
         return (
             <div className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                     {data.map((stat) => {
                         const StatIcon = stat.icon;
-                        const positive = Number(stat.diff) >= 0;
-                        const DiffIcon = positive ? IconArrowUpRight : IconArrowDownRight;
-                        const diffColor = positive ? "text-teal-500" : "text-red-500";
-    
                         return (
                             <div
                                 key={stat.key}
@@ -986,19 +1031,9 @@
                                     </p>
                                     <StatIcon className="w-5 h-5 text-gray-400" />
                                 </div>
-                                <div className="flex items-end space-x-2 mt-4">
-                                    <span className="text-2xl font-bold">{stat.value}</span>
-                                    {stat.diff !== 0 && (
-                                        <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
-                            {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
-                          </span>
-                                    )}
+                                <div className="mt-4 text-2xl font-bold text-gray-800">
+                                    {stat.value}
                                 </div>
-                                {(stat.key === "bookings" || stat.key === "guests") && (
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        {t("overview.vsPrevious")}
-                                    </p>
-                                )}
                             </div>
                         );
                     })}
@@ -1209,20 +1244,266 @@
     }
 
 ––––––––––––––––––––––––
-/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/pastBookings/PastBookings.jsx
-    // frontend/src/components/admin/pastBookings/PastBookings.jsx
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/settings/OperationalSettings.jsx
+    // frontend/src/components/admin/settings/OperationalSettings.jsx
+    /* eslint-disable react/prop-types */
+    import React, { useState, useEffect, useCallback } from "react";
+    import { format } from "date-fns";
+    import { motion, AnimatePresence } from "framer-motion";
     
-    import React from "react";
-    import BookingsOverview from "../sharedBookings/BookingsOverview";
+    import BookingsCalendarView from "../sharedBookings/BookingsCalendarView";
+    import { clearAvailabilityCache } from "../../../services/bookingService";
+    import { getDayMealTypes } from "../../../services/datePicker";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    export default function PastBookings({ bookings }) {
-        return <BookingsOverview mode="past" bookings={bookings} />;
+    /* HTTP helpers ───────────────────────────── */
+    async function toggleClosedDay(dateYMD) {
+        await fetch("/api/closed-days/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: dateYMD }),
+        });
+    }
+    
+    async function toggleOpenDay(dateYMD) {
+        await fetch("/api/open-days/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: dateYMD }),
+        });
+    }
+    
+    async function fetchClosedDays() {
+        const r = await fetch("/api/closed-days");
+        const j = await r.json();
+        return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+    }
+    
+    async function fetchOpenDays() {
+        const r = await fetch("/api/open-days");
+        const j = await r.json();
+        return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+    }
+    
+    /* ✔ little tick after a successful action */
+    const SuccessTick = ({ id }) => (
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={id}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1.25, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                className="absolute top-2 right-2 text-green-600 pointer-events-none select-none"
+            >
+                ✓
+            </motion.div>
+        </AnimatePresence>
+    );
+    
+    /* ▶ Animated progress button (generic) */
+    function ProgressButton({
+                                colour = "blue",
+                                idleLabel,
+                                loadingLabel,
+                                successLabel,
+                                onClick,
+                                disabled = false,
+                            }) {
+        const [state, setState] = useState("idle"); // idle | loading | success
+        const [progress, setProgress] = useState(0);
+        const timer = React.useRef(null);
+    
+        React.useEffect(() => {
+            if (state !== "loading") return;
+            timer.current = setInterval(() => {
+                setProgress((p) => (p < 95 ? p + 1 : p));
+            }, 25);
+            return () => clearInterval(timer.current);
+        }, [state]);
+    
+        const start = () => {
+            setProgress(0);
+            setState("loading");
+        };
+        const finish = () => {
+            clearInterval(timer.current);
+            setProgress(100);
+            setState("success");
+            setTimeout(() => {
+                setState("idle");
+                setProgress(0);
+            }, 1500);
+        };
+    
+        const handle = async () => {
+            if (state === "loading" || disabled) return;
+            try {
+                start();
+                await onClick();
+                finish();
+            } catch (e) {
+                clearInterval(timer.current);
+                console.error(e);
+                setState("idle");
+                setProgress(0);
+                alert(e?.response?.data?.error || "Action failed");
+            }
+        };
+    
+        const baseClr = state === "success" ? "green" : colour;
+        const colourClasses = {
+            blue: "bg-blue-600 hover:bg-blue-700",
+            red: "bg-red-600 hover:bg-red-700",
+            green: "bg-green-600 hover:bg-green-700",
+        }[baseClr];
+    
+        return (
+            <button
+                onClick={handle}
+                disabled={state === "loading" || disabled}
+                className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-50 ${colourClasses}`}
+            >
+          <span className="relative z-10">
+            {state === "idle" && idleLabel}
+              {state === "loading" && loadingLabel}
+              {state === "success" && successLabel}
+          </span>
+                {state === "loading" && (
+                    <motion.span
+                        style={{ scaleX: progress / 100 }}
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: progress / 100 }}
+                        className="absolute inset-0 bg-white/30 origin-left rounded"
+                    />
+                )}
+            </button>
+        );
+    }
+    
+    /*──────────────────────────────────────────────
+      Operational settings – Open / Close specific days
+    ──────────────────────────────────────────────*/
+    export default function OperationalSettings({ bookings = [] }) {
+        /* i18n */
+        const lang = getLanguage();
+        const t = (k, v) => translate(lang, k, v);
+    
+        /* component state */
+        const [selDate, setSelDate] = useState(null);
+        const [blip, setBlip] = useState(null);
+        const [closedDays, setClosed] = useState([]);
+        const [openDays, setOpen] = useState([]);
+    
+        /* future-bookings slice for calendar */
+        const todayYMD = new Date().toISOString().slice(0, 10);
+        const futureBookings = bookings.filter((b) => {
+            const d = (b.table_availability?.date || b.date || "").slice(0, 10);
+            return d >= todayYMD;
+        });
+    
+        /* fetch helpers */
+        const refreshClosed = useCallback(async () => {
+            setClosed(await fetchClosedDays());
+        }, []);
+        const refreshOpen = useCallback(async () => {
+            setOpen(await fetchOpenDays());
+        }, []);
+    
+        useEffect(() => {
+            refreshClosed();
+            refreshOpen();
+        }, [refreshClosed, refreshOpen]);
+    
+        /* derive flags */
+        const ymd = selDate ? format(selDate, "yyyy-MM-dd") : null;
+        const scheduleClosed =
+            selDate && getDayMealTypes(selDate.getDay()).length === 0;
+        const exceptionallyClosed = selDate && closedDays.includes(ymd);
+        const exceptionallyOpen = selDate && openDays.includes(ymd);
+    
+        /* overall closed? */
+        const isClosedNow =
+            (scheduleClosed && !exceptionallyOpen) || exceptionallyClosed;
+    
+        /* filter out any “open” exceptions so they don’t stay red */
+        const closedEffective = closedDays.filter((d) => !openDays.includes(d));
+    
+        /* permissions */
+        const canClose =
+            selDate && !exceptionallyClosed && !scheduleClosed;
+        const canOpen =
+            selDate &&
+            ((scheduleClosed && !exceptionallyOpen) || exceptionallyClosed);
+    
+        /* handlers */
+        const doClose = async () => {
+            if (!selDate) return;
+            await toggleClosedDay(ymd);
+            await refreshClosed();
+            clearAvailabilityCache();
+            setBlip("close");
+            setTimeout(() => setBlip(null), 1500);
+        };
+        const doOpen = async () => {
+            if (!selDate) return;
+            if (scheduleClosed && !exceptionallyOpen) {
+                /* add open-exception */
+                await toggleOpenDay(ymd);
+                await refreshOpen();
+            } else {
+                /* undo manual close */
+                await toggleClosedDay(ymd);
+                await refreshClosed();
+            }
+            clearAvailabilityCache();
+            setBlip("open");
+            setTimeout(() => setBlip(null), 1500);
+        };
+    
+        return (
+            <div className="relative space-y-6">
+                {blip && <SuccessTick id={blip} />}
+    
+                <BookingsCalendarView
+                    selectedDate={selDate}
+                    onSelectDay={setSelDate}
+                    bookings={futureBookings}
+                    closedDays={closedEffective}
+                />
+    
+                <div className="flex gap-4">
+                    <ProgressButton
+                        colour="red"
+                        idleLabel={t("settings.closeDay")}
+                        loadingLabel={t("settings.closing")}
+                        successLabel={t("settings.successClosed")}
+                        onClick={doClose}
+                        disabled={!canClose}
+                    />
+                    <ProgressButton
+                        colour="green"
+                        idleLabel={t("settings.openDay")}
+                        loadingLabel={t("settings.opening")}
+                        successLabel={t("settings.successOpened")}
+                        onClick={doOpen}
+                        disabled={!canOpen}
+                    />
+                </div>
+    
+                {selDate && (
+                    <p className="text-sm text-gray-600">
+                        <strong>{format(selDate, "PPP")}</strong> –{" "}
+                        {isClosedNow ? t("settings.closed") : t("settings.open")}
+                    </p>
+                )}
+            </div>
+        );
     }
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
     // frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
-    
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import {
@@ -1232,123 +1513,120 @@
         startOfWeek,
         endOfWeek,
         addDays,
+        addMonths,
+        subMonths,
         isSameMonth,
         isSameDay,
     } from "date-fns";
-    import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    
+    import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = {
-        en: enUS,
-        es: esLocale,
-        ca: caLocale,
-    };
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const BOOKING_WINDOW_DAYS = 30;
     
     export default function BookingsCalendarView({
                                                      selectedDate = null,
                                                      onSelectDay,
                                                      bookings,
+                                                     closedDays = [],
                                                  }) {
         const lang   = getLanguage();
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
         const [monthToShow, setMonthToShow] = useState(new Date());
+        const today = new Date();
+        const closedSet = new Set(closedDays);
     
-        // weekday headers localized
+        /* helpers */
         const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
-            format(
-                addDays(
-                    startOfWeek(new Date(), { weekStartsOn: 1, locale }),
-                    i
-                ),
-                "EEE",
-                { locale }
-            )
+            format(addDays(startOfWeek(new Date(), { weekStartsOn: 1, locale }), i), "EEE", { locale })
         );
     
         const monthStart = startOfMonth(monthToShow);
         const monthEnd   = endOfMonth(monthToShow);
         const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1, locale });
-        const gridEnd    = endOfWeek(monthEnd, { weekStartsOn: 1, locale });
+        const gridEnd    = endOfWeek(monthEnd,   { weekStartsOn: 1, locale });
     
-        function getDayStats(date) {
-            const dateStr = format(date, "yyyy-MM-dd", { locale });
-            const dayBookings = bookings.filter((b) => {
-                const bd = b.table_availability?.date || b.date;
-                return bd === dateStr;
-            });
-            const totalClients = dayBookings.reduce(
-                (acc, b) => acc + (b.table_availability?.capacity || 0),
-                0
+        const getDayStats = (date) => {
+            const key   = format(date, "yyyy-MM-dd");
+            const dayBk = bookings.filter(
+                (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
             );
-            return { bookingsCount: dayBookings.length, totalClients };
-        }
+            const tot   = dayBk.reduce(
+                (n, b) => n + (b.total_adults || 0) + (b.total_kids || 0), 0);
+            return { bookings: dayBk.length, clients: tot };
+        };
     
+        /* colour helpers */
+        const isClosed  = (d) =>
+            closedSet.has(format(d, "yyyy-MM-dd")) || getDayMealTypes(d.getDay()).length === 0;
+        const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
+    
+        /* build grid */
         const rows = [];
-        let day = gridStart;
-        while (day <= gridEnd) {
+        let dayPtr = gridStart;
+        while (dayPtr <= gridEnd) {
             const week = [];
             for (let i = 0; i < 7; i++) {
-                const cloneDay     = day;
-                const { bookingsCount, totalClients } = getDayStats(cloneDay);
-                const isCurrentMonth = isSameMonth(cloneDay, monthToShow);
-                const isSelected     = selectedDate && isSameDay(cloneDay, selectedDate);
+                const d = dayPtr;
+                const { bookings: bc, clients } = getDayStats(d);
+                const inMonth  = isSameMonth(d, monthToShow);
+                const selected = selectedDate && isSameDay(d, selectedDate);
     
-                let bg  = isSelected ? "bg-blue-600" : "bg-white";
-                let txt = isSelected
-                    ? "text-white"
-                    : isCurrentMonth
-                        ? "text-gray-800"
-                        : "text-gray-400";
+                /* colour classes */
+                let bg  = "bg-white";
+                let txt = inMonth ? "text-gray-800" : "text-gray-400";
+    
+                if (isClosed(d)) {
+                    bg  = "bg-red-200";
+                    txt = "text-red-800";
+                } else if (isBlocked(d)) {
+                    bg  = "bg-yellow-100";
+                    txt = "text-yellow-800";
+                }
+    
+                if (selected) {
+                    bg  = "bg-blue-600";
+                    txt = "text-white";
+                }
     
                 week.push(
                     <button
-                        key={cloneDay.toISOString()}
-                        onClick={() => onSelectDay(cloneDay)}
-                        className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex items-center justify-center hover:bg-blue-50 transition`}
+                        key={d.toISOString()}
+                        onClick={() => onSelectDay(d)}
+                        className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex flex-col items-center justify-center hover:bg-blue-50 transition`}
                         style={{ minWidth: 50 }}
-                        title={format(cloneDay, "EEEE, MMMM d, yyyy", { locale })}
+                        title={format(d, "EEEE, MMMM d, yyyy", { locale })}
                     >
-                        <div className="flex flex-col items-center">
-                            <span className="text-sm font-semibold">
-                                {format(cloneDay, "d", { locale })}
-                            </span>
-                            {bookingsCount > 0 && (
-                                <span className="text-xs mt-1 inline-block bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                                    {bookingsCount} {t("calendar.badgeBookings")}
-                                </span>
-                            )}
-                            {totalClients > 0 && (
-                                <span className="text-xs mt-1 inline-block bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
-                                    {totalClients} {t("calendar.badgeClients")}
-                                </span>
-                            )}
-                        </div>
+                        <span className="text-sm font-semibold">{format(d, "d", { locale })}</span>
+    
+                        {bc > 0 && (
+                            <span className="text-[10px] mt-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
+                  {bc} {t("calendar.badgeBookings")}
+                </span>
+                        )}
+                        {clients > 0 && (
+                            <span className="text-[10px] mt-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                  {clients} {t("calendar.badgeClients")}
+                </span>
+                        )}
                     </button>
                 );
-                day = addDays(day, 1);
+    
+                dayPtr = addDays(dayPtr, 1);
             }
-            rows.push(
-                <div key={rows.length} className="grid grid-cols-7">
-                    {week}
-                </div>
-            );
+            rows.push(<div key={rows.length} className="grid grid-cols-7">{week}</div>);
         }
     
         return (
             <div className="bg-white p-4 rounded shadow">
+                {/* month controls */}
                 <div className="flex items-center justify-between mb-2">
                     <button
-                        onClick={() =>
-                            setMonthToShow((prev) =>
-                                new Date(prev.setMonth(prev.getMonth() - 1))
-                            )
-                        }
+                        onClick={() => setMonthToShow((prev) => subMonths(prev, 1))}
                         className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                     >
                         {t("calendar.prev")}
@@ -1357,21 +1635,16 @@
                         {format(monthToShow, "MMMM yyyy", { locale })}
                     </h3>
                     <button
-                        onClick={() =>
-                            setMonthToShow((prev) =>
-                                new Date(prev.setMonth(prev.getMonth() + 1))
-                            )
-                        }
+                        onClick={() => setMonthToShow((prev) => addMonths(prev, 1))}
                         className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
                     >
                         {t("calendar.next")}
                     </button>
                 </div>
     
+                {/* weekday headers */}
                 <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
-                    {weekdayLabels.map((lbl) => (
-                        <div key={lbl}>{lbl}</div>
-                    ))}
+                    {weekdayLabels.map((lbl) => <div key={lbl}>{lbl}</div>)}
                 </div>
     
                 {rows}
@@ -1383,6 +1656,7 @@
         selectedDate: PropTypes.instanceOf(Date),
         onSelectDay:  PropTypes.func.isRequired,
         bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
+        closedDays:   PropTypes.arrayOf(PropTypes.string),
     };
 
 ––––––––––––––––––––––––
@@ -1495,290 +1769,382 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
     // frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
-    
     import React from "react";
     import PropTypes from "prop-types";
     import { format, addDays, subDays, isSameDay } from "date-fns";
-    import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    
+    import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = {
-        en: enUS,
-        es: esLocale,
-        ca: caLocale,
-    };
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const BOOKING_WINDOW_DAYS = 30;
     
     export default function BookingsCompactView({
                                                     mode,
                                                     rangeDays,
+                                                    offset,
+                                                    onOffsetChange,
                                                     selectedDate = null,
                                                     onSelectDay,
                                                     bookings,
+                                                    closedDays = [],
                                                 }) {
         const lang   = getLanguage();
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
         const today = new Date();
-        const days  = [];
+        const closedSet = new Set(closedDays);
     
+        const days = [];
         if (mode === "future") {
-            for (let i = 0; i < rangeDays; i++) {
-                days.push(addDays(today, i));
-            }
+            for (let i = offset; i < offset + rangeDays; i++) days.push(addDays(today, i));
         } else {
-            for (let i = 1; i <= rangeDays; i++) {
-                days.push(subDays(today, i));
-            }
+            for (let i = 1 + offset; i <= rangeDays + offset; i++) days.push(subDays(today, i));
         }
     
-        function getDayStats(day) {
-            const key = format(day, "yyyy-MM-dd", { locale });
-            const dayBookings = bookings.filter((b) => {
-                const bd = b.table_availability?.date || b.date;
-                return bd === key;
-            });
-            const totalClients = dayBookings.reduce(
-                (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
-                0
+        const getDayStats = (day) => {
+            const key = format(day, "yyyy-MM-dd");
+            const dayBookings = bookings.filter(
+                (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
             );
-            return {
-                bookingsCount: dayBookings.length,
-                totalClients,
-            };
-        }
+            const totalClients = dayBookings.reduce(
+                (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0), 0
+            );
+            return { bookings: dayBookings.length, clients: totalClients };
+        };
+    
+        const isClosed  = (d) =>
+            closedSet.has(format(d, "yyyy-MM-dd")) || getDayMealTypes(d.getDay()).length === 0;
+        const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
     
         return (
-            <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow">
-                {days.map((day) => {
-                    const { bookingsCount, totalClients } = getDayStats(day);
-                    const isSel = selectedDate && isSameDay(day, selectedDate);
-                    const bg    = isSel ? "bg-blue-600" : "bg-gray-100";
-                    const txt   = isSel ? "text-white" : "text-gray-800";
+            <div className="relative">
+                {/* arrows */}
+                <button
+                    onClick={() => onOffsetChange(offset - 1)}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
+                    aria-label="Previous window"
+                >
+                    ‹
+                </button>
+                <button
+                    onClick={() => onOffsetChange(offset + 1)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
+                    aria-label="Next window"
+                >
+                    ›
+                </button>
     
-                    return (
-                        <button
-                            key={day.toISOString()}
-                            onClick={() => onSelectDay(day)}
-                            className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded`}
-                            title={format(day, "EEEE, MMMM d, yyyy", { locale })}
-                        >
-                            <span className="text-xs font-semibold">
-                                {format(day, "E", { locale })}
-                            </span>
-                            <span className="text-xl font-bold">
-                                {format(day, "d", { locale })}
-                            </span>
-                            <span className="text-xs">
-                                {format(day, "MMMM", { locale })}
-                            </span>
-                            <span className="mt-1 text-xs">
-                                {bookingsCount} {t("calendar.badgeBookings")}
-                            </span>
-                            <span className="text-xs">
-                                {totalClients} {t("calendar.badgeClients")}
-                            </span>
-                        </button>
-                    );
-                })}
+                <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow mx-6">
+                    {days.map((day) => {
+                        const { bookings: bc, clients } = getDayStats(day);
+                        const isSel = selectedDate && isSameDay(day, selectedDate);
+    
+                        /* colour classes */
+                        let bg  = "bg-gray-100";
+                        let txt = "text-gray-800";
+    
+                        if (isClosed(day)) {
+                            bg  = "bg-red-200";
+                            txt = "text-red-800";
+                        } else if (isBlocked(day)) {
+                            bg  = "bg-yellow-100";
+                            txt = "text-yellow-800";
+                        }
+    
+                        if (isSel) {
+                            bg  = "bg-blue-600";
+                            txt = "text-white";
+                        }
+    
+                        return (
+                            <button
+                                key={day.toISOString()}
+                                onClick={() => onSelectDay(day)}
+                                className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded hover:bg-blue-200 transition`}
+                                title={format(day, "EEEE, MMMM d, yyyy", { locale })}
+                            >
+                                <span className="text-xs font-semibold">{format(day, "E", { locale })}</span>
+                                <span className="text-xl font-bold">{format(day, "d", { locale })}</span>
+                                <span className="text-xs">{format(day, "MMM", { locale })}</span>
+                                <span className="mt-1 text-[10px]">
+                    {bc} {t("calendar.badgeBookings")}
+                  </span>
+                                <span className="text-[10px]">
+                    {clients} {t("calendar.badgeClients")}
+                  </span>
+                            </button>
+                        );
+                    })}
+                </div>
             </div>
         );
     }
     
     BookingsCompactView.propTypes = {
-        mode:         PropTypes.oneOf(["future", "past"]).isRequired,
-        rangeDays:    PropTypes.number.isRequired,
-        selectedDate: PropTypes.instanceOf(Date),
-        onSelectDay:  PropTypes.func.isRequired,
-        bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
+        mode:            PropTypes.oneOf(["future", "past"]).isRequired,
+        rangeDays:       PropTypes.number.isRequired,
+        offset:          PropTypes.number.isRequired,
+        onOffsetChange:  PropTypes.func.isRequired,
+        selectedDate:    PropTypes.instanceOf(Date),
+        onSelectDay:     PropTypes.func.isRequired,
+        bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
+        closedDays:      PropTypes.arrayOf(PropTypes.string),
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
     // frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
-    // (unchanged – reproduced verbatim)
-    
-    // frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
-    
-    import React, { useState, useEffect } from "react";
+    import React, { useState, useEffect, useMemo } from "react";
     import PropTypes from "prop-types";
     import {
         format,
         addDays,
         subDays,
         parseISO,
-        differenceInCalendarDays,
+        startOfMonth,
+        endOfMonth,
+        startOfDay,
     } from "date-fns";
     
     import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-    import BookingsCompactView from "./BookingsCompactView";
+    import BookingsCompactView  from "./BookingsCompactView";
     import BookingsCalendarView from "./BookingsCalendarView";
-    import BookingsChart from "./BookingsChart";
-    import DaySchedule from "./DaySchedule";
-    import AddBookingModal from "../currentBookings/AddBookingModal";
-    import { translate } from "../../../services/i18n";
+    import BookingsChart        from "./BookingsChart";
+    import DaySchedule          from "./DaySchedule";
+    import AddBookingModal      from "../currentBookings/AddBookingModal";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    const lang = localStorage.getItem("adminLang") || "ca";
-    const t = (key, vars) => translate(lang, key, vars);
-    
+    /* helper – stable “YYYY-MM-DD” */
     const ymd = (d) => format(d, "yyyy-MM-dd");
     
-    export default function BookingsOverview({ mode, bookings }) {
-        const today = new Date();
-        const [rangeDays, setRangeDays] = useState(7);
-        const [view, setView] = useState("compact");
-        const [selDay, setSelDay] = useState(null);
-        const [ta, setTA] = useState({});
+    export default function BookingsOverview({
+                                                 mode,               // "future" | "past"
+                                                 bookings,
+                                                 showChart        = true,
+                                                 allowDrill       = true,
+                                                 view:            controlledView,
+                                                 hideViewToggle   = false,
+                                                 onViewChange     = () => {},
+                                                 onWindowChange   = () => {},
+                                             }) {
+        /* ────── i18n ────── */
+        const lang = getLanguage();
+        const t    = (k, v) => translate(lang, k, v);
+    
+        /* ────── constants ────── */
+        const rangeDays = 7;
+        const today     = useMemo(() => startOfDay(new Date()), []);
+    
+        /* ────── local state ────── */
+        const [viewState, setViewState]   = useState("compact");
+        const view = controlledView ?? viewState;
+    
+        const changeView = (v) => {
+            if (controlledView !== undefined) onViewChange(v);
+            else                              setViewState(v);
+        };
+    
+        const [offset,    setOffset]    = useState(0);
+        const [selDay,    setSelDay]    = useState(null);
+        const [ta,        setTA]        = useState({});
         const [loadingTA, setLoadingTA] = useState(false);
-        const [showModal, setShowModal] = useState(false);
     
-        const start = mode === "future" ? today : subDays(today, rangeDays);
-        const end   = mode === "future" ? addDays(today, rangeDays) : today;
-    
-        useEffect(() => {
-            if (view === "compact" && rangeDays !== 7) setView("calendar");
-        }, [view, rangeDays]);
+        /* CLOSED-DAYS support */
+        const [closedDays, setClosedDays] = useState([]);
     
         useEffect(() => {
-            (async () => {
-                setLoadingTA(true);
-                try {
-                    const [lunch, dinner] = await Promise.all([
-                        fetchTableAvailabilityRange(ymd(start), ymd(end), "lunch"),
-                        fetchTableAvailabilityRange(ymd(start), ymd(end), "dinner"),
-                    ]);
-                    const merged = {};
-                    [lunch, dinner].forEach((src) =>
-                        Object.entries(src).forEach(([d, info]) => {
-                            merged[d] = merged[d]
-                                ? { ...merged[d], ...info }
-                                : info;
-                        })
-                    );
-                    setTA(merged);
-                } catch {
-                    setTA({});
-                } finally {
-                    setLoadingTA(false);
-                }
-            })();
-        }, [mode, rangeDays]);
+            fetch("/api/closed-days")
+                .then((r) => r.json())
+                .then((arr) => Array.isArray(arr) && setClosedDays(arr))
+                .catch(() => setClosedDays([]));
+        }, []);
     
-        const filtered = bookings.filter((b) => {
-            const dateStr = b.table_availability?.date || b.date;
-            const d = parseISO(dateStr);
-            if (mode === "future" && differenceInCalendarDays(d, today) <= 0) return false;
-            if (mode === "past"   && differenceInCalendarDays(d, today) >= 0) return false;
-            return d >= start && d <= end;
-        });
+        /* ────── window boundaries ────── */
+        const compactStart = useMemo(
+            () =>
+                mode === "future"
+                    ? addDays(today, offset)
+                    : subDays(today, rangeDays + offset),
+            [mode, today, offset]
+        );
+        const compactEnd = useMemo(
+            () =>
+                mode === "future"
+                    ? addDays(compactStart, rangeDays - 1)
+                    : subDays(today, 1 + offset),
+            [mode, compactStart, today, offset]
+        );
     
-        const totalBookings = filtered.length;
-        const totalClients  = filtered.reduce(
+        /* helpers */
+        const inFuture = (d) => d >= today;
+        const inPast   = (d) => d <  today;
+    
+        /* bookings slices */
+        const compactFiltered = useMemo(
+            () =>
+                bookings.filter((b) => {
+                    const d = parseISO(b.table_availability?.date || b.date);
+                    return d >= compactStart && d <= compactEnd;
+                }),
+            [bookings, compactStart, compactEnd]
+        );
+    
+        const calendarBookings = useMemo(
+            () =>
+                bookings.filter((b) => {
+                    const d = parseISO(b.table_availability?.date || b.date);
+                    return mode === "future" ? inFuture(d) : inPast(d);
+                }),
+            [bookings, mode, today]
+        );
+    
+        const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
+    
+        /* notify parent */
+        useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]); // eslint-disable-line
+    
+        /* KPI counters */
+        const totalBookings = statsBookings.length;
+        const totalClients  = statsBookings.reduce(
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
             0
         );
     
-        const handleSaved = () => {
-            setShowModal(false);
-            window.location.reload();
-        };
+        /* ────── table-availability payload for the visible window ────── */
+        const viewWinStart = useMemo(
+            () =>
+                view === "calendar" ? startOfMonth(addDays(today, offset)) : compactStart,
+            [view, today, offset, compactStart]
+        );
+        const viewWinEnd   = useMemo(
+            () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
+            [view, viewWinStart, compactEnd]
+        );
+        const winStartStr  = ymd(viewWinStart);
+        const winEndStr    = ymd(viewWinEnd);
     
+        useEffect(() => {
+            let cancelled = false;
+            setLoadingTA(true);
+    
+            Promise.all([
+                fetchTableAvailabilityRange(winStartStr, winEndStr, "lunch"),
+                fetchTableAvailabilityRange(winStartStr, winEndStr, "dinner"),
+            ])
+                .then(([lunch, dinner]) => {
+                    if (cancelled) return;
+                    const merged = {};
+                    [lunch, dinner].forEach((src) =>
+                        Object.entries(src).forEach(([d, info]) => {
+                            merged[d] = merged[d] ? { ...merged[d], ...info } : info;
+                        })
+                    );
+                    setTA(merged);
+                })
+                .catch(() => !cancelled && setTA({}))
+                .finally(() => !cancelled && setLoadingTA(false));
+    
+            return () => void (cancelled = true);
+        }, [winStartStr, winEndStr, view]);
+    
+        /* ensure TA present for drilled-in day */
+        useEffect(() => {
+            if (!selDay || view !== "calendar") return;
+            const key = ymd(selDay);
+            if (ta[key]) return;
+    
+            (async () => {
+                try {
+                    const [lunch, dinner] = await Promise.all([
+                        fetchTableAvailabilityRange(key, key, "lunch"),
+                        fetchTableAvailabilityRange(key, key, "dinner"),
+                    ]);
+                    setTA((prev) => ({
+                        ...prev,
+                        [key]: { ...(lunch[key] || {}), ...(dinner[key] || {}) },
+                    }));
+                } catch {/* ignore */}
+            })();
+        }, [selDay, view, ta]);
+    
+        /* manual add */
+        const [showModal, setShowModal] = useState(false);
+        const handleSaved = () => { setShowModal(false); window.location.reload(); };
+    
+        /* ────── UI ────── */
         return (
             <div className="p-6 bg-white rounded shadow space-y-6">
-                {/* Header */}
+                {/* header */}
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl font-bold">
-                            {mode === "future"
-                                ? t("overview.futureBookings")
-                                : t("overview.pastBookings")}
+                        <h2 className="text-2xl font-bold capitalize">
+                            {t(`overview.${mode}Bookings`)}
                         </h2>
                         <p className="text-sm text-gray-500">
-                            {t("overview.dataWindow", {
-                                start: ymd(start),
-                                end:   ymd(end),
-                            })}
+                            {t("overview.dataWindow", { start: winStartStr, end: winEndStr })}
                         </p>
                     </div>
-                    <div>
+    
+                    {!hideViewToggle && (
                         <select
                             className="border rounded p-1"
                             value={view}
-                            onChange={(e) => setView(e.target.value)}
+                            onChange={(e) => changeView(e.target.value)}
                         >
-                            {rangeDays === 7 && <option value="compact">{t("admin.compact")}</option>}
+                            <option value="compact">{t("admin.compact")}</option>
                             <option value="calendar">{t("admin.calendar")}</option>
                         </select>
-                    </div>
+                    )}
                 </div>
     
-                {/* Totals */}
+                {/* KPI cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-blue-50 p-3 rounded text-center">
-                        <p className="text-xs text-gray-600">{t("overview.bookings30d")}</p>
+                        <p className="text-xs text-gray-600">{t("overview.bookings")}</p>
                         <p className="text-xl font-bold">{totalBookings}</p>
                     </div>
                     <div className="bg-green-50 p-3 rounded text-center">
-                        <p className="text-xs text-gray-600">{t("overview.guests30d")}</p>
+                        <p className="text-xs text-gray-600">{t("overview.guests")}</p>
                         <p className="text-xl font-bold">{totalClients}</p>
                     </div>
                 </div>
     
-                {/* List view */}
-                {view === "compact" && (
+                {/* list / calendar */}
+                {view === "compact" ? (
                     <BookingsCompactView
                         mode={mode}
-                        rangeDays={7}
-                        selectedDate={selDay}
-                        onSelectDay={setSelDay}
-                        bookings={filtered}
+                        rangeDays={rangeDays}
+                        offset={offset}
+                        onOffsetChange={setOffset}
+                        selectedDate={allowDrill ? selDay : null}
+                        onSelectDay={allowDrill ? setSelDay : () => {}}
+                        bookings={statsBookings}
+                        closedDays={closedDays}
                     />
-                )}
-                {view === "calendar" && (
+                ) : (
                     <BookingsCalendarView
-                        selectedDate={selDay}
-                        onSelectDay={setSelDay}
-                        bookings={filtered}
+                        selectedDate={allowDrill ? selDay : null}
+                        onSelectDay={allowDrill ? setSelDay : () => {}}
+                        bookings={calendarBookings}
+                        closedDays={closedDays}
                     />
                 )}
     
-                {/* Chart controls */}
-                <div className="flex justify-end mt-6 mb-2">
-                    <select
-                        className="border rounded p-1"
-                        value={rangeDays}
-                        onChange={(e) => setRangeDays(Number(e.target.value))}
-                    >
-                        {mode === "future" ? (
-                            <>
-                                <option value={7}>{t("overview.upcomingRange", { n: 7 })}</option>
-                                <option value={30}>{t("overview.upcomingRange", { n: 30 })}</option>
-                                <option value={90}>{t("overview.upcomingRange", { n: 90 })}</option>
-                            </>
-                        ) : (
-                            <>
-                                <option value={7}>{t("overview.pastRange", { n: 7 })}</option>
-                                <option value={30}>{t("overview.pastRange", { n: 30 })}</option>
-                                <option value={90}>{t("overview.pastRange", { n: 90 })}</option>
-                            </>
-                        )}
-                    </select>
-                </div>
+                {/* chart */}
+                {showChart && (
+                    <BookingsChart
+                        key={`${mode}-${offset}-${view}`}
+                        bookings={statsBookings}
+                        startDate={compactStart}
+                        days={rangeDays}
+                    />
+                )}
     
-                {/* Chart */}
-                <BookingsChart
-                    key={`${mode}-${rangeDays}`}
-                    bookings={filtered}
-                    startDate={start}
-                    days={rangeDays}
-                />
-    
-                {/* Day drill-in */}
-                {selDay && (
+                {/* drilled-in schedule */}
+                {allowDrill && selDay && (
                     <div className="mt-4 relative">
                         {mode === "future" && (
                             <button
@@ -1790,7 +2156,7 @@
                         )}
                         <DaySchedule
                             selectedDate={selDay}
-                            bookings={filtered}
+                            bookings={bookings}
                             tableAvailability={ta}
                             onClose={() => setSelDay(null)}
                             enableZoom
@@ -1798,8 +2164,8 @@
                     </div>
                 )}
     
-                {/* Manual add */}
-                {showModal && selDay && (
+                {/* manual-add modal */}
+                {allowDrill && showModal && selDay && (
                     <AddBookingModal
                         dateObj={selDay}
                         onClose={() => setShowModal(false)}
@@ -1811,30 +2177,29 @@
     }
     
     BookingsOverview.propTypes = {
-        mode: PropTypes.oneOf(["future", "past"]).isRequired,
-        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        mode:            PropTypes.oneOf(["future", "past"]).isRequired,
+        bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
+        showChart:       PropTypes.bool,
+        allowDrill:      PropTypes.bool,
+        view:            PropTypes.oneOf(["compact", "calendar"]),
+        hideViewToggle:  PropTypes.bool,
+        onViewChange:    PropTypes.func,
+        onWindowChange:  PropTypes.func,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/DaySchedule.jsx
     // frontend/src/components/admin/sharedBookings/DaySchedule.jsx
-    
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     import { format } from "date-fns";
-    import {
-        enUS,
-        es as esLocale,
-        ca as caLocale,
-    } from "date-fns/locale";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     import TableUsage from "./TableUsage";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = {
-        en: enUS,
-        es: esLocale,
-        ca: caLocale,
-    };
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10);
     
     export default function DaySchedule({
                                             selectedDate,
@@ -1847,58 +2212,24 @@
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
-        // **Re-added** showFloor state:
         const [showFloor, setShowFloor] = useState(false);
-    
         if (!selectedDate) return null;
     
-        const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
-        const dayInfo = tableAvailability[dateStr];
+        const dateStr   = format(selectedDate, "yyyy-MM-dd");
+        const dayInfo   = tableAvailability[dateStr];
+        const indicator = typeof dayInfo === "string" ? dayInfo : null; // "closed" | "blocked"
+        const dayObj    = indicator ? {} : (dayInfo || {});
     
-        if (!dayInfo || dayInfo === "closed") {
-            return (
-                <div className="mt-6 border rounded bg-white p-4 shadow">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold">
-                            {t("schedule.header", {
-                                date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
-                            })}
-                        </h3>
-                        <button onClick={onClose} className="text-sm text-red-500 underline">
-                            {t("admin.close")}
-                        </button>
-                    </div>
-                    <p
-                        className={
-                            dayInfo === "closed"
-                                ? "text-red-600 font-semibold"
-                                : "text-gray-700"
-                        }
-                    >
-                        {dayInfo === "closed"
-                            ? "CLOSED"
-                            : t("schedule.noBookings")}
-                    </p>
-                </div>
-            );
-        }
-    
-        const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
-            (rk) => rk in dayInfo
-        );
+        /* fixed round keys so we can still show bookings on closed / blocked days */
+        const roundKeys = ["first_round", "second_round", "dinner_round"];
     
         const roundBookings = {};
         roundKeys.forEach((rk) => {
             roundBookings[rk] = bookings
                 .filter((b) => {
-                    const d = b.table_availability?.date;
-                    if (d !== dateStr) return false;
-                    if (rk.includes("first")) return b.reserved_time < "15:00:00";
-                    if (rk.includes("second"))
-                        return (
-                            b.reserved_time >= "15:00:00" &&
-                            b.reserved_time < "20:00:00"
-                        );
+                    if (getBookingDate(b) !== dateStr) return false;
+                    if (rk.includes("first"))  return b.reserved_time < "15:00:00";
+                    if (rk.includes("second")) return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
                     return b.reserved_time >= "20:00:00";
                 })
                 .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
@@ -1906,14 +2237,14 @@
     
         const fullStock = { 2: 0, 4: 0, 6: 0 };
         roundKeys.forEach((rk) => {
-            const avail = dayInfo[rk]?.availability || {};
-            const booked = {};
-            (roundBookings[rk] || []).forEach((bk) => {
+            const avail = dayObj[rk]?.availability || {};
+            const bookedCounts = {};
+            roundBookings[rk].forEach((bk) => {
                 const cap = bk.table_availability?.capacity || 0;
-                booked[cap] = (booked[cap] || 0) + 1;
+                bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
             });
             [2, 4, 6].forEach((cap) => {
-                const totalHere = (avail[cap] || 0) + (booked[cap] || 0);
+                const totalHere = (avail[cap] || 0) + (bookedCounts[cap] || 0);
                 fullStock[cap] = Math.max(fullStock[cap], totalHere);
             });
         });
@@ -1940,9 +2271,7 @@
                                 onClick={() => setShowFloor((v) => !v)}
                                 className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
                             >
-                                {showFloor
-                                    ? t("admin.hideFloor")
-                                    : t("admin.expandFloor")}
+                                {showFloor ? t("admin.hideFloor") : t("admin.expandFloor")}
                             </button>
                         )}
                         <button
@@ -1953,6 +2282,18 @@
                         </button>
                     </div>
                 </div>
+    
+                {indicator && (
+                    <p
+                        className={
+                            indicator === "closed"
+                                ? "text-red-600 font-semibold mb-4"
+                                : "text-yellow-600 font-semibold mb-4"
+                        }
+                    >
+                        {indicator.toUpperCase()}
+                    </p>
+                )}
     
                 {roundKeys.map((rk) => {
                     const { lbl, bg } = prettyRound(rk);
@@ -1979,16 +2320,9 @@
                                     </thead>
                                     <tbody>
                                     {rows.map((bk) => (
-                                        <tr
-                                            key={bk.id}
-                                            className={`${bg} hover:bg-yellow-50 transition`}
-                                        >
-                                            <td className="px-3 py-2">
-                                                {bk.reserved_time.slice(0, 5)}
-                                            </td>
-                                            <td className="px-3 py-2 truncate max-w-[160px]">
-                                                {bk.full_name}
-                                            </td>
+                                        <tr key={bk.id} className={`${bg} hover:bg-yellow-50 transition`}>
+                                            <td className="px-3 py-2">{bk.reserved_time.slice(0, 5)}</td>
+                                            <td className="px-3 py-2 truncate max-w-[160px]">{bk.full_name}</td>
                                             <td className="px-3 py-2">
                                                 {bk.total_adults + bk.total_kids}
                                             </td>
@@ -1997,17 +2331,11 @@
                                     </tbody>
                                 </table>
                             ) : (
-                                <p className="text-gray-500 mb-3">
-                                    {t("schedule.noBookings")}
-                                </p>
+                                <p className="text-gray-500 mb-3">{t("schedule.noBookings")}</p>
                             )}
     
                             {showFloor && (
-                                <TableUsage
-                                    capacityTotals={fullStock}
-                                    bookings={rows}
-                                    expanded
-                                />
+                                <TableUsage capacityTotals={fullStock} bookings={rows} expanded />
                             )}
                         </div>
                     );
@@ -2128,4 +2456,68 @@
         expanded:       PropTypes.bool,
         seatSize:       PropTypes.number,
     };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/utils/LanguagePicker.jsx
+    // frontend/src/components/admin/utils/LanguagePicker.jsx
+    
+    import { useState, Fragment } from "react";
+    import { Listbox, Transition } from "@headlessui/react";
+    import { ChevronDownIcon } from "@heroicons/react/20/solid";
+    
+    const options = [
+        { label: "Català",   code: "ca" },
+        { label: "Español",  code: "es" },
+        { label: "English",  code: "en" },
+    ];
+    
+    export default function LanguagePicker({ onChange, selectedCode }) {
+        const initial = options.find((opt) => opt.code === selectedCode) || options[0];
+        const [selected, setSelected] = useState(initial);
+    
+        const handleChange = (opt) => {
+            setSelected(opt);
+            onChange(opt.code);
+        };
+    
+        return (
+            <div className="w-48 relative">
+                <Listbox value={selected} onChange={handleChange}>
+                    <div className="relative">
+                        <Listbox.Button className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 flex items-center justify-between text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <span>{selected.label}</span>
+                            <ChevronDownIcon className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                        </Listbox.Button>
+    
+                        <Transition
+                            as={Fragment}
+                            leave="transition ease-in duration-100"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            <Listbox.Options className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+                                {options.map((opt) => (
+                                    <Listbox.Option
+                                        key={opt.code}
+                                        value={opt}
+                                        className={({ active }) =>
+                                            `cursor-pointer select-none relative px-3 py-2 text-sm ${
+                                                active ? "bg-indigo-100 text-indigo-900" : "text-gray-700"
+                                            }`
+                                        }
+                                    >
+                                        {({ selected: isSel }) => (
+                                            <span className={`${isSel ? "font-semibold" : "font-normal"}`}>
+                          {opt.label}
+                        </span>
+                                        )}
+                                    </Listbox.Option>
+                                ))}
+                            </Listbox.Options>
+                        </Transition>
+                    </div>
+                </Listbox>
+            </div>
+        );
+    }
 

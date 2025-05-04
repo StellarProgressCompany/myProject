@@ -103,14 +103,17 @@ export default {
     tableUsage: "Table Usage",
 
     settings: {
-        bookingWindowFrom: "Accept bookings from",  // kept for back-compat if referenced elsewhere
+        bookingWindowFrom: "Accept bookings from",
         closeDay:          "Close a day",
+        openDay:           "Open a day",
         openUntil:         "Open bookings until that day",
         save:              "Save",
         closed:            "Closed (click to open)",
         open:              "Open (click to close)",
         chooseDay:         "Choose a day",
         successClosed:     "Day closed!",
-        successWindow:     "Booking window updated!",
+        successOpened:     "Day opened!",
+        closing:           "Closing…",
+        opening:           "Opening…",
     },
 };

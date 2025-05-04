@@ -1,5 +1,3 @@
-// frontend/src/pages/AdminDashboard.jsx
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -7,6 +5,7 @@ import {
     IconCalendarClock,
     IconClock,
     IconChartBar,
+    IconSettings,
     IconLogout,
 } from "@tabler/icons-react";
 
@@ -16,30 +15,31 @@ import CurrentBookings      from "../components/admin/currentBookings/CurrentBoo
 import BookingsOverview     from "../components/admin/sharedBookings/BookingsOverview";
 import AlgorithmTester      from "../components/admin/algorithmTest/AlgorithmTester";
 import MetricsDashboard     from "../components/admin/metrics/MetricsDashboard";
+import OperationalSettings  from "../components/admin/settings/OperationalSettings.jsx";
 import { translate, setLanguage } from "../services/i18n";
 
 const navMeta = [
-    { key: "current", icon: IconClock },
-    { key: "future",  icon: IconCalendarClock },
-    { key: "metrics", icon: IconChartBar },
-    { key: "tester",  icon: IconChartBar },
+    { key: "current",  icon: IconClock },
+    { key: "future",   icon: IconCalendarClock },
+    { key: "metrics",  icon: IconChartBar },
+    { key: "tester",   icon: IconChartBar },
+    { key: "settings", icon: IconSettings },
 ];
 
 export default function AdminDashboard() {
     const navigate = useNavigate();
 
-    // ─── Language state ───
+    /* ─── language ─── */
     const [lang, setLang] = useState(
         () => localStorage.getItem("adminLang") || "ca"
     );
     const t = (key, vars) => translate(lang, key, vars);
-
     const changeLang = (lng) => {
         setLanguage(lng);
         setLang(lng);
     };
 
-    // ─── Bookings state ───
+    /* ─── booking data ─── */
     const [active,   setActive]   = useState("current");
     const [bookings, setBookings] = useState([]);
     const [loading,  setLoading]  = useState(true);
@@ -48,68 +48,57 @@ export default function AdminDashboard() {
         setLoading(true);
         try {
             const data = await fetchAllBookings();
-            if (Array.isArray(data)) {
-                setBookings(data);
-            }
+            if (Array.isArray(data)) setBookings(data);
         } catch (err) {
             console.error("Failed to fetch bookings:", err);
-            // retain previous bookings on error
         } finally {
             setLoading(false);
         }
     }, []);
 
-    useEffect(() => {
-        loadBookings();
-    }, [loadBookings]);
+    useEffect(() => { loadBookings(); }, [loadBookings]);
 
-    // ─── Auth ───
+    /* ─── auth ─── */
     const logout = () => {
         localStorage.removeItem("isAuthenticated");
         navigate("/login");
     };
 
-    // ─── Render panels ───
     const renderPanel = () => {
         if (loading) return <p>{t("tester.loadingTA")}</p>;
 
         switch (active) {
-            case "current":
-                return (
-                    <CurrentBookings
-                        bookings={bookings}
-                        onDataRefresh={loadBookings}
-                    />
-                );
-            case "future":
-                return (
-                    <BookingsOverview
-                        mode="future"
-                        bookings={bookings}
-                        showChart={false}
-                        allowDrill={true}
-                    />
-                );
-            case "metrics":
-                return <MetricsDashboard bookings={bookings} />;
-            case "tester":
-                return (
-                    <AlgorithmTester
-                        bookings={bookings}
-                        onRefresh={loadBookings}
-                    />
-                );
-            default:
-                return null;
+            case "current": return (
+                <CurrentBookings
+                    bookings={bookings}
+                    onDataRefresh={loadBookings}
+                />
+            );
+            case "future":  return (
+                <BookingsOverview
+                    mode="future"
+                    bookings={bookings}
+                    showChart={false}
+                    allowDrill={true}
+                />
+            );
+            case "metrics": return <MetricsDashboard bookings={bookings} />;
+            case "tester":  return (
+                <AlgorithmTester
+                    bookings={bookings}
+                    onRefresh={loadBookings}
+                />
+            );
+            case "settings": return <OperationalSettings />;
+            default:         return null;
         }
     };
 
-    // ─── version from Vite env ───
     const version = import.meta.env.VITE_APP_VERSION || "1.0.3";
 
     return (
         <div className="flex min-h-screen bg-gray-100">
-            {/* ───────── Sidebar ───────── */}
+            {/* ───────── sidebar ───────── */}
             <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                 <div className="border-b">
                     <div className="flex items-center justify-between p-4">
@@ -142,7 +131,7 @@ export default function AdminDashboard() {
                     ))}
                 </div>
 
-                {/* ─── Logout (refresh removed) ─── */}
+                {/* ─── logout ─── */}
                 <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t">
                     <button
                         onClick={logout}
@@ -154,7 +143,7 @@ export default function AdminDashboard() {
                 </div>
             </aside>
 
-            {/* ───────── Main ───────── */}
+            {/* ───────── main ───────── */}
             <main className="flex-1 p-6 overflow-auto">
                 {renderPanel()}
             </main>

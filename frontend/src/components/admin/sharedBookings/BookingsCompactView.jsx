@@ -2,12 +2,17 @@
 import React from "react";
 import PropTypes from "prop-types";
 import { format, addDays, subDays, isSameDay } from "date-fns";
-import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+import {
+    enUS,
+    es as esLocale,
+    ca as caLocale,
+} from "date-fns/locale";
+
+import { getDayMealTypes } from "../../../services/datePicker";
 import { translate, getLanguage } from "../../../services/i18n";
 
 const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-const getBookingDate = (b) =>
-    (b.table_availability?.date || b.date || "").slice(0, 10);
+const BOOKING_WINDOW_DAYS = 30;
 
 export default function BookingsCompactView({
                                                 mode,
@@ -37,13 +42,18 @@ export default function BookingsCompactView({
 
     const getDayStats = (day) => {
         const key = format(day, "yyyy-MM-dd", { locale });
-        const dayBookings = bookings.filter((b) => getBookingDate(b) === key);
+        const dayBookings = bookings.filter(
+            (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
+        );
         const totalClients = dayBookings.reduce(
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
             0
         );
         return { bookings: dayBookings.length, clients: totalClients };
     };
+
+    const isClosed   = (d) => getDayMealTypes(d.getDay()).length === 0;
+    const isBlocked  = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
 
     return (
         <div className="relative">
@@ -67,8 +77,23 @@ export default function BookingsCompactView({
                 {days.map((day) => {
                     const { bookings: bc, clients } = getDayStats(day);
                     const isSel = selectedDate && isSameDay(day, selectedDate);
-                    const bg    = isSel ? "bg-blue-600" : "bg-gray-100";
-                    const txt   = isSel ? "text-white"  : "text-gray-800";
+
+                    /* colour classes */
+                    let bg  = "bg-gray-100";
+                    let txt = "text-gray-800";
+
+                    if (isClosed(day)) {
+                        bg  = "bg-red-200";
+                        txt = "text-red-800";
+                    } else if (isBlocked(day)) {
+                        bg  = "bg-yellow-100";
+                        txt = "text-yellow-800";
+                    }
+
+                    if (isSel) {
+                        bg  = "bg-blue-600";
+                        txt = "text-white";
+                    }
 
                     return (
                         <button

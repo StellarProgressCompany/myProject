@@ -1,16 +1,15 @@
-// frontend/src/services/languages/en.js
-
 export default {
     admin: {
-        title:          "My Admin",
-        versionPrefix:  "v",
-        language:       "Language",
+        title:         "My Admin",
+        versionPrefix: "v",
+        language:      "Language",
         nav: {
-            current: "Current Bookings",
-            future:  "Future Bookings",
-            past:    "Past Bookings",
-            metrics: "Metrics",
-            tester:  "Algorithm Tester",
+            current:  "Current Bookings",
+            future:   "Future Bookings",
+            past:     "Past Bookings",
+            metrics:  "Metrics",
+            tester:   "Algorithm Tester",
+            settings: "Settings",
         },
         refresh:       "Refresh",
         logout:        "Log Out",
@@ -26,6 +25,8 @@ export default {
     },
 
     overview: {
+        bookings:      "Bookings",
+        guests:        "Guests",
         futureBookings: "Future Bookings",
         pastBookings:   "Past Bookings",
         dataWindow:     "Data window: {start} → {end}",
@@ -41,19 +42,15 @@ export default {
     modal: {
         addTitle:      "Add Manual Booking",
         dateDisplay:   "{weekday}, {month} {day}, {year}",
-
         fullName:      "Full Name",
         guests:        "Guests",
         phoneOptional: "Phone (optional)",
-
         meal:  { lunch: "Lunch", dinner: "Dinner" },
         round: { first: "1st Round", second: "2nd Round" },
-
         time:        "Time",
         close:       "Close",
         save:        "Save",
         closedDay:   "Sorry, we’re closed that day.",
-
         errorRequired: "Please fill in all required fields.",
         saveError:     "Error saving — please try again.",
     },
@@ -104,4 +101,16 @@ export default {
     },
 
     tableUsage: "Table Usage",
+
+    settings: {
+        bookingWindowFrom: "Accept bookings from",  // kept for back-compat if referenced elsewhere
+        closeDay:          "Close a day",
+        openUntil:         "Open bookings until that day",
+        save:              "Save",
+        closed:            "Closed (click to open)",
+        open:              "Open (click to close)",
+        chooseDay:         "Choose a day",
+        successClosed:     "Day closed!",
+        successWindow:     "Booking window updated!",
+    },
 };

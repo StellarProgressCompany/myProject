@@ -1,16 +1,15 @@
-// frontend/src/services/languages/es.js
-
 export default {
     admin: {
-        title:          "Mi Admin",
-        versionPrefix:  "v",
-        language:       "Idioma",
+        title:         "Mi Admin",
+        versionPrefix: "v",
+        language:      "Idioma",
         nav: {
-            current: "Reservas actuales",
-            future:  "Reservas futuras",
-            past:    "Reservas pasadas",
-            metrics: "Métricas",
-            tester:  "Probador de algoritmo",
+            current:  "Reservas actuales",
+            future:   "Reservas futuras",
+            past:     "Reservas pasadas",
+            metrics:  "Métricas",
+            tester:   "Probador de algoritmo",
+            settings: "Ajustes",
         },
         refresh:       "Actualizar",
         logout:        "Cerrar sesión",
@@ -26,6 +25,8 @@ export default {
     },
 
     overview: {
+        bookings:      "Reservas",
+        guests:        "Clientes",
         futureBookings: "Reservas futuras",
         pastBookings:   "Reservas pasadas",
         dataWindow:     "Ventana de datos: {start} → {end}",
@@ -41,19 +42,15 @@ export default {
     modal: {
         addTitle:      "Añadir reserva manual",
         dateDisplay:   "{weekday}, {day} {month} {year}",
-
         fullName:      "Nombre completo",
         guests:        "Clientes",
         phoneOptional: "Teléfono (opcional)",
-
         meal:  { lunch: "Comida", dinner: "Cena" },
         round: { first: "1ª Turno", second: "2ª Turno" },
-
         time:        "Hora",
         close:       "Cerrar",
         save:        "Guardar",
         closedDay:   "Lo sentimos, ese día estamos cerrados.",
-
         errorRequired: "Por favor complete todos los campos obligatorios.",
         saveError:     "Error al guardar — inténtalo de nuevo.",
     },
@@ -104,4 +101,16 @@ export default {
     },
 
     tableUsage: "Uso de mesas",
+
+    settings: {
+        bookingWindowFrom: "Aceptar reservas a partir de",
+        closeDay:          "Cerrar un día",
+        openUntil:         "Abrir reservas hasta ese día",
+        save:              "Guardar",
+        closed:            "Cerrado (clic para abrir)",
+        open:              "Abierto (clic para cerrar)",
+        chooseDay:         "Elige un día",
+        successClosed:     "Día cerrado",
+        successWindow:     "Ventana de reserva actualizada",
+    },
 };

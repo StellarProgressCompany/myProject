@@ -4,30 +4,47 @@ import PropTypes from "prop-types";
 
 import StatsGrid from "./StatsGrid";
 import BookingsOverview from "../sharedBookings/BookingsOverview";
+import { translate, getLanguage } from "../../../services/i18n";
 
-/**
- * Shows the KPI grid plus a BookingsOverview (past-mode).
- * The KPI grid now always reflects the *currently selected*
- * window inside BookingsOverview (7-day compact window or
- * the full calendar month), so metrics are never stuck on “today”.
- */
 export default function MetricsDashboard({ bookings }) {
-    /* windowBookings is updated by BookingsOverview via the
-       onWindowChange callback.  Default to the whole set.    */
+    const lang = getLanguage();
+    const t    = (k, p) => translate(lang, k, p);
+
+    /* user-controlled window view */
+    const [view, setView] = useState("calendar");  // default to month view
     const [windowBookings, setWindowBookings] = useState(bookings);
 
     return (
         <div className="space-y-8">
-            {/* KPIs for the visible window */}
+            {/* view selector */}
+            <div className="flex items-center space-x-4">
+                <span className="text-sm font-semibold">{t("admin.calendar")} / {t("admin.compact")}:</span>
+                <button
+                    onClick={() => setView("calendar")}
+                    className={`px-3 py-1 rounded ${view==="calendar" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                >
+                    {t("admin.calendar")}
+                </button>
+                <button
+                    onClick={() => setView("compact")}
+                    className={`px-3 py-1 rounded ${view==="compact" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                >
+                    {t("admin.compact")}
+                </button>
+            </div>
+
+            {/* KPI grid for the selected window */}
             <StatsGrid bookings={windowBookings} />
 
-            {/* Past bookings list / chart.  We pass the callback so the
-                KPI grid stays in-sync with whatever the user is viewing. */}
+            {/* bookings explorer (past-mode) */}
             <BookingsOverview
                 mode="past"
                 bookings={bookings}
                 showChart={true}
                 allowDrill={false}
+                view={view}
+                hideViewToggle     /* hide internal selector */
+                onViewChange={setView}
                 onWindowChange={setWindowBookings}
             />
         </div>

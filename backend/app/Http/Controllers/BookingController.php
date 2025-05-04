@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\BookingDetail;
 use App\Models\TableAvailability;
+use App\Models\ClosedDay;
+use App\Models\SystemSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -16,26 +18,20 @@ use App\Services\BookingAlgorithmService;
 
 class BookingController extends Controller
 {
-    /* ───────────────────────────────────────────────────── */
-    /* Return every booking (admin list)                    */
-    /* ───────────────────────────────────────────────────── */
     public function index()
     {
         $bookings = Booking::with('tableAvailability')
-            ->orderBy('created_at', 'desc')
+            ->orderBy('created_at','desc')
             ->get();
 
-        return response()->json(['data' => $bookings]);
+        return response()->json(['data'=>$bookings]);
     }
 
-    /* ───────────────────────────────────────────────────── */
-    /* Create a new booking                                 */
-    /* ───────────────────────────────────────────────────── */
     public function store(Request $request)
     {
         $validated = $request->validate([
             'date'             => 'required|date_format:Y-m-d',
-            'meal_type'        => 'required|in:lunch,dinner',   // ★ new – was missing
+            'meal_type'        => 'required|in:lunch,dinner',
             'reserved_time'    => 'required|date_format:H:i:s',
             'total_adults'     => 'required|integer|min:1',
             'total_kids'       => 'required|integer|min:0',
@@ -48,10 +44,24 @@ class BookingController extends Controller
             'long_stay'        => 'boolean',
         ]);
 
+        // ❌ before-open date check
+        $openFrom = SystemSetting::getValue('booking_open_from');
+        if ($openFrom && $validated['date'] < $openFrom) {
+            return response()->json([
+                'error' => 'Bookings are not yet open for this date.'
+            ], 400);
+        }
+
+        // ❌ manually closed-day check
+        if (ClosedDay::where('date',$validated['date'])->exists()) {
+            return response()->json([
+                'error' => 'The restaurant is closed on the selected date.'
+            ], 400);
+        }
+
         $partySize = $validated['total_adults'] + $validated['total_kids'];
         $longStay  = $validated['long_stay'] ?? false;
 
-        /* five-zone / SAA allocation */
         $algo   = new BookingAlgorithmService();
         $assign = $algo->tryAllocate(
             $validated['date'],
@@ -62,61 +72,51 @@ class BookingController extends Controller
         );
 
         if (isset($assign['error'])) {
-            return response()->json(['error' => $assign['error']], 400);
+            return response()->json(['error'=>$assign['error']], 400);
         }
 
-        /* ───── persist – ONE master row + N-1 details ───── */
         return DB::transaction(function () use ($validated, $assign, $longStay) {
-
-            $master = null;   // main booking row (first table)
+            $master = null;
             foreach ($assign as $i => $slot) {
-
-                /* fetch the static TableAvailability row (no stock mutation) */
-                $ta = TableAvailability::where('date', $validated['date'])
-                    ->where('meal_type', $validated['meal_type'])
-                    ->where('capacity', $slot['capacity'])
+                $ta = TableAvailability::where('date',$validated['date'])
+                    ->where('meal_type',$validated['meal_type'])
+                    ->where('capacity',$slot['capacity'])
                     ->firstOrFail();
 
-                /* first table = master booking row */
-                if ($i === 0) {
+                if ($i===0) {
                     $master = Booking::create([
-                        'table_availability_id' => $ta->id,
-                        'reserved_time'         => $validated['reserved_time'],
-                        'total_adults'          => $validated['total_adults'],
-                        'total_kids'            => $validated['total_kids'],
-                        'full_name'             => $validated['full_name'],
-                        'phone'                 => $validated['phone'] ?? null,
-                        'email'                 => $validated['email'] ?? null,
-                        'special_requests'      => $validated['special_requests'] ?? null,
-                        'gdpr_consent'          => $validated['gdpr_consent'] ?? false,
-                        'marketing_opt_in'      => $validated['marketing_opt_in'] ?? false,
-                        'long_stay'             => $longStay,
+                        'table_availability_id'=> $ta->id,
+                        'reserved_time'        => $validated['reserved_time'],
+                        'total_adults'         => $validated['total_adults'],
+                        'total_kids'           => $validated['total_kids'],
+                        'full_name'            => $validated['full_name'],
+                        'phone'                => $validated['phone'] ?? null,
+                        'email'                => $validated['email'] ?? null,
+                        'special_requests'     => $validated['special_requests'] ?? null,
+                        'gdpr_consent'         => $validated['gdpr_consent'] ?? false,
+                        'marketing_opt_in'     => $validated['marketing_opt_in'] ?? false,
+                        'long_stay'            => $longStay,
                     ]);
-                }
-                /* extra tables = BookingDetail rows */
-                else {
+                } else {
                     BookingDetail::create([
-                        'booking_id'             => $master->id,
-                        'table_availability_id'  => $ta->id,
-                        'capacity'               => $slot['capacity'],
-                        'extra_chair'            => (bool) ($slot['extra_chair'] ?? false),
+                        'booking_id'            => $master->id,
+                        'table_availability_id' => $ta->id,
+                        'capacity'              => $slot['capacity'],
+                        'extra_chair'           => (bool)($slot['extra_chair'] ?? false),
                     ]);
                 }
             }
 
-            /* ── e-mails (only once – master booking) ── */
             if ($master->email) {
                 Mail::to($master->email)
                     ->send(new BookingConfirmationMail($master));
-
-                $mealDT = Carbon::parse("{$master->tableAvailability->date} {$master->reserved_time}");
+                $mealDT = Carbon::parse("$master->tableAvailability->date $master->reserved_time");
                 $remind = $mealDT->copy()->subHours(24);
                 $survey = $mealDT->copy()->addHours(3);
 
                 if ($remind->isFuture()) {
                     Mail::to($master->email)->later($remind, new BookingReminderMail($master));
                 } else {
-                    // si es menos de 24 h, envía el recordatorio de inmediato
                     Mail::to($master->email)->send(new BookingReminderMail($master));
                 }
 
@@ -126,36 +126,31 @@ class BookingController extends Controller
             }
 
             return response()->json([
-                'message' => 'Booked successfully!',
-                'data'    => $master->load(['tableAvailability', 'details']),
-            ], 201);
+                'message'=>'Booked successfully!',
+                'data'=> $master->load(['tableAvailability','details'])
+            ],201);
         });
     }
 
-    /* PATCH /api/bookings/{id} */
     public function update(Request $request, Booking $booking)
     {
-        $booking->update(
-            $request->validate([
-                'reserved_time' => 'sometimes|date_format:H:i:s',
-                'total_adults'  => 'sometimes|integer|min:1',
-                'total_kids'    => 'sometimes|integer|min:0',
-                'full_name'     => 'sometimes|string',
-                'phone'         => 'sometimes|nullable|string',
-            ])
-        );
+        $booking->update($request->validate([
+            'reserved_time'=>'sometimes|date_format:H:i:s',
+            'total_adults' =>'sometimes|integer|min:1',
+            'total_kids'   =>'sometimes|integer|min:0',
+            'full_name'    =>'sometimes|string',
+            'phone'        =>'sometimes|nullable|string',
+        ]));
 
         return response()->json([
-            'message' => 'booking updated',
-            'data'    => $booking->fresh('tableAvailability'),
+            'message'=>'booking updated',
+            'data'   =>$booking->fresh('tableAvailability')
         ]);
     }
 
-    /* DELETE /api/bookings/{id} */
     public function destroy(Booking $booking)
     {
         $booking->delete();
-
-        return response()->json(['message' => 'booking deleted']);
+        return response()->json(['message'=>'booking deleted']);
     }
 }

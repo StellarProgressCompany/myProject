@@ -13,12 +13,17 @@ import {
     isSameMonth,
     isSameDay,
 } from "date-fns";
-import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+import {
+    enUS,
+    es as esLocale,
+    ca as caLocale,
+} from "date-fns/locale";
+
+import { getDayMealTypes } from "../../../services/datePicker";
 import { translate, getLanguage } from "../../../services/i18n";
 
 const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-const getBookingDate = (b) =>
-    (b.table_availability?.date || b.date || "").slice(0, 10);
+const BOOKING_WINDOW_DAYS = 30;            // days in advance that bookings are allowed
 
 export default function BookingsCalendarView({
                                                  selectedDate = null,
@@ -30,6 +35,7 @@ export default function BookingsCalendarView({
     const locale = localeMap[lang] || enUS;
 
     const [monthToShow, setMonthToShow] = useState(new Date());
+    const today = new Date();
 
     /* ───────── helpers ───────── */
     const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
@@ -47,7 +53,9 @@ export default function BookingsCalendarView({
 
     const getDayStats = (date) => {
         const key   = format(date, "yyyy-MM-dd", { locale });
-        const dayBk = bookings.filter((b) => getBookingDate(b) === key);
+        const dayBk = bookings.filter(
+            (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
+        );
         const tot   = dayBk.reduce(
             (n, b) => n + (b.total_adults || 0) + (b.total_kids || 0),
             0
@@ -55,23 +63,37 @@ export default function BookingsCalendarView({
         return { bookings: dayBk.length, clients: tot };
     };
 
+    /* quick status helpers (for colouring) */
+    const isClosed = (d) => getDayMealTypes(d.getDay()).length === 0;
+    const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
+
     /* ───────── build calendar grid ───────── */
     const rows = [];
     let dayPtr = gridStart;
     while (dayPtr <= gridEnd) {
         const week = [];
         for (let i = 0; i < 7; i++) {
-            const d                 = dayPtr;
+            const d = dayPtr;
             const { bookings: bc, clients } = getDayStats(d);
-            const inMonth           = isSameMonth(d, monthToShow);
-            const selected          = selectedDate && isSameDay(d, selectedDate);
+            const inMonth  = isSameMonth(d, monthToShow);
+            const selected = selectedDate && isSameDay(d, selectedDate);
 
-            const bg  = selected ? "bg-blue-600" : "bg-white";
-            const txt = selected
-                ? "text-white"
-                : inMonth
-                    ? "text-gray-800"
-                    : "text-gray-400";
+            /* colouring logic */
+            let bg  = "bg-white";
+            let txt = inMonth ? "text-gray-800" : "text-gray-400";
+
+            if (isClosed(d)) {
+                bg  = "bg-red-200";
+                txt = "text-red-800";
+            } else if (isBlocked(d)) {
+                bg  = "bg-yellow-100";
+                txt = "text-yellow-800";
+            }
+
+            if (selected) {
+                bg  = "bg-blue-600";
+                txt = "text-white";
+            }
 
             week.push(
                 <button
@@ -84,6 +106,7 @@ export default function BookingsCalendarView({
                     <span className="text-sm font-semibold">
                         {format(d, "d", { locale })}
                     </span>
+
                     {bc > 0 && (
                         <span className="text-[10px] mt-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
                             {bc} {t("calendar.badgeBookings")}
@@ -96,6 +119,7 @@ export default function BookingsCalendarView({
                     )}
                 </button>
             );
+
             dayPtr = addDays(dayPtr, 1);
         }
         rows.push(

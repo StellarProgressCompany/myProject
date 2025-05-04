@@ -1,16 +1,15 @@
-// frontend/src/services/languages/ca.js
-
 export default {
     admin: {
-        title:          "El meu Admin",
-        versionPrefix:  "v",
-        language:       "Llengua",
+        title:         "El meu Admin",
+        versionPrefix: "v",
+        language:      "Llengua",
         nav: {
-            current: "Reserves actuals",
-            future:  "Reserves futures",
-            past:    "Reserves passades",
-            metrics: "Mètriques",
-            tester:  "Prova d'algorisme",
+            current:  "Reserves actuals",
+            future:   "Reserves futures",
+            past:     "Reserves passades",
+            metrics:  "Mètriques",
+            tester:   "Prova d'algorisme",
+            settings: "Ajustos",
         },
         refresh:       "Actualitza",
         logout:        "Tanca sessió",
@@ -26,6 +25,8 @@ export default {
     },
 
     overview: {
+        bookings:      "Reserves",
+        guests:        "Clients",
         futureBookings: "Reserves futures",
         pastBookings:   "Reserves passades",
         dataWindow:     "Finestra de dades: {start} → {end}",
@@ -41,19 +42,15 @@ export default {
     modal: {
         addTitle:      "Afegir reserva manual",
         dateDisplay:   "{weekday}, {day} {month} {year}",
-
         fullName:      "Nom complet",
         guests:        "Clients",
         phoneOptional: "Telèfon (opcional)",
-
         meal:  { lunch: "Dinar", dinner: "Sopar" },
         round: { first: "1a Torn", second: "2a Torn" },
-
         time:        "Hora",
         close:       "Tanca",
         save:        "Desa",
         closedDay:   "Ho sentim, estem tancats aquell dia.",
-
         errorRequired: "Si us plau omple tots els camps obligatoris.",
         saveError:     "Error en desar — torna-ho a provar.",
     },
@@ -104,4 +101,16 @@ export default {
     },
 
     tableUsage: "Ús de taules",
+
+    settings: {
+        bookingWindowFrom: "Acceptar reserves a partir de",
+        closeDay:          "Tancar un dia",
+        openUntil:         "Obrir reserves fins a aquest dia",
+        save:              "Desa",
+        closed:            "Tancat (clic per obrir)",
+        open:              "Obert (clic per tancar)",
+        chooseDay:         "Tria un dia",
+        successClosed:     "Dia tancat",
+        successWindow:     "Finestra de reserves actualitzada",
+    },
 };

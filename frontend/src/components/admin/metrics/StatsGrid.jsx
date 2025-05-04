@@ -1,114 +1,95 @@
 // frontend/src/components/admin/metrics/StatsGrid.jsx
-
 import React, { useMemo } from "react";
 import PropTypes from "prop-types";
 import {
-    IconArrowDownRight,
-    IconArrowUpRight,
     IconCalendarStats,
     IconUsers,
     IconLayoutGrid,
-    IconTrendingUp,
+    IconTrophy,
 } from "@tabler/icons-react";
-import { parseISO, subDays } from "date-fns";
+import { parseISO } from "date-fns";
 import { translate, getLanguage } from "../../../services/i18n";
 
 function computeMetrics(bookings) {
-    const today     = new Date();
-    const startCurr = subDays(today, 30);
-    const startPrev = subDays(today, 60);
-
-    let currBookings = 0,
-        prevBookings = 0,
-        currGuests   = 0,
-        prevGuests   = 0,
-        uniqueGuests = new Set();
+    let totalBookings = 0;
+    let totalGuests   = 0;
+    const uniqueGuests = new Set();
+    const perDayGuests = {};
 
     bookings.forEach((b) => {
         const dateStr = b.table_availability?.date || b.date;
         if (!dateStr) return;
-        const d      = parseISO(dateStr);
+
         const guests = (b.total_adults || 0) + (b.total_kids || 0);
+        totalBookings += 1;
+        totalGuests   += guests;
+
+        /* per-day count */
+        const dKey = parseISO(dateStr).toISOString().slice(0,10);
+        perDayGuests[dKey] = (perDayGuests[dKey] || 0) + guests;
+
+        /* unique guest counted by full name (fallback id) */
         uniqueGuests.add(b.full_name?.trim() || `#${b.id}`);
-        if (d >= startCurr && d <= today) {
-            currBookings++;
-            currGuests  += guests;
-        } else if (d >= startPrev && d < startCurr) {
-            prevBookings++;
-            prevGuests  += guests;
-        }
     });
 
-    const bookingDiff = prevBookings === 0
-        ? 100
-        : ((currBookings - prevBookings) / prevBookings) * 100;
-    const guestDiff = prevGuests === 0
-        ? 100
-        : ((currGuests - prevGuests) / prevGuests) * 100;
+    const peakGuests = Object.values(perDayGuests).reduce(
+        (m, v) => Math.max(m, v),
+        0
+    );
 
     return {
-        currBookings,
-        currGuests,
+        totalBookings,
+        totalGuests,
         uniqueGuests: uniqueGuests.size,
-        avgGuests:    currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
-        bookingDiff:  bookingDiff.toFixed(0),
-        guestDiff:    guestDiff.toFixed(0),
+        avgGuests:    totalBookings === 0 ? 0 : (totalGuests / totalBookings).toFixed(1),
+        peakGuests,
     };
 }
 
-const icons = {
-    calendar: IconCalendarStats,
-    users:    IconUsers,
-    grid:     IconLayoutGrid,
-    trend:    IconTrendingUp,
-};
-
 export default function StatsGrid({ bookings = [] }) {
     const lang = getLanguage();
-    const t    = (key, vars) => translate(lang, key, vars);
+    const t    = (k, vars) => translate(lang, k, vars);
 
     const m = useMemo(() => computeMetrics(bookings), [bookings]);
 
     const data = [
         {
             key:   "bookings",
-            title: t("overview.bookings30d"),
-            icon:  icons.calendar,
-            value: m.currBookings,
-            diff:  m.bookingDiff,
+            title: t("overview.bookings"),
+            icon:  IconCalendarStats,
+            value: m.totalBookings,
         },
         {
             key:   "guests",
-            title: t("overview.guests30d"),
-            icon:  icons.users,
-            value: m.currGuests,
-            diff:  m.guestDiff,
+            title: t("overview.guests"),
+            icon:  IconUsers,
+            value: m.totalGuests,
         },
         {
             key:   "avg",
             title: t("overview.avgGuests"),
-            icon:  icons.grid,
+            icon:  IconLayoutGrid,
             value: m.avgGuests,
-            diff:  0,
+        },
+        {
+            key:   "peak",
+            title: t("overview.peakDayGuests"),
+            icon:  IconTrophy,
+            value: m.peakGuests,
         },
         {
             key:   "unique",
             title: t("overview.uniqueNames"),
-            icon:  icons.trend,
+            icon:  IconUsers,
             value: m.uniqueGuests,
-            diff:  0,
         },
     ];
 
     return (
         <div className="p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                 {data.map((stat) => {
                     const StatIcon = stat.icon;
-                    const positive = Number(stat.diff) >= 0;
-                    const DiffIcon = positive ? IconArrowUpRight : IconArrowDownRight;
-                    const diffColor = positive ? "text-teal-500" : "text-red-500";
-
                     return (
                         <div
                             key={stat.key}
@@ -120,19 +101,9 @@ export default function StatsGrid({ bookings = [] }) {
                                 </p>
                                 <StatIcon className="w-5 h-5 text-gray-400" />
                             </div>
-                            <div className="flex items-end space-x-2 mt-4">
-                                <span className="text-2xl font-bold">{stat.value}</span>
-                                {stat.diff !== 0 && (
-                                    <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
-                                        {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
-                                    </span>
-                                )}
+                            <div className="mt-4 text-2xl font-bold text-gray-800">
+                                {stat.value}
                             </div>
-                            {(stat.key === "bookings" || stat.key === "guests") && (
-                                <p className="text-xs text-gray-500 mt-2">
-                                    {t("overview.vsPrevious")}
-                                </p>
-                            )}
                         </div>
                     );
                 })}

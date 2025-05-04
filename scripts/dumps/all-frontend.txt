@@ -10,6 +10,7 @@
     ├── /frontend/src/components/admin/metrics/MetricsDashboard.jsx
     ├── /frontend/src/components/admin/metrics/StatsGrid.jsx
     ├── /frontend/src/components/admin/metrics/VisualizeBookings.jsx
+    ├── /frontend/src/components/admin/settings/OperationalSettings.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsChart.jsx
     ├── /frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
@@ -41,6 +42,7 @@
     ├── /frontend/src/services/languages/ca.js
     ├── /frontend/src/services/languages/en.js
     ├── /frontend/src/services/languages/es.js
+    ├── /frontend/src/services/settingsService.js
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/App.css
@@ -979,30 +981,47 @@
     
     import StatsGrid from "./StatsGrid";
     import BookingsOverview from "../sharedBookings/BookingsOverview";
+    import { translate, getLanguage } from "../../../services/i18n";
     
-    /**
-     * Shows the KPI grid plus a BookingsOverview (past-mode).
-     * The KPI grid now always reflects the *currently selected*
-     * window inside BookingsOverview (7-day compact window or
-     * the full calendar month), so metrics are never stuck on “today”.
-     */
     export default function MetricsDashboard({ bookings }) {
-        /* windowBookings is updated by BookingsOverview via the
-           onWindowChange callback.  Default to the whole set.    */
+        const lang = getLanguage();
+        const t    = (k, p) => translate(lang, k, p);
+    
+        /* user-controlled window view */
+        const [view, setView] = useState("calendar");  // default to month view
         const [windowBookings, setWindowBookings] = useState(bookings);
     
         return (
             <div className="space-y-8">
-                {/* KPIs for the visible window */}
+                {/* view selector */}
+                <div className="flex items-center space-x-4">
+                    <span className="text-sm font-semibold">{t("admin.calendar")} / {t("admin.compact")}:</span>
+                    <button
+                        onClick={() => setView("calendar")}
+                        className={`px-3 py-1 rounded ${view==="calendar" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                    >
+                        {t("admin.calendar")}
+                    </button>
+                    <button
+                        onClick={() => setView("compact")}
+                        className={`px-3 py-1 rounded ${view==="compact" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                    >
+                        {t("admin.compact")}
+                    </button>
+                </div>
+    
+                {/* KPI grid for the selected window */}
                 <StatsGrid bookings={windowBookings} />
     
-                {/* Past bookings list / chart.  We pass the callback so the
-                    KPI grid stays in-sync with whatever the user is viewing. */}
+                {/* bookings explorer (past-mode) */}
                 <BookingsOverview
                     mode="past"
                     bookings={bookings}
                     showChart={true}
                     allowDrill={false}
+                    view={view}
+                    hideViewToggle     /* hide internal selector */
+                    onViewChange={setView}
                     onWindowChange={setWindowBookings}
                 />
             </div>
@@ -1016,116 +1035,97 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/metrics/StatsGrid.jsx
     // frontend/src/components/admin/metrics/StatsGrid.jsx
-    
     import React, { useMemo } from "react";
     import PropTypes from "prop-types";
     import {
-        IconArrowDownRight,
-        IconArrowUpRight,
         IconCalendarStats,
         IconUsers,
         IconLayoutGrid,
-        IconTrendingUp,
+        IconTrophy,
     } from "@tabler/icons-react";
-    import { parseISO, subDays } from "date-fns";
+    import { parseISO } from "date-fns";
     import { translate, getLanguage } from "../../../services/i18n";
     
     function computeMetrics(bookings) {
-        const today     = new Date();
-        const startCurr = subDays(today, 30);
-        const startPrev = subDays(today, 60);
-    
-        let currBookings = 0,
-            prevBookings = 0,
-            currGuests   = 0,
-            prevGuests   = 0,
-            uniqueGuests = new Set();
+        let totalBookings = 0;
+        let totalGuests   = 0;
+        const uniqueGuests = new Set();
+        const perDayGuests = {};
     
         bookings.forEach((b) => {
             const dateStr = b.table_availability?.date || b.date;
             if (!dateStr) return;
-            const d      = parseISO(dateStr);
+    
             const guests = (b.total_adults || 0) + (b.total_kids || 0);
+            totalBookings += 1;
+            totalGuests   += guests;
+    
+            /* per-day count */
+            const dKey = parseISO(dateStr).toISOString().slice(0,10);
+            perDayGuests[dKey] = (perDayGuests[dKey] || 0) + guests;
+    
+            /* unique guest counted by full name (fallback id) */
             uniqueGuests.add(b.full_name?.trim() || `#${b.id}`);
-            if (d >= startCurr && d <= today) {
-                currBookings++;
-                currGuests  += guests;
-            } else if (d >= startPrev && d < startCurr) {
-                prevBookings++;
-                prevGuests  += guests;
-            }
         });
     
-        const bookingDiff = prevBookings === 0
-            ? 100
-            : ((currBookings - prevBookings) / prevBookings) * 100;
-        const guestDiff = prevGuests === 0
-            ? 100
-            : ((currGuests - prevGuests) / prevGuests) * 100;
+        const peakGuests = Object.values(perDayGuests).reduce(
+            (m, v) => Math.max(m, v),
+            0
+        );
     
         return {
-            currBookings,
-            currGuests,
+            totalBookings,
+            totalGuests,
             uniqueGuests: uniqueGuests.size,
-            avgGuests:    currBookings === 0 ? 0 : (currGuests / currBookings).toFixed(1),
-            bookingDiff:  bookingDiff.toFixed(0),
-            guestDiff:    guestDiff.toFixed(0),
+            avgGuests:    totalBookings === 0 ? 0 : (totalGuests / totalBookings).toFixed(1),
+            peakGuests,
         };
     }
     
-    const icons = {
-        calendar: IconCalendarStats,
-        users:    IconUsers,
-        grid:     IconLayoutGrid,
-        trend:    IconTrendingUp,
-    };
-    
     export default function StatsGrid({ bookings = [] }) {
         const lang = getLanguage();
-        const t    = (key, vars) => translate(lang, key, vars);
+        const t    = (k, vars) => translate(lang, k, vars);
     
         const m = useMemo(() => computeMetrics(bookings), [bookings]);
     
         const data = [
             {
                 key:   "bookings",
-                title: t("overview.bookings30d"),
-                icon:  icons.calendar,
-                value: m.currBookings,
-                diff:  m.bookingDiff,
+                title: t("overview.bookings"),
+                icon:  IconCalendarStats,
+                value: m.totalBookings,
             },
             {
                 key:   "guests",
-                title: t("overview.guests30d"),
-                icon:  icons.users,
-                value: m.currGuests,
-                diff:  m.guestDiff,
+                title: t("overview.guests"),
+                icon:  IconUsers,
+                value: m.totalGuests,
             },
             {
                 key:   "avg",
                 title: t("overview.avgGuests"),
-                icon:  icons.grid,
+                icon:  IconLayoutGrid,
                 value: m.avgGuests,
-                diff:  0,
+            },
+            {
+                key:   "peak",
+                title: t("overview.peakDayGuests"),
+                icon:  IconTrophy,
+                value: m.peakGuests,
             },
             {
                 key:   "unique",
                 title: t("overview.uniqueNames"),
-                icon:  icons.trend,
+                icon:  IconUsers,
                 value: m.uniqueGuests,
-                diff:  0,
             },
         ];
     
         return (
             <div className="p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                     {data.map((stat) => {
                         const StatIcon = stat.icon;
-                        const positive = Number(stat.diff) >= 0;
-                        const DiffIcon = positive ? IconArrowUpRight : IconArrowDownRight;
-                        const diffColor = positive ? "text-teal-500" : "text-red-500";
-    
                         return (
                             <div
                                 key={stat.key}
@@ -1137,19 +1137,9 @@
                                     </p>
                                     <StatIcon className="w-5 h-5 text-gray-400" />
                                 </div>
-                                <div className="flex items-end space-x-2 mt-4">
-                                    <span className="text-2xl font-bold">{stat.value}</span>
-                                    {stat.diff !== 0 && (
-                                        <span className={`flex items-center text-sm font-semibold ${diffColor}`}>
-                                            {stat.diff}% <DiffIcon className="w-4 h-4 ml-1" />
-                                        </span>
-                                    )}
+                                <div className="mt-4 text-2xl font-bold text-gray-800">
+                                    {stat.value}
                                 </div>
-                                {(stat.key === "bookings" || stat.key === "guests") && (
-                                    <p className="text-xs text-gray-500 mt-2">
-                                        {t("overview.vsPrevious")}
-                                    </p>
-                                )}
                             </div>
                         );
                     })}
@@ -1360,6 +1350,171 @@
     }
 
 ––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/settings/OperationalSettings.jsx
+    import React, { useState, useRef, useEffect } from "react";
+    import { motion, AnimatePresence } from "framer-motion";
+    import BookingsCalendarView from "../sharedBookings/BookingsCalendarView";
+    import {
+        closeSpecificDay,
+        openBookingWindowUntil,
+    } from "../../../services/settingsService.js";
+    import { translate } from "../../../services/i18n";
+    
+    /* ✔ little tick after a successful action */
+    const SuccessTick = ({ id }) => (
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={id}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1.25, opacity: 1 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20 }}
+                className="absolute top-2 right-2 text-green-600 pointer-events-none select-none"
+            >
+                ✓
+            </motion.div>
+        </AnimatePresence>
+    );
+    
+    /* ▶ animated progress button (inlined for brevity) */
+    function ProgressButton({
+                                colour = "blue",
+                                idleLabel,
+                                loadingLabel,
+                                successLabel,
+                                onClick,
+                            }) {
+        const [state, setState]       = useState("idle");     // idle | loading | success
+        const [progress, setProgress] = useState(0);          // 0-100
+        const timerRef = useRef(null);
+    
+        /* drive the fake progress bar while “loading” */
+        useEffect(() => {
+            if (state !== "loading") return;
+            timerRef.current = setInterval(() => {
+                setProgress((p) => (p < 95 ? p + 1 : p));
+            }, 25);
+            return () => clearInterval(timerRef.current);
+        }, [state]);
+    
+        /* helpers */
+        const start  = () => { setProgress(0); setState("loading"); };
+        const finish = () => {
+            clearInterval(timerRef.current);
+            setProgress(100);
+            setState("success");
+            setTimeout(() => { setState("idle"); setProgress(0); }, 1500);
+        };
+    
+        /* click handler wrapper */
+        const handleClick = async () => {
+            if (state === "loading") return;
+            try {
+                start();
+                await onClick();          // async work
+                finish();
+            } catch (e) {
+                clearInterval(timerRef.current);
+                setState("idle");
+                setProgress(0);
+                alert(e?.response?.data?.error || "Action failed");
+            }
+        };
+    
+        /* visual helpers */
+        const baseClr = state === "success" ? "green" : colour;
+        const colourClasses = {
+            blue:   "bg-blue-600 hover:bg-blue-700",
+            red:    "bg-red-600  hover:bg-red-700",
+            green:  "bg-green-600 hover:bg-green-700",
+        }[baseClr];
+    
+        return (
+            <button
+                onClick={handleClick}
+                disabled={state === "loading"}
+                className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-60 ${colourClasses}`}
+            >
+                {/* label */}
+                <span className="relative z-10">
+            {state === "idle"    && idleLabel}
+                    {state === "loading" && loadingLabel}
+                    {state === "success" && successLabel}
+          </span>
+    
+                {/* progress bar */}
+                {state === "loading" && (
+                    <motion.span
+                        style={{ scaleX: progress / 100 }}
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: progress / 100 }}
+                        className="absolute inset-0 bg-white/30 origin-left rounded"
+                    />
+                )}
+            </button>
+        );
+    }
+    
+    export default function OperationalSettings() {
+        /* i18n */
+        const [lang] = useState(() => localStorage.getItem("adminLang") || "ca");
+        const t      = (k, v) => translate(lang, k, v);
+    
+        /* selected calendar date */
+        const [selDate, setSelDate] = useState(null);
+    
+        /* success blips (one for each action) */
+        const [blip, setBlip] = useState(null);  // "close" | "open" | null
+    
+        /* actions */
+        const closeDay = async () => {
+            if (!selDate) return;
+            await closeSpecificDay(selDate.toISOString().slice(0, 10));
+            setBlip("close");
+            setTimeout(() => setBlip(null), 1600);
+        };
+    
+        const openWindow = async () => {
+            if (!selDate) return;
+            await openBookingWindowUntil(selDate.toISOString().slice(0, 10));
+            setBlip("open");
+            setTimeout(() => setBlip(null), 1600);
+        };
+    
+        return (
+            <div className="relative space-y-6">
+                {blip && <SuccessTick id={blip} />}
+    
+                {/* colour-coded month calendar (no drill-in) */}
+                <BookingsCalendarView
+                    selectedDate={selDate}
+                    onSelectDay={setSelDate}
+                    bookings={[]}
+                />
+    
+                {/* action buttons */}
+                <div className="flex gap-4">
+                    <ProgressButton
+                        colour="red"
+                        idleLabel={t("settings.closeDay")}
+                        loadingLabel={t("settings.closed")}
+                        successLabel={t("settings.successClosed")}
+                        onClick={closeDay}
+                    />
+    
+                    <ProgressButton
+                        colour="blue"
+                        idleLabel={t("settings.openUntil")}
+                        loadingLabel={t("settings.save")}
+                        successLabel={t("settings.successWindow")}
+                        onClick={openWindow}
+                    />
+                </div>
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
     // frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
     import React, { useState } from "react";
@@ -1376,12 +1531,17 @@
         isSameMonth,
         isSameDay,
     } from "date-fns";
-    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
+    
+    import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
     const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-    const getBookingDate = (b) =>
-        (b.table_availability?.date || b.date || "").slice(0, 10);
+    const BOOKING_WINDOW_DAYS = 30;            // days in advance that bookings are allowed
     
     export default function BookingsCalendarView({
                                                      selectedDate = null,
@@ -1393,6 +1553,7 @@
         const locale = localeMap[lang] || enUS;
     
         const [monthToShow, setMonthToShow] = useState(new Date());
+        const today = new Date();
     
         /* ───────── helpers ───────── */
         const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
@@ -1410,7 +1571,9 @@
     
         const getDayStats = (date) => {
             const key   = format(date, "yyyy-MM-dd", { locale });
-            const dayBk = bookings.filter((b) => getBookingDate(b) === key);
+            const dayBk = bookings.filter(
+                (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
+            );
             const tot   = dayBk.reduce(
                 (n, b) => n + (b.total_adults || 0) + (b.total_kids || 0),
                 0
@@ -1418,23 +1581,37 @@
             return { bookings: dayBk.length, clients: tot };
         };
     
+        /* quick status helpers (for colouring) */
+        const isClosed = (d) => getDayMealTypes(d.getDay()).length === 0;
+        const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
+    
         /* ───────── build calendar grid ───────── */
         const rows = [];
         let dayPtr = gridStart;
         while (dayPtr <= gridEnd) {
             const week = [];
             for (let i = 0; i < 7; i++) {
-                const d                 = dayPtr;
+                const d = dayPtr;
                 const { bookings: bc, clients } = getDayStats(d);
-                const inMonth           = isSameMonth(d, monthToShow);
-                const selected          = selectedDate && isSameDay(d, selectedDate);
+                const inMonth  = isSameMonth(d, monthToShow);
+                const selected = selectedDate && isSameDay(d, selectedDate);
     
-                const bg  = selected ? "bg-blue-600" : "bg-white";
-                const txt = selected
-                    ? "text-white"
-                    : inMonth
-                        ? "text-gray-800"
-                        : "text-gray-400";
+                /* colouring logic */
+                let bg  = "bg-white";
+                let txt = inMonth ? "text-gray-800" : "text-gray-400";
+    
+                if (isClosed(d)) {
+                    bg  = "bg-red-200";
+                    txt = "text-red-800";
+                } else if (isBlocked(d)) {
+                    bg  = "bg-yellow-100";
+                    txt = "text-yellow-800";
+                }
+    
+                if (selected) {
+                    bg  = "bg-blue-600";
+                    txt = "text-white";
+                }
     
                 week.push(
                     <button
@@ -1447,6 +1624,7 @@
                         <span className="text-sm font-semibold">
                             {format(d, "d", { locale })}
                         </span>
+    
                         {bc > 0 && (
                             <span className="text-[10px] mt-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
                                 {bc} {t("calendar.badgeBookings")}
@@ -1459,6 +1637,7 @@
                         )}
                     </button>
                 );
+    
                 dayPtr = addDays(dayPtr, 1);
             }
             rows.push(
@@ -1620,12 +1799,17 @@
     import React from "react";
     import PropTypes from "prop-types";
     import { format, addDays, subDays, isSameDay } from "date-fns";
-    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
+    
+    import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
     const localeMap = { en: enUS, es: esLocale, ca: caLocale };
-    const getBookingDate = (b) =>
-        (b.table_availability?.date || b.date || "").slice(0, 10);
+    const BOOKING_WINDOW_DAYS = 30;
     
     export default function BookingsCompactView({
                                                     mode,
@@ -1655,13 +1839,18 @@
     
         const getDayStats = (day) => {
             const key = format(day, "yyyy-MM-dd", { locale });
-            const dayBookings = bookings.filter((b) => getBookingDate(b) === key);
+            const dayBookings = bookings.filter(
+                (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
+            );
             const totalClients = dayBookings.reduce(
                 (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
                 0
             );
             return { bookings: dayBookings.length, clients: totalClients };
         };
+    
+        const isClosed   = (d) => getDayMealTypes(d.getDay()).length === 0;
+        const isBlocked  = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
     
         return (
             <div className="relative">
@@ -1685,8 +1874,23 @@
                     {days.map((day) => {
                         const { bookings: bc, clients } = getDayStats(day);
                         const isSel = selectedDate && isSameDay(day, selectedDate);
-                        const bg    = isSel ? "bg-blue-600" : "bg-gray-100";
-                        const txt   = isSel ? "text-white"  : "text-gray-800";
+    
+                        /* colour classes */
+                        let bg  = "bg-gray-100";
+                        let txt = "text-gray-800";
+    
+                        if (isClosed(day)) {
+                            bg  = "bg-red-200";
+                            txt = "text-red-800";
+                        } else if (isBlocked(day)) {
+                            bg  = "bg-yellow-100";
+                            txt = "text-yellow-800";
+                        }
+    
+                        if (isSel) {
+                            bg  = "bg-blue-600";
+                            txt = "text-white";
+                        }
     
                         return (
                             <button
@@ -1730,7 +1934,7 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
-    // src/components/admin/sharedBookings/BookingsOverview.jsx
+    // frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
     import React, { useState, useEffect, useMemo } from "react";
     import PropTypes from "prop-types";
     import {
@@ -1759,6 +1963,10 @@
                                                  bookings,
                                                  showChart   = true,
                                                  allowDrill  = true,
+                                                 /* new controlled-view props */
+                                                 view:         controlledView,
+                                                 hideViewToggle = false,
+                                                 onViewChange   = () => {},
                                                  onWindowChange = () => {},
                                              }) {
         /* ───────── i18n ───────── */
@@ -1769,9 +1977,20 @@
         const rangeDays = 7;
         const today     = useMemo(() => startOfDay(new Date()), []);   // stable “today”
     
-        /* ───────── local state ───────── */
+        /* ───────── local view state (uncontrolled) ───────── */
+        const [viewState, setViewState] = useState("compact");
+        const view = controlledView ?? viewState;
+    
+        const changeView = (v) => {
+            if (controlledView !== undefined) {
+                onViewChange(v);
+            } else {
+                setViewState(v);
+            }
+        };
+    
+        /* ───────── offset / selection ───────── */
         const [offset,    setOffset]    = useState(0);        // window offset
-        const [view,      setView]      = useState("compact"); // compact | calendar
         const [selDay,    setSelDay]    = useState(null);     // drilled-in date
         const [ta,        setTA]        = useState({});       // table availability
         const [loadingTA, setLoadingTA] = useState(false);
@@ -1793,12 +2012,12 @@
             [mode, compactStart, today, offset]
         );
     
-        /* ───────── helpers ───────── */
+        /* helpers */
         const inFuture = (d) => d >= today;
         const inPast   = (d) => d <  today;
     
         /* ╭─────────────────────────────────────────────────────────╮
-           │ bookings slices (memoised → stable reference)           │
+           │ bookings slices                                         │
            ╰─────────────────────────────────────────────────────────╯ */
         const compactFiltered = useMemo(
             () =>
@@ -1818,16 +2037,14 @@
             [bookings, mode, today]
         );
     
-        /* which set to expose to MetricsDashboard for KPIs */
+        /* window used for metrics */
         const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
     
-        /* ╭─────────────────────────────────────────────────────────╮
-           │ notify parent when statsBookings **content** changes    │
-           ╰─────────────────────────────────────────────────────────╯ */
+        /* notify parent when statsBookings changes */
         useEffect(() => {
             onWindowChange(statsBookings);
             // eslint-disable-next-line react-hooks/exhaustive-deps
-        }, [statsBookings]);         // safe – memo gives stable reference unless real diff
+        }, [statsBookings]);
     
         const totalBookings = statsBookings.length;
         const totalClients  = statsBookings.reduce(
@@ -1838,8 +2055,6 @@
         /* ╭─────────────────────────────────────────────────────────╮
            │ Fetch table availability for the visible window         │
            ╰─────────────────────────────────────────────────────────╯ */
-    
-        /*  stringify dates so dependency identity is stable  */
         const viewWinStart = useMemo(
             () =>
                 view === "calendar"
@@ -1867,7 +2082,6 @@
             ])
                 .then(([lunch, dinner]) => {
                     if (cancelled) return;
-                    /* merge */
                     const merged = {};
                     [lunch, dinner].forEach((src) =>
                         Object.entries(src).forEach(([d, info]) => {
@@ -1880,13 +2094,13 @@
                 .finally(() => !cancelled && setLoadingTA(false));
     
             return () => void (cancelled = true);
-        }, [winStartStr, winEndStr, view]);  // ← primitive deps, no endless loop
+        }, [winStartStr, winEndStr, view]);
     
         /* ensure TA for drilled-in day inside calendar view (once) */
         useEffect(() => {
             if (!selDay || view !== "calendar") return;
             const key = ymd(selDay);
-            if (ta[key]) return; // already present
+            if (ta[key]) return;
     
             (async () => {
                 try {
@@ -1898,9 +2112,7 @@
                         ...prev,
                         [key]: { ...(lunch[key] || {}), ...(dinner[key] || {}) },
                     }));
-                } catch {
-                    /* swallow */
-                }
+                } catch {/* ignore */}
             })();
         }, [selDay, view, ta]);
     
@@ -1927,27 +2139,29 @@
                         </p>
                     </div>
     
-                    <select
-                        className="border rounded p-1"
-                        value={view}
-                        onChange={(e) => setView(e.target.value)}
-                    >
-                        <option value="compact">{t("admin.compact")}</option>
-                        <option value="calendar">{t("admin.calendar")}</option>
-                    </select>
+                    {!hideViewToggle && (
+                        <select
+                            className="border rounded p-1"
+                            value={view}
+                            onChange={(e) => changeView(e.target.value)}
+                        >
+                            <option value="compact">{t("admin.compact")}</option>
+                            <option value="calendar">{t("admin.calendar")}</option>
+                        </select>
+                    )}
                 </div>
     
                 {/* stats */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div className="bg-blue-50 p-3 rounded text-center">
                         <p className="text-xs text-gray-600">
-                            {t("overview.bookings30d")}
+                            {t("overview.bookings")}
                         </p>
                         <p className="text-xl font-bold">{totalBookings}</p>
                     </div>
                     <div className="bg-green-50 p-3 rounded text-center">
                         <p className="text-xs text-gray-600">
-                            {t("overview.guests30d")}
+                            {t("overview.guests")}
                         </p>
                         <p className="text-xl font-bold">{totalClients}</p>
                     </div>
@@ -2020,6 +2234,9 @@
         bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
         showChart:       PropTypes.bool,
         allowDrill:      PropTypes.bool,
+        view:            PropTypes.oneOf(["compact", "calendar"]),
+        hideViewToggle:  PropTypes.bool,
+        onViewChange:    PropTypes.func,
         onWindowChange:  PropTypes.func,
     };
 
@@ -3596,8 +3813,6 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/pages/AdminDashboard.jsx
-    // frontend/src/pages/AdminDashboard.jsx
-    
     import React, { useState, useEffect, useCallback } from "react";
     import { useNavigate } from "react-router-dom";
     
@@ -3605,6 +3820,7 @@
         IconCalendarClock,
         IconClock,
         IconChartBar,
+        IconSettings,
         IconLogout,
     } from "@tabler/icons-react";
     
@@ -3614,30 +3830,31 @@
     import BookingsOverview     from "../components/admin/sharedBookings/BookingsOverview";
     import AlgorithmTester      from "../components/admin/algorithmTest/AlgorithmTester";
     import MetricsDashboard     from "../components/admin/metrics/MetricsDashboard";
+    import OperationalSettings  from "../components/admin/settings/OperationalSettings.jsx";
     import { translate, setLanguage } from "../services/i18n";
     
     const navMeta = [
-        { key: "current", icon: IconClock },
-        { key: "future",  icon: IconCalendarClock },
-        { key: "metrics", icon: IconChartBar },
-        { key: "tester",  icon: IconChartBar },
+        { key: "current",  icon: IconClock },
+        { key: "future",   icon: IconCalendarClock },
+        { key: "metrics",  icon: IconChartBar },
+        { key: "tester",   icon: IconChartBar },
+        { key: "settings", icon: IconSettings },
     ];
     
     export default function AdminDashboard() {
         const navigate = useNavigate();
     
-        // ─── Language state ───
+        /* ─── language ─── */
         const [lang, setLang] = useState(
             () => localStorage.getItem("adminLang") || "ca"
         );
         const t = (key, vars) => translate(lang, key, vars);
-    
         const changeLang = (lng) => {
             setLanguage(lng);
             setLang(lng);
         };
     
-        // ─── Bookings state ───
+        /* ─── booking data ─── */
         const [active,   setActive]   = useState("current");
         const [bookings, setBookings] = useState([]);
         const [loading,  setLoading]  = useState(true);
@@ -3646,68 +3863,57 @@
             setLoading(true);
             try {
                 const data = await fetchAllBookings();
-                if (Array.isArray(data)) {
-                    setBookings(data);
-                }
+                if (Array.isArray(data)) setBookings(data);
             } catch (err) {
                 console.error("Failed to fetch bookings:", err);
-                // retain previous bookings on error
             } finally {
                 setLoading(false);
             }
         }, []);
     
-        useEffect(() => {
-            loadBookings();
-        }, [loadBookings]);
+        useEffect(() => { loadBookings(); }, [loadBookings]);
     
-        // ─── Auth ───
+        /* ─── auth ─── */
         const logout = () => {
             localStorage.removeItem("isAuthenticated");
             navigate("/login");
         };
     
-        // ─── Render panels ───
         const renderPanel = () => {
             if (loading) return <p>{t("tester.loadingTA")}</p>;
     
             switch (active) {
-                case "current":
-                    return (
-                        <CurrentBookings
-                            bookings={bookings}
-                            onDataRefresh={loadBookings}
-                        />
-                    );
-                case "future":
-                    return (
-                        <BookingsOverview
-                            mode="future"
-                            bookings={bookings}
-                            showChart={false}
-                            allowDrill={true}
-                        />
-                    );
-                case "metrics":
-                    return <MetricsDashboard bookings={bookings} />;
-                case "tester":
-                    return (
-                        <AlgorithmTester
-                            bookings={bookings}
-                            onRefresh={loadBookings}
-                        />
-                    );
-                default:
-                    return null;
+                case "current": return (
+                    <CurrentBookings
+                        bookings={bookings}
+                        onDataRefresh={loadBookings}
+                    />
+                );
+                case "future":  return (
+                    <BookingsOverview
+                        mode="future"
+                        bookings={bookings}
+                        showChart={false}
+                        allowDrill={true}
+                    />
+                );
+                case "metrics": return <MetricsDashboard bookings={bookings} />;
+                case "tester":  return (
+                    <AlgorithmTester
+                        bookings={bookings}
+                        onRefresh={loadBookings}
+                    />
+                );
+                case "settings": return <OperationalSettings />;
+                default:         return null;
             }
         };
     
-        // ─── version from Vite env ───
         const version = import.meta.env.VITE_APP_VERSION || "1.0.3";
     
         return (
             <div className="flex min-h-screen bg-gray-100">
-                {/* ───────── Sidebar ───────── */}
+                {/* ───────── sidebar ───────── */}
                 <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                     <div className="border-b">
                         <div className="flex items-center justify-between p-4">
@@ -3740,7 +3946,7 @@
                         ))}
                     </div>
     
-                    {/* ─── Logout (refresh removed) ─── */}
+                    {/* ─── logout ─── */}
                     <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t">
                         <button
                             onClick={logout}
@@ -3752,7 +3958,7 @@
                     </div>
                 </aside>
     
-                {/* ───────── Main ───────── */}
+                {/* ───────── main ───────── */}
                 <main className="flex-1 p-6 overflow-auto">
                     {renderPanel()}
                 </main>
@@ -4166,19 +4372,18 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/ca.js
-    // frontend/src/services/languages/ca.js
-    
     export default {
         admin: {
-            title:          "El meu Admin",
-            versionPrefix:  "v",
-            language:       "Llengua",
+            title:         "El meu Admin",
+            versionPrefix: "v",
+            language:      "Llengua",
             nav: {
-                current: "Reserves actuals",
-                future:  "Reserves futures",
-                past:    "Reserves passades",
-                metrics: "Mètriques",
-                tester:  "Prova d'algorisme",
+                current:  "Reserves actuals",
+                future:   "Reserves futures",
+                past:     "Reserves passades",
+                metrics:  "Mètriques",
+                tester:   "Prova d'algorisme",
+                settings: "Ajustos",
             },
             refresh:       "Actualitza",
             logout:        "Tanca sessió",
@@ -4194,6 +4399,8 @@
         },
     
         overview: {
+            bookings:      "Reserves",
+            guests:        "Clients",
             futureBookings: "Reserves futures",
             pastBookings:   "Reserves passades",
             dataWindow:     "Finestra de dades: {start} → {end}",
@@ -4209,19 +4416,15 @@
         modal: {
             addTitle:      "Afegir reserva manual",
             dateDisplay:   "{weekday}, {day} {month} {year}",
-    
             fullName:      "Nom complet",
             guests:        "Clients",
             phoneOptional: "Telèfon (opcional)",
-    
             meal:  { lunch: "Dinar", dinner: "Sopar" },
             round: { first: "1a Torn", second: "2a Torn" },
-    
             time:        "Hora",
             close:       "Tanca",
             save:        "Desa",
             closedDay:   "Ho sentim, estem tancats aquell dia.",
-    
             errorRequired: "Si us plau omple tots els camps obligatoris.",
             saveError:     "Error en desar — torna-ho a provar.",
         },
@@ -4272,23 +4475,34 @@
         },
     
         tableUsage: "Ús de taules",
+    
+        settings: {
+            bookingWindowFrom: "Acceptar reserves a partir de",
+            closeDay:          "Tancar un dia",
+            openUntil:         "Obrir reserves fins a aquest dia",
+            save:              "Desa",
+            closed:            "Tancat (clic per obrir)",
+            open:              "Obert (clic per tancar)",
+            chooseDay:         "Tria un dia",
+            successClosed:     "Dia tancat",
+            successWindow:     "Finestra de reserves actualitzada",
+        },
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/en.js
-    // frontend/src/services/languages/en.js
-    
     export default {
         admin: {
-            title:          "My Admin",
-            versionPrefix:  "v",
-            language:       "Language",
+            title:         "My Admin",
+            versionPrefix: "v",
+            language:      "Language",
             nav: {
-                current: "Current Bookings",
-                future:  "Future Bookings",
-                past:    "Past Bookings",
-                metrics: "Metrics",
-                tester:  "Algorithm Tester",
+                current:  "Current Bookings",
+                future:   "Future Bookings",
+                past:     "Past Bookings",
+                metrics:  "Metrics",
+                tester:   "Algorithm Tester",
+                settings: "Settings",
             },
             refresh:       "Refresh",
             logout:        "Log Out",
@@ -4304,6 +4518,8 @@
         },
     
         overview: {
+            bookings:      "Bookings",
+            guests:        "Guests",
             futureBookings: "Future Bookings",
             pastBookings:   "Past Bookings",
             dataWindow:     "Data window: {start} → {end}",
@@ -4319,19 +4535,15 @@
         modal: {
             addTitle:      "Add Manual Booking",
             dateDisplay:   "{weekday}, {month} {day}, {year}",
-    
             fullName:      "Full Name",
             guests:        "Guests",
             phoneOptional: "Phone (optional)",
-    
             meal:  { lunch: "Lunch", dinner: "Dinner" },
             round: { first: "1st Round", second: "2nd Round" },
-    
             time:        "Time",
             close:       "Close",
             save:        "Save",
             closedDay:   "Sorry, we’re closed that day.",
-    
             errorRequired: "Please fill in all required fields.",
             saveError:     "Error saving — please try again.",
         },
@@ -4382,23 +4594,34 @@
         },
     
         tableUsage: "Table Usage",
+    
+        settings: {
+            bookingWindowFrom: "Accept bookings from",  // kept for back-compat if referenced elsewhere
+            closeDay:          "Close a day",
+            openUntil:         "Open bookings until that day",
+            save:              "Save",
+            closed:            "Closed (click to open)",
+            open:              "Open (click to close)",
+            chooseDay:         "Choose a day",
+            successClosed:     "Day closed!",
+            successWindow:     "Booking window updated!",
+        },
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/es.js
-    // frontend/src/services/languages/es.js
-    
     export default {
         admin: {
-            title:          "Mi Admin",
-            versionPrefix:  "v",
-            language:       "Idioma",
+            title:         "Mi Admin",
+            versionPrefix: "v",
+            language:      "Idioma",
             nav: {
-                current: "Reservas actuales",
-                future:  "Reservas futuras",
-                past:    "Reservas pasadas",
-                metrics: "Métricas",
-                tester:  "Probador de algoritmo",
+                current:  "Reservas actuales",
+                future:   "Reservas futuras",
+                past:     "Reservas pasadas",
+                metrics:  "Métricas",
+                tester:   "Probador de algoritmo",
+                settings: "Ajustes",
             },
             refresh:       "Actualizar",
             logout:        "Cerrar sesión",
@@ -4414,6 +4637,8 @@
         },
     
         overview: {
+            bookings:      "Reservas",
+            guests:        "Clientes",
             futureBookings: "Reservas futuras",
             pastBookings:   "Reservas pasadas",
             dataWindow:     "Ventana de datos: {start} → {end}",
@@ -4429,19 +4654,15 @@
         modal: {
             addTitle:      "Añadir reserva manual",
             dateDisplay:   "{weekday}, {day} {month} {year}",
-    
             fullName:      "Nombre completo",
             guests:        "Clientes",
             phoneOptional: "Teléfono (opcional)",
-    
             meal:  { lunch: "Comida", dinner: "Cena" },
             round: { first: "1ª Turno", second: "2ª Turno" },
-    
             time:        "Hora",
             close:       "Cerrar",
             save:        "Guardar",
             closedDay:   "Lo sentimos, ese día estamos cerrados.",
-    
             errorRequired: "Por favor complete todos los campos obligatorios.",
             saveError:     "Error al guardar — inténtalo de nuevo.",
         },
@@ -4492,5 +4713,56 @@
         },
     
         tableUsage: "Uso de mesas",
+    
+        settings: {
+            bookingWindowFrom: "Aceptar reservas a partir de",
+            closeDay:          "Cerrar un día",
+            openUntil:         "Abrir reservas hasta ese día",
+            save:              "Guardar",
+            closed:            "Cerrado (clic para abrir)",
+            open:              "Abierto (clic para cerrar)",
+            chooseDay:         "Elige un día",
+            successClosed:     "Día cerrado",
+            successWindow:     "Ventana de reserva actualizada",
+        },
     };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/settingsService.js
+    import axios from "axios";
+    
+    /* ───────────────────────────────
+       Close / open a specific day
+       ─────────────────────────────── */
+    
+    /**
+     * Mark a calendar day as “closed”.
+     * Backend will usually toggle, but we expose
+     * a single-purpose helper for clarity.
+     *
+     * @param {string} dateYMD – “YYYY-MM-DD”
+     */
+    export async function closeSpecificDay(dateYMD) {
+        const { data } = await axios.post("/api/closed-days/toggle", {
+            date: dateYMD,
+        });
+        return data;           // whatever the API echoes back
+    }
+    
+    /* ───────────────────────────────
+       Booking-window helpers
+       ─────────────────────────────── */
+    
+    /**
+     * Extend the booking window so guests can
+     * book **up to and including** this date.
+     *
+     * @param {string} dateYMD – “YYYY-MM-DD”
+     */
+    export async function openBookingWindowUntil(dateYMD) {
+        const { data } = await axios.put("/api/settings/booking-open-until", {
+            booking_open_until: dateYMD,
+        });
+        return data.booking_open_until;
+    }
 

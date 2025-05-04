@@ -1,4 +1,4 @@
-// src/components/admin/sharedBookings/BookingsOverview.jsx
+// frontend/src/components/admin/sharedBookings/BookingsOverview.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import PropTypes from "prop-types";
 import {
@@ -27,6 +27,10 @@ export default function BookingsOverview({
                                              bookings,
                                              showChart   = true,
                                              allowDrill  = true,
+                                             /* new controlled-view props */
+                                             view:         controlledView,
+                                             hideViewToggle = false,
+                                             onViewChange   = () => {},
                                              onWindowChange = () => {},
                                          }) {
     /* ───────── i18n ───────── */
@@ -37,9 +41,20 @@ export default function BookingsOverview({
     const rangeDays = 7;
     const today     = useMemo(() => startOfDay(new Date()), []);   // stable “today”
 
-    /* ───────── local state ───────── */
+    /* ───────── local view state (uncontrolled) ───────── */
+    const [viewState, setViewState] = useState("compact");
+    const view = controlledView ?? viewState;
+
+    const changeView = (v) => {
+        if (controlledView !== undefined) {
+            onViewChange(v);
+        } else {
+            setViewState(v);
+        }
+    };
+
+    /* ───────── offset / selection ───────── */
     const [offset,    setOffset]    = useState(0);        // window offset
-    const [view,      setView]      = useState("compact"); // compact | calendar
     const [selDay,    setSelDay]    = useState(null);     // drilled-in date
     const [ta,        setTA]        = useState({});       // table availability
     const [loadingTA, setLoadingTA] = useState(false);
@@ -61,12 +76,12 @@ export default function BookingsOverview({
         [mode, compactStart, today, offset]
     );
 
-    /* ───────── helpers ───────── */
+    /* helpers */
     const inFuture = (d) => d >= today;
     const inPast   = (d) => d <  today;
 
     /* ╭─────────────────────────────────────────────────────────╮
-       │ bookings slices (memoised → stable reference)           │
+       │ bookings slices                                         │
        ╰─────────────────────────────────────────────────────────╯ */
     const compactFiltered = useMemo(
         () =>
@@ -86,16 +101,14 @@ export default function BookingsOverview({
         [bookings, mode, today]
     );
 
-    /* which set to expose to MetricsDashboard for KPIs */
+    /* window used for metrics */
     const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
 
-    /* ╭─────────────────────────────────────────────────────────╮
-       │ notify parent when statsBookings **content** changes    │
-       ╰─────────────────────────────────────────────────────────╯ */
+    /* notify parent when statsBookings changes */
     useEffect(() => {
         onWindowChange(statsBookings);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [statsBookings]);         // safe – memo gives stable reference unless real diff
+    }, [statsBookings]);
 
     const totalBookings = statsBookings.length;
     const totalClients  = statsBookings.reduce(
@@ -106,8 +119,6 @@ export default function BookingsOverview({
     /* ╭─────────────────────────────────────────────────────────╮
        │ Fetch table availability for the visible window         │
        ╰─────────────────────────────────────────────────────────╯ */
-
-    /*  stringify dates so dependency identity is stable  */
     const viewWinStart = useMemo(
         () =>
             view === "calendar"
@@ -135,7 +146,6 @@ export default function BookingsOverview({
         ])
             .then(([lunch, dinner]) => {
                 if (cancelled) return;
-                /* merge */
                 const merged = {};
                 [lunch, dinner].forEach((src) =>
                     Object.entries(src).forEach(([d, info]) => {
@@ -148,13 +158,13 @@ export default function BookingsOverview({
             .finally(() => !cancelled && setLoadingTA(false));
 
         return () => void (cancelled = true);
-    }, [winStartStr, winEndStr, view]);  // ← primitive deps, no endless loop
+    }, [winStartStr, winEndStr, view]);
 
     /* ensure TA for drilled-in day inside calendar view (once) */
     useEffect(() => {
         if (!selDay || view !== "calendar") return;
         const key = ymd(selDay);
-        if (ta[key]) return; // already present
+        if (ta[key]) return;
 
         (async () => {
             try {
@@ -166,9 +176,7 @@ export default function BookingsOverview({
                     ...prev,
                     [key]: { ...(lunch[key] || {}), ...(dinner[key] || {}) },
                 }));
-            } catch {
-                /* swallow */
-            }
+            } catch {/* ignore */}
         })();
     }, [selDay, view, ta]);
 
@@ -195,27 +203,29 @@ export default function BookingsOverview({
                     </p>
                 </div>
 
-                <select
-                    className="border rounded p-1"
-                    value={view}
-                    onChange={(e) => setView(e.target.value)}
-                >
-                    <option value="compact">{t("admin.compact")}</option>
-                    <option value="calendar">{t("admin.calendar")}</option>
-                </select>
+                {!hideViewToggle && (
+                    <select
+                        className="border rounded p-1"
+                        value={view}
+                        onChange={(e) => changeView(e.target.value)}
+                    >
+                        <option value="compact">{t("admin.compact")}</option>
+                        <option value="calendar">{t("admin.calendar")}</option>
+                    </select>
+                )}
             </div>
 
             {/* stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="bg-blue-50 p-3 rounded text-center">
                     <p className="text-xs text-gray-600">
-                        {t("overview.bookings30d")}
+                        {t("overview.bookings")}
                     </p>
                     <p className="text-xl font-bold">{totalBookings}</p>
                 </div>
                 <div className="bg-green-50 p-3 rounded text-center">
                     <p className="text-xs text-gray-600">
-                        {t("overview.guests30d")}
+                        {t("overview.guests")}
                     </p>
                     <p className="text-xl font-bold">{totalClients}</p>
                 </div>
@@ -288,5 +298,8 @@ BookingsOverview.propTypes = {
     bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
     showChart:       PropTypes.bool,
     allowDrill:      PropTypes.bool,
+    view:            PropTypes.oneOf(["compact", "calendar"]),
+    hideViewToggle:  PropTypes.bool,
+    onViewChange:    PropTypes.func,
     onWindowChange:  PropTypes.func,
 };

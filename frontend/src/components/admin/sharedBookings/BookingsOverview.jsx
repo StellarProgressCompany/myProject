@@ -12,47 +12,82 @@ import {
 } from "date-fns";
 
 import { fetchTableAvailabilityRange } from "../../../services/bookingService";
-import BookingsCompactView  from "./BookingsCompactView";
+import BookingsCompactView from "./BookingsCompactView";
 import BookingsCalendarView from "./BookingsCalendarView";
-import BookingsChart        from "./BookingsChart";
-import DaySchedule          from "./DaySchedule";
-import AddBookingModal      from "../currentBookings/AddBookingModal";
+import BookingsChart from "./BookingsChart";
+import DaySchedule from "./DaySchedule";
+import AddBookingModal from "../currentBookings/AddBookingModal";
 import { translate, getLanguage } from "../../../services/i18n";
 
 /* helper – stable “YYYY-MM-DD” */
 const ymd = (d) => format(d, "yyyy-MM-dd");
 
+/* ────────────────────────────────────────────────
+   Segmented-control style toggle (gradient pills)
+   ────────────────────────────────────────────────*/
+function ViewToggle({ value, onChange }) {
+    const lang = getLanguage();
+    const t = (k, p) => translate(lang, k, p);
+
+    const opts = [
+        { key: "compact",  label: t("admin.compact") },
+        { key: "calendar", label: t("admin.calendar") },
+    ];
+
+    return (
+        <div className="inline-flex bg-gray-100 rounded-full p-1 shadow-inner">
+            {opts.map(({ key, label }) => (
+                <button
+                    key={key}
+                    onClick={() => onChange(key)}
+                    className={`px-4 py-1 text-sm font-medium rounded-full transition
+            ${value === key
+                        ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow"
+                        : "text-gray-600 hover:text-gray-800"}`}
+                >
+                    {label}
+                </button>
+            ))}
+        </div>
+    );
+}
+
+ViewToggle.propTypes = {
+    value: PropTypes.string.isRequired,
+    onChange: PropTypes.func.isRequired,
+};
+
 export default function BookingsOverview({
-                                             mode,               // "future" | "past"
+                                             mode, // "future" | "past"
                                              bookings,
-                                             showChart        = true,
-                                             allowDrill       = true,
-                                             view:            controlledView,
-                                             hideViewToggle   = false,
-                                             onViewChange     = () => {},
-                                             onWindowChange   = () => {},
-                                             customTitle      = null,             // ★ NEW
+                                             showChart = true,
+                                             allowDrill = true,
+                                             view: controlledView,
+                                             hideViewToggle = false,
+                                             onViewChange = () => {},
+                                             onWindowChange = () => {},
+                                             customTitle = null,
                                          }) {
     /* ────── i18n ────── */
     const lang = getLanguage();
-    const t    = (k, v) => translate(lang, k, v);
+    const t = (k, v) => translate(lang, k, v);
 
     /* ────── constants ────── */
     const rangeDays = 7;
-    const today     = useMemo(() => startOfDay(new Date()), []);
+    const today = useMemo(() => startOfDay(new Date()), []);
 
     /* ────── local state ────── */
-    const [viewState, setViewState]   = useState("compact");
+    const [viewState, setViewState] = useState("compact");
     const view = controlledView ?? viewState;
 
     const changeView = (v) => {
         if (controlledView !== undefined) onViewChange(v);
-        else                              setViewState(v);
+        else setViewState(v);
     };
 
-    const [offset,    setOffset]    = useState(0);
-    const [selDay,    setSelDay]    = useState(null);
-    const [ta,        setTA]        = useState({});
+    const [offset, setOffset] = useState(0);
+    const [selDay, setSelDay] = useState(null);
+    const [ta, setTA] = useState({});
     const [loadingTA, setLoadingTA] = useState(false);
 
     /* CLOSED-DAYS support */
@@ -83,7 +118,7 @@ export default function BookingsOverview({
 
     /* helpers */
     const inFuture = (d) => d >= today;
-    const inPast   = (d) => d <  today;
+    const inPast = (d) => d < today;
 
     /* bookings slices */
     const compactFiltered = useMemo(
@@ -104,11 +139,12 @@ export default function BookingsOverview({
         [bookings, mode, today]
     );
 
-    /* ----  NEW: scoped stats for calendar view (current month only) ---- */
+    /* ----  scoped stats for calendar view (current month only) ---- */
     const viewWinStart = useMemo(
-        () => (view === "calendar"
-            ? startOfMonth(addDays(today, offset))
-            : compactStart),
+        () =>
+            view === "calendar"
+                ? startOfMonth(addDays(today, offset))
+                : compactStart,
         [view, today, offset, compactStart]
     );
     const viewWinEnd = useMemo(
@@ -127,18 +163,20 @@ export default function BookingsOverview({
     }, [view, calendarBookings, compactFiltered, viewWinStart, viewWinEnd]);
 
     /* notify parent (metrics dashboard, etc.) */
-    useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]); // eslint-disable-line
+    useEffect(() => {
+        onWindowChange(statsBookings);
+    }, [statsBookings]); // eslint-disable-line
 
     /* KPI counters */
     const totalBookings = statsBookings.length;
-    const totalClients  = statsBookings.reduce(
+    const totalClients = statsBookings.reduce(
         (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
 
     /* ────── table-availability for visible window ────── */
     const winStartStr = ymd(viewWinStart);
-    const winEndStr   = ymd(viewWinEnd);
+    const winEndStr = ymd(viewWinEnd);
 
     useEffect(() => {
         let cancelled = false;
@@ -180,13 +218,18 @@ export default function BookingsOverview({
                     ...prev,
                     [key]: { ...(lunch[key] || {}), ...(dinner[key] || {}) },
                 }));
-            } catch {/* ignore */}
+            } catch {
+                /* ignore */
+            }
         })();
     }, [selDay, view, ta]);
 
     /* manual add */
     const [showModal, setShowModal] = useState(false);
-    const handleSaved = () => { setShowModal(false); window.location.reload(); };
+    const handleSaved = () => {
+        setShowModal(false);
+        window.location.reload();
+    };
 
     /* ────── UI ────── */
     return (
@@ -203,14 +246,7 @@ export default function BookingsOverview({
                 </div>
 
                 {!hideViewToggle && (
-                    <select
-                        className="border rounded p-1"
-                        value={view}
-                        onChange={(e) => changeView(e.target.value)}
-                    >
-                        <option value="compact">{t("admin.compact")}</option>
-                        <option value="calendar">{t("admin.calendar")}</option>
-                    </select>
+                    <ViewToggle value={view} onChange={changeView} />
                 )}
             </div>
 
@@ -291,13 +327,13 @@ export default function BookingsOverview({
 }
 
 BookingsOverview.propTypes = {
-    mode:            PropTypes.oneOf(["future", "past"]).isRequired,
-    bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
-    showChart:       PropTypes.bool,
-    allowDrill:      PropTypes.bool,
-    view:            PropTypes.oneOf(["compact", "calendar"]),
-    hideViewToggle:  PropTypes.bool,
-    onViewChange:    PropTypes.func,
-    onWindowChange:  PropTypes.func,
-    customTitle:     PropTypes.string,              // ★ NEW
+    mode: PropTypes.oneOf(["future", "past"]).isRequired,
+    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    showChart: PropTypes.bool,
+    allowDrill: PropTypes.bool,
+    view: PropTypes.oneOf(["compact", "calendar"]),
+    hideViewToggle: PropTypes.bool,
+    onViewChange: PropTypes.func,
+    onWindowChange: PropTypes.func,
+    customTitle: PropTypes.string,
 };

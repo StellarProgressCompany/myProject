@@ -125,11 +125,11 @@ function ProgressButton({
             disabled={state === "loading" || disabled}
             className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-50 ${colourClasses}`}
         >
-      <span className="relative z-10">
-        {state === "idle" && idleLabel}
-          {state === "loading" && loadingLabel}
-          {state === "success" && successLabel}
-      </span>
+            <span className="relative z-10">
+                {state === "idle" && idleLabel}
+                {state === "loading" && loadingLabel}
+                {state === "success" && successLabel}
+            </span>
             {state === "loading" && (
                 <motion.span
                     style={{ scaleX: progress / 100 }}
@@ -267,6 +267,18 @@ export default function OperationalSettings({
                     disabled={!canOpen || loading}
                 />
             </div>
+
+            {/* success message */}
+            {blip === "close" && (
+                <p className="mt-2 text-sm text-green-600">
+                    {t("settings.successClosed")}
+                </p>
+            )}
+            {blip === "open" && (
+                <p className="mt-2 text-sm text-green-600">
+                    {t("settings.successOpened")}
+                </p>
+            )}
 
             {selDate && (
                 <p className="text-sm text-gray-600">

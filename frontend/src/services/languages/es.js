@@ -25,18 +25,19 @@ export default {
     },
 
     overview: {
-        bookings:      "Reservas",
-        guests:        "Clientes",
+        bookings: "Reservas",
+        guests: "Clientes",
         futureBookings: "Reservas futuras",
-        pastBookings:   "Reservas pasadas",
-        dataWindow:     "Ventana de datos: {start} → {end}",
-        bookings30d:    "Reservas (30 d)",
-        guests30d:      "Clientes (30 d)",
-        avgGuests:      "Prom Clientes / Reserva",
-        uniqueNames:    "Nombres únicos",
-        vsPrevious:     "vs 30 d anteriores",
-        upcomingRange:  "Próximos {n} d",
-        pastRange:      "Últimos {n} d",
+        pastBookings: "Reservas pasadas",
+        dataWindow: "Ventana de datos: {start} → {end}",
+        bookings30d: "Reservas (30 d)",
+        guests30d: "Clientes (30 d)",
+        avgGuests: "Prom Clientes / Reserva",
+        uniqueNames: "Nombres únicos",
+        vsPrevious: "vs 30 d anteriores",
+        upcomingRange: "Próximos {n} d",
+        pastRange: "Últimos {n} d",
+        peakDayGuests: "Máximo clientes en un día", // ← added
     },
 
     modal: {

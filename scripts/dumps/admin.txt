@@ -518,6 +518,10 @@
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format, addDays } from "date-fns";
+    import {
+        IconChevronLeft,
+        IconChevronRight,
+    } from "@tabler/icons-react";
     import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     
     import AddBookingModal from "./AddBookingModal";
@@ -610,18 +614,20 @@
                 {/* header + controls */}
                 <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
                     <h2 className="text-xl font-bold">{title}</h2>
-                    <div className="space-x-2">
+                    <div className="space-x-2 flex items-center">
                         <button
                             onClick={() => setOffset((o) => o - 1)}
-                            className="px-2 py-1 border rounded"
+                            className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                            aria-label={t("calendar.prev")}
                         >
-                            ◀
+                            <IconChevronLeft className="w-5 h-5 text-gray-500" />
                         </button>
                         <button
                             onClick={() => setOffset((o) => o + 1)}
-                            className="px-2 py-1 border rounded"
+                            className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                            aria-label={t("calendar.next")}
                         >
-                            ▶
+                            <IconChevronRight className="w-5 h-5 text-gray-500" />
                         </button>
                         <button
                             onClick={() => setIsAdding(true)}
@@ -873,7 +879,7 @@
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     
-    import StatsGrid from "./StatsGrid";
+    import StatsGrid        from "./StatsGrid";
     import BookingsOverview from "../sharedBookings/BookingsOverview";
     import { translate, getLanguage } from "../../../services/i18n";
     
@@ -881,42 +887,49 @@
         const lang = getLanguage();
         const t    = (k, p) => translate(lang, k, p);
     
-        /* user-controlled window view */
-        const [view, setView] = useState("calendar");  // default to month view
+        /* start in COMPACT view */
+        const [view, setView] = useState("compact");
         const [windowBookings, setWindowBookings] = useState(bookings);
     
         return (
             <div className="space-y-8">
-                {/* view selector */}
-                <div className="flex items-center space-x-4">
-                    <span className="text-sm font-semibold">{t("admin.calendar")} / {t("admin.compact")}:</span>
+                {/* view toggle */}
+                <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">
+              {t("admin.calendar")} / {t("admin.compact")}:
+            </span>
                     <button
                         onClick={() => setView("calendar")}
-                        className={`px-3 py-1 rounded ${view==="calendar" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                        className={`px-3 py-1 rounded ${
+                            view === "calendar" ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}
                     >
                         {t("admin.calendar")}
                     </button>
                     <button
                         onClick={() => setView("compact")}
-                        className={`px-3 py-1 rounded ${view==="compact" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                        className={`px-3 py-1 rounded ${
+                            view === "compact" ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}
                     >
                         {t("admin.compact")}
                     </button>
                 </div>
     
-                {/* KPI grid for the selected window */}
+                {/* KPI grid */}
                 <StatsGrid bookings={windowBookings} />
     
-                {/* bookings explorer (past-mode) */}
+                {/* explorer – FUTURE mode but labelled simply “Bookings” */}
                 <BookingsOverview
-                    mode="past"
+                    mode="future"
                     bookings={bookings}
                     showChart={true}
                     allowDrill={false}
                     view={view}
-                    hideViewToggle     /* hide internal selector */
+                    hideViewToggle
                     onViewChange={setView}
                     onWindowChange={setWindowBookings}
+                    customTitle="Bookings"          // ★ title override
                 />
             </div>
         );
@@ -1256,7 +1269,10 @@
     import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    /* HTTP helpers ───────────────────────────── */
+    /* skeleton */
+    import SkeletonCalendar from "../../datePicker/SkeletonCalendar.jsx";
+    
+    /* ───────── HTTP helpers ───────── */
     async function toggleClosedDay(dateYMD) {
         await fetch("/api/closed-days/toggle", {
             method: "POST",
@@ -1285,6 +1301,11 @@
         return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
     }
     
+    /* NEW – destroy every booking for a given date */
+    async function deleteBookingsForDate(dateYMD) {
+        await fetch(`/api/bookings/by-date/${dateYMD}`, { method: "DELETE" });
+    }
+    
     /* ✔ little tick after a successful action */
     const SuccessTick = ({ id }) => (
         <AnimatePresence mode="wait">
@@ -1301,7 +1322,7 @@
         </AnimatePresence>
     );
     
-    /* ▶ Animated progress button (generic) */
+    /*▶ generic progress button (unchanged)*/
     function ProgressButton({
                                 colour = "blue",
                                 idleLabel,
@@ -1384,7 +1405,10 @@
     /*──────────────────────────────────────────────
       Operational settings – Open / Close specific days
     ──────────────────────────────────────────────*/
-    export default function OperationalSettings({ bookings = [] }) {
+    export default function OperationalSettings({
+                                                    bookings = [],
+                                                    onRefresh = () => {},
+                                                }) {
         /* i18n */
         const lang = getLanguage();
         const t = (k, v) => translate(lang, k, v);
@@ -1394,6 +1418,7 @@
         const [blip, setBlip] = useState(null);
         const [closedDays, setClosed] = useState([]);
         const [openDays, setOpen] = useState([]);
+        const [loading, setLoading] = useState(true);   // ★ NEW
     
         /* future-bookings slice for calendar */
         const todayYMD = new Date().toISOString().slice(0, 10);
@@ -1410,9 +1435,13 @@
             setOpen(await fetchOpenDays());
         }, []);
     
+        /* initial load (with skeleton) */
         useEffect(() => {
-            refreshClosed();
-            refreshOpen();
+            (async () => {
+                setLoading(true);
+                await Promise.all([refreshClosed(), refreshOpen()]);
+                setLoading(false);
+            })();
         }, [refreshClosed, refreshOpen]);
     
         /* derive flags */
@@ -1440,6 +1469,8 @@
         const doClose = async () => {
             if (!selDate) return;
             await toggleClosedDay(ymd);
+            await deleteBookingsForDate(ymd);          // remove bookings in DB
+            await onRefresh();                         // refresh list in parent
             await refreshClosed();
             clearAvailabilityCache();
             setBlip("close");
@@ -1448,14 +1479,13 @@
         const doOpen = async () => {
             if (!selDate) return;
             if (scheduleClosed && !exceptionallyOpen) {
-                /* add open-exception */
                 await toggleOpenDay(ymd);
                 await refreshOpen();
             } else {
-                /* undo manual close */
                 await toggleClosedDay(ymd);
                 await refreshClosed();
             }
+            await onRefresh();                         // keep data in-sync
             clearAvailabilityCache();
             setBlip("open");
             setTimeout(() => setBlip(null), 1500);
@@ -1465,13 +1495,20 @@
             <div className="relative space-y-6">
                 {blip && <SuccessTick id={blip} />}
     
-                <BookingsCalendarView
-                    selectedDate={selDate}
-                    onSelectDay={setSelDate}
-                    bookings={futureBookings}
-                    closedDays={closedEffective}
-                />
+                {/* show a skeleton until closed/open days arrive */}
+                {loading ? (
+                    <SkeletonCalendar />
+                ) : (
+                    <BookingsCalendarView
+                        selectedDate={selDate}
+                        onSelectDay={setSelDate}
+                        bookings={futureBookings}
+                        closedDays={closedEffective}
+                        openDays={openDays}
+                    />
+                )}
     
+                {/* action buttons */}
                 <div className="flex gap-4">
                     <ProgressButton
                         colour="red"
@@ -1479,7 +1516,7 @@
                         loadingLabel={t("settings.closing")}
                         successLabel={t("settings.successClosed")}
                         onClick={doClose}
-                        disabled={!canClose}
+                        disabled={!canClose || loading}
                     />
                     <ProgressButton
                         colour="green"
@@ -1487,7 +1524,7 @@
                         loadingLabel={t("settings.opening")}
                         successLabel={t("settings.successOpened")}
                         onClick={doOpen}
-                        disabled={!canOpen}
+                        disabled={!canOpen || loading}
                     />
                 </div>
     
@@ -1531,18 +1568,24 @@
                                                      onSelectDay,
                                                      bookings,
                                                      closedDays = [],
+                                                     openDays   = [],
                                                  }) {
         const lang   = getLanguage();
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
         const [monthToShow, setMonthToShow] = useState(new Date());
-        const today = new Date();
-        const closedSet = new Set(closedDays);
+        const today      = new Date();
+        const closedSet  = new Set(closedDays);
+        const openSet    = new Set(openDays);          /* ⇠ NEW */
     
         /* helpers */
         const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
-            format(addDays(startOfWeek(new Date(), { weekStartsOn: 1, locale }), i), "EEE", { locale })
+            format(
+                addDays(startOfWeek(new Date(), { weekStartsOn: 1, locale }), i),
+                "EEE",
+                { locale }
+            )
         );
     
         const monthStart = startOfMonth(monthToShow);
@@ -1556,13 +1599,21 @@
                 (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
             );
             const tot   = dayBk.reduce(
-                (n, b) => n + (b.total_adults || 0) + (b.total_kids || 0), 0);
+                (n, b) => n + (b.total_adults || 0) + (b.total_kids || 0),
+                0
+            );
             return { bookings: dayBk.length, clients: tot };
         };
     
         /* colour helpers */
-        const isClosed  = (d) =>
-            closedSet.has(format(d, "yyyy-MM-dd")) || getDayMealTypes(d.getDay()).length === 0;
+        const isClosed = (d) => {
+            const key = format(d, "yyyy-MM-dd");
+            if (openSet.has(key)) return false;                 // ← exception overrides
+            return (
+                closedSet.has(key) ||
+                getDayMealTypes(d.getDay()).length === 0
+            );
+        };
         const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
     
         /* build grid */
@@ -1571,7 +1622,7 @@
         while (dayPtr <= gridEnd) {
             const week = [];
             for (let i = 0; i < 7; i++) {
-                const d = dayPtr;
+                const d  = dayPtr;
                 const { bookings: bc, clients } = getDayStats(d);
                 const inMonth  = isSameMonth(d, monthToShow);
                 const selected = selectedDate && isSameDay(d, selectedDate);
@@ -1601,24 +1652,30 @@
                         style={{ minWidth: 50 }}
                         title={format(d, "EEEE, MMMM d, yyyy", { locale })}
                     >
-                        <span className="text-sm font-semibold">{format(d, "d", { locale })}</span>
+                        <span className="text-sm font-semibold">
+                            {format(d, "d", { locale })}
+                        </span>
     
                         {bc > 0 && (
                             <span className="text-[10px] mt-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
-                  {bc} {t("calendar.badgeBookings")}
-                </span>
+                                {bc} {t("calendar.badgeBookings")}
+                            </span>
                         )}
                         {clients > 0 && (
                             <span className="text-[10px] mt-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
-                  {clients} {t("calendar.badgeClients")}
-                </span>
+                                {clients} {t("calendar.badgeClients")}
+                            </span>
                         )}
                     </button>
                 );
     
                 dayPtr = addDays(dayPtr, 1);
             }
-            rows.push(<div key={rows.length} className="grid grid-cols-7">{week}</div>);
+            rows.push(
+                <div key={rows.length} className="grid grid-cols-7">
+                    {week}
+                </div>
+            );
         }
     
         return (
@@ -1644,7 +1701,9 @@
     
                 {/* weekday headers */}
                 <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
-                    {weekdayLabels.map((lbl) => <div key={lbl}>{lbl}</div>)}
+                    {weekdayLabels.map((lbl) => (
+                        <div key={lbl}>{lbl}</div>
+                    ))}
                 </div>
     
                 {rows}
@@ -1657,6 +1716,7 @@
         onSelectDay:  PropTypes.func.isRequired,
         bookings:     PropTypes.arrayOf(PropTypes.object).isRequired,
         closedDays:   PropTypes.arrayOf(PropTypes.string),
+        openDays:     PropTypes.arrayOf(PropTypes.string),   // ← NEW
     };
 
 ––––––––––––––––––––––––
@@ -1773,13 +1833,20 @@
     import PropTypes from "prop-types";
     import { format, addDays, subDays, isSameDay } from "date-fns";
     import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    import {
+        IconChevronLeft,
+        IconChevronRight,
+    } from "@tabler/icons-react";
     
     import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const localeMap          = { en: enUS, es: esLocale, ca: caLocale };
     const BOOKING_WINDOW_DAYS = 30;
     
+    /**
+     * Compact 7-day strip (future / past).
+     */
     export default function BookingsCompactView({
                                                     mode,
                                                     rangeDays,
@@ -1794,9 +1861,10 @@
         const t      = (k, p) => translate(lang, k, p);
         const locale = localeMap[lang] || enUS;
     
-        const today = new Date();
+        const today     = new Date();
         const closedSet = new Set(closedDays);
     
+        /* build day list for the current window */
         const days = [];
         if (mode === "future") {
             for (let i = offset; i < offset + rangeDays; i++) days.push(addDays(today, i));
@@ -1804,40 +1872,39 @@
             for (let i = 1 + offset; i <= rangeDays + offset; i++) days.push(subDays(today, i));
         }
     
+        /* aggregate stats */
         const getDayStats = (day) => {
-            const key = format(day, "yyyy-MM-dd");
-            const dayBookings = bookings.filter(
+            const key          = format(day, "yyyy-MM-dd");
+            const dayBookings  = bookings.filter(
                 (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
             );
             const totalClients = dayBookings.reduce(
-                (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0), 0
+                (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
+                0
             );
             return { bookings: dayBookings.length, clients: totalClients };
         };
     
+        /* colouring helpers */
         const isClosed  = (d) =>
-            closedSet.has(format(d, "yyyy-MM-dd")) || getDayMealTypes(d.getDay()).length === 0;
+            closedSet.has(format(d, "yyyy-MM-dd")) ||
+            getDayMealTypes(d.getDay()).length === 0;
         const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
     
+        /* ───────── UI ───────── */
         return (
-            <div className="relative">
-                {/* arrows */}
+            <div className="relative inline-flex">
+                {/* left chevron */}
                 <button
                     onClick={() => onOffsetChange(offset - 1)}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
-                    aria-label="Previous window"
+                    className="absolute -left-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                    aria-label={t("calendar.prev")}
                 >
-                    ‹
-                </button>
-                <button
-                    onClick={() => onOffsetChange(offset + 1)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 px-1 text-gray-500 hover:text-gray-800"
-                    aria-label="Next window"
-                >
-                    ›
+                    <IconChevronLeft className="w-5 h-5 text-gray-500" />
                 </button>
     
-                <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow mx-6">
+                {/* day buttons container */}
+                <div className="flex space-x-2 p-2 bg-white rounded shadow">
                     {days.map((day) => {
                         const { bookings: bc, clients } = getDayStats(day);
                         const isSel = selectedDate && isSameDay(day, selectedDate);
@@ -1853,7 +1920,6 @@
                             bg  = "bg-yellow-100";
                             txt = "text-yellow-800";
                         }
-    
                         if (isSel) {
                             bg  = "bg-blue-600";
                             txt = "text-white";
@@ -1869,16 +1935,25 @@
                                 <span className="text-xs font-semibold">{format(day, "E", { locale })}</span>
                                 <span className="text-xl font-bold">{format(day, "d", { locale })}</span>
                                 <span className="text-xs">{format(day, "MMM", { locale })}</span>
-                                <span className="mt-1 text-[10px]">
+                                <span className="mt-1 text-[10px] leading-none">
                     {bc} {t("calendar.badgeBookings")}
                   </span>
-                                <span className="text-[10px]">
+                                <span className="text-[10px] leading-none">
                     {clients} {t("calendar.badgeClients")}
                   </span>
                             </button>
                         );
                     })}
                 </div>
+    
+                {/* right chevron */}
+                <button
+                    onClick={() => onOffsetChange(offset + 1)}
+                    className="absolute -right-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                    aria-label={t("calendar.next")}
+                >
+                    <IconChevronRight className="w-5 h-5 text-gray-500" />
+                </button>
             </div>
         );
     }
@@ -1929,6 +2004,7 @@
                                                  hideViewToggle   = false,
                                                  onViewChange     = () => {},
                                                  onWindowChange   = () => {},
+                                                 customTitle      = null,             // ★ NEW
                                              }) {
         /* ────── i18n ────── */
         const lang = getLanguage();
@@ -2001,9 +2077,29 @@
             [bookings, mode, today]
         );
     
-        const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
+        /* ----  NEW: scoped stats for calendar view (current month only) ---- */
+        const viewWinStart = useMemo(
+            () => (view === "calendar"
+                ? startOfMonth(addDays(today, offset))
+                : compactStart),
+            [view, today, offset, compactStart]
+        );
+        const viewWinEnd = useMemo(
+            () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
+            [view, viewWinStart, compactEnd]
+        );
     
-        /* notify parent */
+        const statsBookings = useMemo(() => {
+            if (view === "calendar") {
+                return calendarBookings.filter((b) => {
+                    const d = parseISO(b.table_availability?.date || b.date);
+                    return d >= viewWinStart && d <= viewWinEnd;
+                });
+            }
+            return compactFiltered;
+        }, [view, calendarBookings, compactFiltered, viewWinStart, viewWinEnd]);
+    
+        /* notify parent (metrics dashboard, etc.) */
         useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]); // eslint-disable-line
     
         /* KPI counters */
@@ -2013,18 +2109,9 @@
             0
         );
     
-        /* ────── table-availability payload for the visible window ────── */
-        const viewWinStart = useMemo(
-            () =>
-                view === "calendar" ? startOfMonth(addDays(today, offset)) : compactStart,
-            [view, today, offset, compactStart]
-        );
-        const viewWinEnd   = useMemo(
-            () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
-            [view, viewWinStart, compactEnd]
-        );
-        const winStartStr  = ymd(viewWinStart);
-        const winEndStr    = ymd(viewWinEnd);
+        /* ────── table-availability for visible window ────── */
+        const winStartStr = ymd(viewWinStart);
+        const winEndStr   = ymd(viewWinEnd);
     
         useEffect(() => {
             let cancelled = false;
@@ -2081,7 +2168,7 @@
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl font-bold capitalize">
-                            {t(`overview.${mode}Bookings`)}
+                            {customTitle || t(`overview.${mode}Bookings`)}
                         </h2>
                         <p className="text-sm text-gray-500">
                             {t("overview.dataWindow", { start: winStartStr, end: winEndStr })}
@@ -2185,6 +2272,7 @@
         hideViewToggle:  PropTypes.bool,
         onViewChange:    PropTypes.func,
         onWindowChange:  PropTypes.func,
+        customTitle:     PropTypes.string,              // ★ NEW
     };
 
 ––––––––––––––––––––––––

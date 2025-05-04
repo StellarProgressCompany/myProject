@@ -11,9 +11,12 @@ import {
 import { getDayMealTypes } from "../../../services/datePicker";
 import { translate, getLanguage } from "../../../services/i18n";
 
-const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+const localeMap          = { en: enUS, es: esLocale, ca: caLocale };
 const BOOKING_WINDOW_DAYS = 30;
 
+/**
+ * Compact 7-day strip (future / past).
+ */
 export default function BookingsCompactView({
                                                 mode,
                                                 rangeDays,
@@ -31,18 +34,18 @@ export default function BookingsCompactView({
     const today     = new Date();
     const closedSet = new Set(closedDays);
 
+    /* build day list for the current window */
     const days = [];
     if (mode === "future") {
-        for (let i = offset; i < offset + rangeDays; i++)
-            days.push(addDays(today, i));
+        for (let i = offset; i < offset + rangeDays; i++) days.push(addDays(today, i));
     } else {
-        for (let i = 1 + offset; i <= rangeDays + offset; i++)
-            days.push(subDays(today, i));
+        for (let i = 1 + offset; i <= rangeDays + offset; i++) days.push(subDays(today, i));
     }
 
+    /* aggregate stats */
     const getDayStats = (day) => {
-        const key = format(day, "yyyy-MM-dd");
-        const dayBookings = bookings.filter(
+        const key          = format(day, "yyyy-MM-dd");
+        const dayBookings  = bookings.filter(
             (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
         );
         const totalClients = dayBookings.reduce(
@@ -52,30 +55,26 @@ export default function BookingsCompactView({
         return { bookings: dayBookings.length, clients: totalClients };
     };
 
-    const isClosed = (d) =>
+    /* colouring helpers */
+    const isClosed  = (d) =>
         closedSet.has(format(d, "yyyy-MM-dd")) ||
         getDayMealTypes(d.getDay()).length === 0;
     const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
 
+    /* ───────── UI ───────── */
     return (
-        <div className="relative">
-            {/* arrows */}
+        <div className="relative inline-flex">
+            {/* left chevron */}
             <button
                 onClick={() => onOffsetChange(offset - 1)}
-                className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100"
+                className="absolute -left-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
                 aria-label={t("calendar.prev")}
             >
-                <IconChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-                onClick={() => onOffsetChange(offset + 1)}
-                className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100"
-                aria-label={t("calendar.next")}
-            >
-                <IconChevronRight className="w-5 h-5" />
+                <IconChevronLeft className="w-5 h-5 text-gray-500" />
             </button>
 
-            <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow mx-8">
+            {/* day buttons container */}
+            <div className="flex space-x-2 p-2 bg-white rounded shadow">
                 {days.map((day) => {
                     const { bookings: bc, clients } = getDayStats(day);
                     const isSel = selectedDate && isSameDay(day, selectedDate);
@@ -91,7 +90,6 @@ export default function BookingsCompactView({
                         bg  = "bg-yellow-100";
                         txt = "text-yellow-800";
                     }
-
                     if (isSel) {
                         bg  = "bg-blue-600";
                         txt = "text-white";
@@ -104,25 +102,28 @@ export default function BookingsCompactView({
                             className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded hover:bg-blue-200 transition`}
                             title={format(day, "EEEE, MMMM d, yyyy", { locale })}
                         >
-                            <span className="text-xs font-semibold">
-                                {format(day, "E", { locale })}
-                            </span>
-                            <span className="text-xl font-bold">
-                                {format(day, "d", { locale })}
-                            </span>
-                            <span className="text-xs">
-                                {format(day, "MMM", { locale })}
-                            </span>
-                            <span className="mt-1 text-[10px]">
-                                {bc} {t("calendar.badgeBookings")}
-                            </span>
-                            <span className="text-[10px]">
-                                {clients} {t("calendar.badgeClients")}
-                            </span>
+                            <span className="text-xs font-semibold">{format(day, "E", { locale })}</span>
+                            <span className="text-xl font-bold">{format(day, "d", { locale })}</span>
+                            <span className="text-xs">{format(day, "MMM", { locale })}</span>
+                            <span className="mt-1 text-[10px] leading-none">
+                {bc} {t("calendar.badgeBookings")}
+              </span>
+                            <span className="text-[10px] leading-none">
+                {clients} {t("calendar.badgeClients")}
+              </span>
                         </button>
                     );
                 })}
             </div>
+
+            {/* right chevron */}
+            <button
+                onClick={() => onOffsetChange(offset + 1)}
+                className="absolute -right-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                aria-label={t("calendar.next")}
+            >
+                <IconChevronRight className="w-5 h-5 text-gray-500" />
+            </button>
         </div>
     );
 }

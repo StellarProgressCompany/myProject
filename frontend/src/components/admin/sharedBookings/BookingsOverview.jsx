@@ -31,6 +31,7 @@ export default function BookingsOverview({
                                              hideViewToggle   = false,
                                              onViewChange     = () => {},
                                              onWindowChange   = () => {},
+                                             customTitle      = null,             // ★ NEW
                                          }) {
     /* ────── i18n ────── */
     const lang = getLanguage();
@@ -103,9 +104,29 @@ export default function BookingsOverview({
         [bookings, mode, today]
     );
 
-    const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
+    /* ----  NEW: scoped stats for calendar view (current month only) ---- */
+    const viewWinStart = useMemo(
+        () => (view === "calendar"
+            ? startOfMonth(addDays(today, offset))
+            : compactStart),
+        [view, today, offset, compactStart]
+    );
+    const viewWinEnd = useMemo(
+        () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
+        [view, viewWinStart, compactEnd]
+    );
 
-    /* notify parent */
+    const statsBookings = useMemo(() => {
+        if (view === "calendar") {
+            return calendarBookings.filter((b) => {
+                const d = parseISO(b.table_availability?.date || b.date);
+                return d >= viewWinStart && d <= viewWinEnd;
+            });
+        }
+        return compactFiltered;
+    }, [view, calendarBookings, compactFiltered, viewWinStart, viewWinEnd]);
+
+    /* notify parent (metrics dashboard, etc.) */
     useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]); // eslint-disable-line
 
     /* KPI counters */
@@ -115,18 +136,9 @@ export default function BookingsOverview({
         0
     );
 
-    /* ────── table-availability payload for the visible window ────── */
-    const viewWinStart = useMemo(
-        () =>
-            view === "calendar" ? startOfMonth(addDays(today, offset)) : compactStart,
-        [view, today, offset, compactStart]
-    );
-    const viewWinEnd   = useMemo(
-        () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
-        [view, viewWinStart, compactEnd]
-    );
-    const winStartStr  = ymd(viewWinStart);
-    const winEndStr    = ymd(viewWinEnd);
+    /* ────── table-availability for visible window ────── */
+    const winStartStr = ymd(viewWinStart);
+    const winEndStr   = ymd(viewWinEnd);
 
     useEffect(() => {
         let cancelled = false;
@@ -183,7 +195,7 @@ export default function BookingsOverview({
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                     <h2 className="text-2xl font-bold capitalize">
-                        {t(`overview.${mode}Bookings`)}
+                        {customTitle || t(`overview.${mode}Bookings`)}
                     </h2>
                     <p className="text-sm text-gray-500">
                         {t("overview.dataWindow", { start: winStartStr, end: winEndStr })}
@@ -287,4 +299,5 @@ BookingsOverview.propTypes = {
     hideViewToggle:  PropTypes.bool,
     onViewChange:    PropTypes.func,
     onWindowChange:  PropTypes.func,
+    customTitle:     PropTypes.string,              // ★ NEW
 };

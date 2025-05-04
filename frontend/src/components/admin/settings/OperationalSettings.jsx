@@ -9,7 +9,10 @@ import { clearAvailabilityCache } from "../../../services/bookingService";
 import { getDayMealTypes } from "../../../services/datePicker";
 import { translate, getLanguage } from "../../../services/i18n";
 
-/* HTTP helpers ───────────────────────────── */
+/* skeleton */
+import SkeletonCalendar from "../../datePicker/SkeletonCalendar.jsx";
+
+/* ───────── HTTP helpers ───────── */
 async function toggleClosedDay(dateYMD) {
     await fetch("/api/closed-days/toggle", {
         method: "POST",
@@ -38,6 +41,11 @@ async function fetchOpenDays() {
     return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
 }
 
+/* NEW – destroy every booking for a given date */
+async function deleteBookingsForDate(dateYMD) {
+    await fetch(`/api/bookings/by-date/${dateYMD}`, { method: "DELETE" });
+}
+
 /* ✔ little tick after a successful action */
 const SuccessTick = ({ id }) => (
     <AnimatePresence mode="wait">
@@ -54,7 +62,7 @@ const SuccessTick = ({ id }) => (
     </AnimatePresence>
 );
 
-/* ▶ Animated progress button (generic) */
+/*▶ generic progress button (unchanged)*/
 function ProgressButton({
                             colour = "blue",
                             idleLabel,
@@ -137,7 +145,10 @@ function ProgressButton({
 /*──────────────────────────────────────────────
   Operational settings – Open / Close specific days
 ──────────────────────────────────────────────*/
-export default function OperationalSettings({ bookings = [] }) {
+export default function OperationalSettings({
+                                                bookings = [],
+                                                onRefresh = () => {},
+                                            }) {
     /* i18n */
     const lang = getLanguage();
     const t = (k, v) => translate(lang, k, v);
@@ -147,6 +158,7 @@ export default function OperationalSettings({ bookings = [] }) {
     const [blip, setBlip] = useState(null);
     const [closedDays, setClosed] = useState([]);
     const [openDays, setOpen] = useState([]);
+    const [loading, setLoading] = useState(true);   // ★ NEW
 
     /* future-bookings slice for calendar */
     const todayYMD = new Date().toISOString().slice(0, 10);
@@ -163,9 +175,13 @@ export default function OperationalSettings({ bookings = [] }) {
         setOpen(await fetchOpenDays());
     }, []);
 
+    /* initial load (with skeleton) */
     useEffect(() => {
-        refreshClosed();
-        refreshOpen();
+        (async () => {
+            setLoading(true);
+            await Promise.all([refreshClosed(), refreshOpen()]);
+            setLoading(false);
+        })();
     }, [refreshClosed, refreshOpen]);
 
     /* derive flags */
@@ -193,6 +209,8 @@ export default function OperationalSettings({ bookings = [] }) {
     const doClose = async () => {
         if (!selDate) return;
         await toggleClosedDay(ymd);
+        await deleteBookingsForDate(ymd);          // remove bookings in DB
+        await onRefresh();                         // refresh list in parent
         await refreshClosed();
         clearAvailabilityCache();
         setBlip("close");
@@ -201,14 +219,13 @@ export default function OperationalSettings({ bookings = [] }) {
     const doOpen = async () => {
         if (!selDate) return;
         if (scheduleClosed && !exceptionallyOpen) {
-            /* add open-exception */
             await toggleOpenDay(ymd);
             await refreshOpen();
         } else {
-            /* undo manual close */
             await toggleClosedDay(ymd);
             await refreshClosed();
         }
+        await onRefresh();                         // keep data in-sync
         clearAvailabilityCache();
         setBlip("open");
         setTimeout(() => setBlip(null), 1500);
@@ -218,14 +235,20 @@ export default function OperationalSettings({ bookings = [] }) {
         <div className="relative space-y-6">
             {blip && <SuccessTick id={blip} />}
 
-            <BookingsCalendarView
-                selectedDate={selDate}
-                onSelectDay={setSelDate}
-                bookings={futureBookings}
-                closedDays={closedEffective}
-                openDays={openDays}
-            />
+            {/* show a skeleton until closed/open days arrive */}
+            {loading ? (
+                <SkeletonCalendar />
+            ) : (
+                <BookingsCalendarView
+                    selectedDate={selDate}
+                    onSelectDay={setSelDate}
+                    bookings={futureBookings}
+                    closedDays={closedEffective}
+                    openDays={openDays}
+                />
+            )}
 
+            {/* action buttons */}
             <div className="flex gap-4">
                 <ProgressButton
                     colour="red"
@@ -233,7 +256,7 @@ export default function OperationalSettings({ bookings = [] }) {
                     loadingLabel={t("settings.closing")}
                     successLabel={t("settings.successClosed")}
                     onClick={doClose}
-                    disabled={!canClose}
+                    disabled={!canClose || loading}
                 />
                 <ProgressButton
                     colour="green"
@@ -241,7 +264,7 @@ export default function OperationalSettings({ bookings = [] }) {
                     loadingLabel={t("settings.opening")}
                     successLabel={t("settings.successOpened")}
                     onClick={doOpen}
-                    disabled={!canOpen}
+                    disabled={!canOpen || loading}
                 />
             </div>
 

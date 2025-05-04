@@ -985,7 +985,7 @@
     import React, { useState } from "react";
     import PropTypes from "prop-types";
     
-    import StatsGrid from "./StatsGrid";
+    import StatsGrid        from "./StatsGrid";
     import BookingsOverview from "../sharedBookings/BookingsOverview";
     import { translate, getLanguage } from "../../../services/i18n";
     
@@ -993,42 +993,49 @@
         const lang = getLanguage();
         const t    = (k, p) => translate(lang, k, p);
     
-        /* user-controlled window view */
-        const [view, setView] = useState("calendar");  // default to month view
+        /* start in COMPACT view */
+        const [view, setView] = useState("compact");
         const [windowBookings, setWindowBookings] = useState(bookings);
     
         return (
             <div className="space-y-8">
-                {/* view selector */}
-                <div className="flex items-center space-x-4">
-                    <span className="text-sm font-semibold">{t("admin.calendar")} / {t("admin.compact")}:</span>
+                {/* view toggle */}
+                <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">
+              {t("admin.calendar")} / {t("admin.compact")}:
+            </span>
                     <button
                         onClick={() => setView("calendar")}
-                        className={`px-3 py-1 rounded ${view==="calendar" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                        className={`px-3 py-1 rounded ${
+                            view === "calendar" ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}
                     >
                         {t("admin.calendar")}
                     </button>
                     <button
                         onClick={() => setView("compact")}
-                        className={`px-3 py-1 rounded ${view==="compact" ? "bg-blue-600 text-white" : "bg-gray-200"}`}
+                        className={`px-3 py-1 rounded ${
+                            view === "compact" ? "bg-blue-600 text-white" : "bg-gray-200"
+                        }`}
                     >
                         {t("admin.compact")}
                     </button>
                 </div>
     
-                {/* KPI grid for the selected window */}
+                {/* KPI grid */}
                 <StatsGrid bookings={windowBookings} />
     
-                {/* bookings explorer (past-mode) */}
+                {/* explorer – FUTURE mode but labelled simply “Bookings” */}
                 <BookingsOverview
-                    mode="past"
+                    mode="future"
                     bookings={bookings}
                     showChart={true}
                     allowDrill={false}
                     view={view}
-                    hideViewToggle     /* hide internal selector */
+                    hideViewToggle
                     onViewChange={setView}
                     onWindowChange={setWindowBookings}
+                    customTitle="Bookings"          // ★ title override
                 />
             </div>
         );
@@ -1368,7 +1375,10 @@
     import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    /* HTTP helpers ───────────────────────────── */
+    /* skeleton */
+    import SkeletonCalendar from "../../datePicker/SkeletonCalendar.jsx";
+    
+    /* ───────── HTTP helpers ───────── */
     async function toggleClosedDay(dateYMD) {
         await fetch("/api/closed-days/toggle", {
             method: "POST",
@@ -1397,6 +1407,11 @@
         return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
     }
     
+    /* NEW – destroy every booking for a given date */
+    async function deleteBookingsForDate(dateYMD) {
+        await fetch(`/api/bookings/by-date/${dateYMD}`, { method: "DELETE" });
+    }
+    
     /* ✔ little tick after a successful action */
     const SuccessTick = ({ id }) => (
         <AnimatePresence mode="wait">
@@ -1413,7 +1428,7 @@
         </AnimatePresence>
     );
     
-    /* ▶ Animated progress button (generic) */
+    /*▶ generic progress button (unchanged)*/
     function ProgressButton({
                                 colour = "blue",
                                 idleLabel,
@@ -1496,7 +1511,10 @@
     /*──────────────────────────────────────────────
       Operational settings – Open / Close specific days
     ──────────────────────────────────────────────*/
-    export default function OperationalSettings({ bookings = [] }) {
+    export default function OperationalSettings({
+                                                    bookings = [],
+                                                    onRefresh = () => {},
+                                                }) {
         /* i18n */
         const lang = getLanguage();
         const t = (k, v) => translate(lang, k, v);
@@ -1506,6 +1524,7 @@
         const [blip, setBlip] = useState(null);
         const [closedDays, setClosed] = useState([]);
         const [openDays, setOpen] = useState([]);
+        const [loading, setLoading] = useState(true);   // ★ NEW
     
         /* future-bookings slice for calendar */
         const todayYMD = new Date().toISOString().slice(0, 10);
@@ -1522,9 +1541,13 @@
             setOpen(await fetchOpenDays());
         }, []);
     
+        /* initial load (with skeleton) */
         useEffect(() => {
-            refreshClosed();
-            refreshOpen();
+            (async () => {
+                setLoading(true);
+                await Promise.all([refreshClosed(), refreshOpen()]);
+                setLoading(false);
+            })();
         }, [refreshClosed, refreshOpen]);
     
         /* derive flags */
@@ -1552,6 +1575,8 @@
         const doClose = async () => {
             if (!selDate) return;
             await toggleClosedDay(ymd);
+            await deleteBookingsForDate(ymd);          // remove bookings in DB
+            await onRefresh();                         // refresh list in parent
             await refreshClosed();
             clearAvailabilityCache();
             setBlip("close");
@@ -1560,14 +1585,13 @@
         const doOpen = async () => {
             if (!selDate) return;
             if (scheduleClosed && !exceptionallyOpen) {
-                /* add open-exception */
                 await toggleOpenDay(ymd);
                 await refreshOpen();
             } else {
-                /* undo manual close */
                 await toggleClosedDay(ymd);
                 await refreshClosed();
             }
+            await onRefresh();                         // keep data in-sync
             clearAvailabilityCache();
             setBlip("open");
             setTimeout(() => setBlip(null), 1500);
@@ -1577,14 +1601,20 @@
             <div className="relative space-y-6">
                 {blip && <SuccessTick id={blip} />}
     
-                <BookingsCalendarView
-                    selectedDate={selDate}
-                    onSelectDay={setSelDate}
-                    bookings={futureBookings}
-                    closedDays={closedEffective}
-                    openDays={openDays}
-                />
+                {/* show a skeleton until closed/open days arrive */}
+                {loading ? (
+                    <SkeletonCalendar />
+                ) : (
+                    <BookingsCalendarView
+                        selectedDate={selDate}
+                        onSelectDay={setSelDate}
+                        bookings={futureBookings}
+                        closedDays={closedEffective}
+                        openDays={openDays}
+                    />
+                )}
     
+                {/* action buttons */}
                 <div className="flex gap-4">
                     <ProgressButton
                         colour="red"
@@ -1592,7 +1622,7 @@
                         loadingLabel={t("settings.closing")}
                         successLabel={t("settings.successClosed")}
                         onClick={doClose}
-                        disabled={!canClose}
+                        disabled={!canClose || loading}
                     />
                     <ProgressButton
                         colour="green"
@@ -1600,7 +1630,7 @@
                         loadingLabel={t("settings.opening")}
                         successLabel={t("settings.successOpened")}
                         onClick={doOpen}
-                        disabled={!canOpen}
+                        disabled={!canOpen || loading}
                     />
                 </div>
     
@@ -1917,9 +1947,12 @@
     import { getDayMealTypes } from "../../../services/datePicker";
     import { translate, getLanguage } from "../../../services/i18n";
     
-    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const localeMap          = { en: enUS, es: esLocale, ca: caLocale };
     const BOOKING_WINDOW_DAYS = 30;
     
+    /**
+     * Compact 7-day strip (future / past).
+     */
     export default function BookingsCompactView({
                                                     mode,
                                                     rangeDays,
@@ -1937,18 +1970,18 @@
         const today     = new Date();
         const closedSet = new Set(closedDays);
     
+        /* build day list for the current window */
         const days = [];
         if (mode === "future") {
-            for (let i = offset; i < offset + rangeDays; i++)
-                days.push(addDays(today, i));
+            for (let i = offset; i < offset + rangeDays; i++) days.push(addDays(today, i));
         } else {
-            for (let i = 1 + offset; i <= rangeDays + offset; i++)
-                days.push(subDays(today, i));
+            for (let i = 1 + offset; i <= rangeDays + offset; i++) days.push(subDays(today, i));
         }
     
+        /* aggregate stats */
         const getDayStats = (day) => {
-            const key = format(day, "yyyy-MM-dd");
-            const dayBookings = bookings.filter(
+            const key          = format(day, "yyyy-MM-dd");
+            const dayBookings  = bookings.filter(
                 (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
             );
             const totalClients = dayBookings.reduce(
@@ -1958,30 +1991,26 @@
             return { bookings: dayBookings.length, clients: totalClients };
         };
     
-        const isClosed = (d) =>
+        /* colouring helpers */
+        const isClosed  = (d) =>
             closedSet.has(format(d, "yyyy-MM-dd")) ||
             getDayMealTypes(d.getDay()).length === 0;
         const isBlocked = (d) => d > addDays(today, BOOKING_WINDOW_DAYS);
     
+        /* ───────── UI ───────── */
         return (
-            <div className="relative">
-                {/* arrows */}
+            <div className="relative inline-flex">
+                {/* left chevron */}
                 <button
                     onClick={() => onOffsetChange(offset - 1)}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100"
+                    className="absolute -left-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
                     aria-label={t("calendar.prev")}
                 >
-                    <IconChevronLeft className="w-5 h-5" />
-                </button>
-                <button
-                    onClick={() => onOffsetChange(offset + 1)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100"
-                    aria-label={t("calendar.next")}
-                >
-                    <IconChevronRight className="w-5 h-5" />
+                    <IconChevronLeft className="w-5 h-5 text-gray-500" />
                 </button>
     
-                <div className="flex space-x-2 overflow-x-auto p-2 bg-white rounded shadow mx-8">
+                {/* day buttons container */}
+                <div className="flex space-x-2 p-2 bg-white rounded shadow">
                     {days.map((day) => {
                         const { bookings: bc, clients } = getDayStats(day);
                         const isSel = selectedDate && isSameDay(day, selectedDate);
@@ -1997,7 +2026,6 @@
                             bg  = "bg-yellow-100";
                             txt = "text-yellow-800";
                         }
-    
                         if (isSel) {
                             bg  = "bg-blue-600";
                             txt = "text-white";
@@ -2010,25 +2038,28 @@
                                 className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded hover:bg-blue-200 transition`}
                                 title={format(day, "EEEE, MMMM d, yyyy", { locale })}
                             >
-                                <span className="text-xs font-semibold">
-                                    {format(day, "E", { locale })}
-                                </span>
-                                <span className="text-xl font-bold">
-                                    {format(day, "d", { locale })}
-                                </span>
-                                <span className="text-xs">
-                                    {format(day, "MMM", { locale })}
-                                </span>
-                                <span className="mt-1 text-[10px]">
-                                    {bc} {t("calendar.badgeBookings")}
-                                </span>
-                                <span className="text-[10px]">
-                                    {clients} {t("calendar.badgeClients")}
-                                </span>
+                                <span className="text-xs font-semibold">{format(day, "E", { locale })}</span>
+                                <span className="text-xl font-bold">{format(day, "d", { locale })}</span>
+                                <span className="text-xs">{format(day, "MMM", { locale })}</span>
+                                <span className="mt-1 text-[10px] leading-none">
+                    {bc} {t("calendar.badgeBookings")}
+                  </span>
+                                <span className="text-[10px] leading-none">
+                    {clients} {t("calendar.badgeClients")}
+                  </span>
                             </button>
                         );
                     })}
                 </div>
+    
+                {/* right chevron */}
+                <button
+                    onClick={() => onOffsetChange(offset + 1)}
+                    className="absolute -right-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                    aria-label={t("calendar.next")}
+                >
+                    <IconChevronRight className="w-5 h-5 text-gray-500" />
+                </button>
             </div>
         );
     }
@@ -2079,6 +2110,7 @@
                                                  hideViewToggle   = false,
                                                  onViewChange     = () => {},
                                                  onWindowChange   = () => {},
+                                                 customTitle      = null,             // ★ NEW
                                              }) {
         /* ────── i18n ────── */
         const lang = getLanguage();
@@ -2151,9 +2183,29 @@
             [bookings, mode, today]
         );
     
-        const statsBookings = view === "calendar" ? calendarBookings : compactFiltered;
+        /* ----  NEW: scoped stats for calendar view (current month only) ---- */
+        const viewWinStart = useMemo(
+            () => (view === "calendar"
+                ? startOfMonth(addDays(today, offset))
+                : compactStart),
+            [view, today, offset, compactStart]
+        );
+        const viewWinEnd = useMemo(
+            () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
+            [view, viewWinStart, compactEnd]
+        );
     
-        /* notify parent */
+        const statsBookings = useMemo(() => {
+            if (view === "calendar") {
+                return calendarBookings.filter((b) => {
+                    const d = parseISO(b.table_availability?.date || b.date);
+                    return d >= viewWinStart && d <= viewWinEnd;
+                });
+            }
+            return compactFiltered;
+        }, [view, calendarBookings, compactFiltered, viewWinStart, viewWinEnd]);
+    
+        /* notify parent (metrics dashboard, etc.) */
         useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]); // eslint-disable-line
     
         /* KPI counters */
@@ -2163,18 +2215,9 @@
             0
         );
     
-        /* ────── table-availability payload for the visible window ────── */
-        const viewWinStart = useMemo(
-            () =>
-                view === "calendar" ? startOfMonth(addDays(today, offset)) : compactStart,
-            [view, today, offset, compactStart]
-        );
-        const viewWinEnd   = useMemo(
-            () => (view === "calendar" ? endOfMonth(viewWinStart) : compactEnd),
-            [view, viewWinStart, compactEnd]
-        );
-        const winStartStr  = ymd(viewWinStart);
-        const winEndStr    = ymd(viewWinEnd);
+        /* ────── table-availability for visible window ────── */
+        const winStartStr = ymd(viewWinStart);
+        const winEndStr   = ymd(viewWinEnd);
     
         useEffect(() => {
             let cancelled = false;
@@ -2231,7 +2274,7 @@
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl font-bold capitalize">
-                            {t(`overview.${mode}Bookings`)}
+                            {customTitle || t(`overview.${mode}Bookings`)}
                         </h2>
                         <p className="text-sm text-gray-500">
                             {t("overview.dataWindow", { start: winStartStr, end: winEndStr })}
@@ -2335,6 +2378,7 @@
         hideViewToggle:  PropTypes.bool,
         onViewChange:    PropTypes.func,
         onWindowChange:  PropTypes.func,
+        customTitle:     PropTypes.string,              // ★ NEW
     };
 
 ––––––––––––––––––––––––
@@ -3962,6 +4006,7 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/pages/AdminDashboard.jsx
+    // frontend/src/pages/AdminDashboard.jsx
     import React, { useState, useEffect, useCallback } from "react";
     import { useNavigate } from "react-router-dom";
     
@@ -4032,29 +4077,42 @@
             if (loading) return <p>{t("tester.loadingTA")}</p>;
     
             switch (active) {
-                case "current": return (
-                    <CurrentBookings
-                        bookings={bookings}
-                        onDataRefresh={loadBookings}
-                    />
-                );
-                case "future":  return (
-                    <BookingsOverview
-                        mode="future"
-                        bookings={bookings}
-                        showChart={false}
-                        allowDrill={true}
-                    />
-                );
-                case "metrics": return <MetricsDashboard bookings={bookings} />;
-                case "tester":  return (
-                    <AlgorithmTester
-                        bookings={bookings}
-                        onRefresh={loadBookings}
-                    />
-                );
-                case "settings": return <OperationalSettings />;
-                default:         return null;
+                case "current":
+                    return (
+                        <CurrentBookings
+                            bookings={bookings}
+                            onDataRefresh={loadBookings}
+                        />
+                    );
+                case "future":
+                    return (
+                        <BookingsOverview
+                            mode="future"
+                            bookings={bookings}
+                            showChart={false}
+                            allowDrill={true}
+                        />
+                    );
+                case "metrics":
+                    return <MetricsDashboard bookings={bookings} />;
+                case "tester":
+                    return (
+                        <AlgorithmTester
+                            bookings={bookings}
+                            onRefresh={loadBookings}
+                        />
+                    );
+                case "settings":
+                    /* ★ PASS bookings + refresher so that closing a day
+                       can purge its bookings and reload the list */
+                    return (
+                        <OperationalSettings
+                            bookings={bookings}
+                            onRefresh={loadBookings}
+                        />
+                    );
+                default:
+                    return null;
             }
         };
     
@@ -4066,9 +4124,9 @@
                 <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                     <div className="border-b">
                         <div className="flex items-center justify-between p-4">
-                            <span className="text-xl font-semibold">
-                                {t("admin.title")}
-                            </span>
+                <span className="text-xl font-semibold">
+                  {t("admin.title")}
+                </span>
                             <code className="text-sm text-gray-500">
                                 {t("admin.versionPrefix")}{version}
                             </code>
@@ -4528,43 +4586,44 @@
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/ca.js
     export default {
         admin: {
-            title:         "El meu Admin",
+            title: "El meu Admin",
             versionPrefix: "v",
-            language:      "Llengua",
+            language: "Llengua",
             nav: {
-                current:  "Reserves actuals",
-                future:   "Reserves futures",
-                past:     "Reserves passades",
-                metrics:  "Mètriques",
-                tester:   "Prova d'algorisme",
+                current: "Reserves actuals",
+                future: "Reserves futures",
+                past: "Reserves passades",
+                metrics: "Mètriques",
+                tester: "Prova d'algorisme",
                 settings: "Ajustos",
             },
-            refresh:       "Actualitza",
-            logout:        "Tanca sessió",
+            refresh: "Actualitza",
+            logout: "Tanca sessió",
             manualBooking: "+ Reserva manual",
-            today:         "Avui",
-            bookings:      "Reserves",
-            totalClients:  "Total Clients",
-            expandFloor:   "Expandir sala",
-            hideFloor:     "Amaga sala",
-            close:         "Tanca",
-            compact:       "Compacte",
-            calendar:      "Calendari",
+            today: "Avui",
+            bookings: "Reserves",
+            totalClients: "Total Clients",
+            expandFloor: "Expandir sala",
+            hideFloor: "Amaga sala",
+            close: "Tanca",
+            compact: "Compacte",
+            calendar: "Calendari",
         },
     
         overview: {
-            bookings:      "Reserves",
-            guests:        "Clients",
+            bookings: "Reserves",
+            guests: "Clients",
             futureBookings: "Reserves futures",
-            pastBookings:   "Reserves passades",
-            dataWindow:     "Finestra de dades: {start} → {end}",
-            bookings30d:    "Reserves (30 d)",
-            guests30d:      "Clients (30 d)",
-            avgGuests:      "Mitjana clients / reserva",
-            uniqueNames:    "Noms únics",
-            vsPrevious:     "vs 30 d anteriors",
-            upcomingRange:  "Properes {n} d",
-            pastRange:      "Passades {n} d",
+            pastBookings: "Reserves passades",
+            dataWindow: "Finestra de dades: {start} → {end}",
+            bookings30d: "Reserves (30 d)",
+            guests30d: "Clients (30 d)",
+            avgGuests: "Mitjana clients / reserva",
+            uniqueNames: "Noms únics",
+            vsPrevious: "vs 30 d anteriors",
+            upcomingRange: "Properes {n} d",
+            pastRange: "Passades {n} d",
+            peakDayGuests: "Màxim clients en un dia", // ← added
         },
     
         modal: {
@@ -4650,121 +4709,122 @@
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/en.js
     export default {
         admin: {
-            title:         "My Admin",
+            title: "My Admin",
             versionPrefix: "v",
-            language:      "Language",
+            language: "Language",
             nav: {
-                current:  "Current Bookings",
-                future:   "Future Bookings",
-                past:     "Past Bookings",
-                metrics:  "Metrics",
-                tester:   "Algorithm Tester",
+                current: "Current Bookings",
+                future: "Future Bookings",
+                past: "Past Bookings",
+                metrics: "Metrics",
+                tester: "Algorithm Tester",
                 settings: "Settings",
             },
-            refresh:       "Refresh",
-            logout:        "Log Out",
+            refresh: "Refresh",
+            logout: "Log Out",
             manualBooking: "+ Manual Booking",
-            today:         "Today",
-            bookings:      "Bookings",
-            totalClients:  "Total Clients",
-            expandFloor:   "Expand floor",
-            hideFloor:     "Hide floor",
-            close:         "Close",
-            compact:       "Compact",
-            calendar:      "Calendar",
+            today: "Today",
+            bookings: "Bookings",
+            totalClients: "Total Clients",
+            expandFloor: "Expand floor",
+            hideFloor: "Hide floor",
+            close: "Close",
+            compact: "Compact",
+            calendar: "Calendar",
         },
     
         overview: {
-            bookings:      "Bookings",
-            guests:        "Guests",
+            bookings: "Bookings",
+            guests: "Guests",
             futureBookings: "Future Bookings",
-            pastBookings:   "Past Bookings",
-            dataWindow:     "Data window: {start} → {end}",
-            bookings30d:    "Bookings (30 d)",
-            guests30d:      "Guests (30 d)",
-            avgGuests:      "Avg Guests / Booking",
-            uniqueNames:    "Unique Names",
-            vsPrevious:     "vs previous 30 d",
-            upcomingRange:  "Upcoming {n} d",
-            pastRange:      "Past {n} d",
+            pastBookings: "Past Bookings",
+            dataWindow: "Data window: {start} → {end}",
+            bookings30d: "Bookings (30 d)",
+            guests30d: "Guests (30 d)",
+            avgGuests: "Avg Guests / Booking",
+            uniqueNames: "Unique Names",
+            vsPrevious: "vs previous 30 d",
+            upcomingRange: "Upcoming {n} d",
+            pastRange: "Past {n} d",
+            peakDayGuests: "Peak Day Guests", // ← added
         },
     
         modal: {
-            addTitle:      "Add Manual Booking",
-            dateDisplay:   "{weekday}, {month} {day}, {year}",
-            fullName:      "Full Name",
-            guests:        "Guests",
+            addTitle: "Add Manual Booking",
+            dateDisplay: "{weekday}, {month} {day}, {year}",
+            fullName: "Full Name",
+            guests: "Guests",
             phoneOptional: "Phone (optional)",
-            meal:  { lunch: "Lunch", dinner: "Dinner" },
+            meal: { lunch: "Lunch", dinner: "Dinner" },
             round: { first: "1st Round", second: "2nd Round" },
-            time:        "Time",
-            close:       "Close",
-            save:        "Save",
-            closedDay:   "Sorry, we’re closed that day.",
+            time: "Time",
+            close: "Close",
+            save: "Save",
+            closedDay: "Sorry, we’re closed that day.",
             errorRequired: "Please fill in all required fields.",
-            saveError:     "Error saving — please try again.",
+            saveError: "Error saving — please try again.",
         },
     
         datePicker: {
             upcoming: "Upcoming {n} d",
-            past:     "Past {n} d",
+            past: "Past {n} d",
         },
     
         tester: {
-            title:        "Algorithm Tester",
-            partySizes:   "Party sizes (comma-separated)",
-            date:         "Date",
-            meal:         "Meal",
+            title: "Algorithm Tester",
+            partySizes: "Party sizes (comma-separated)",
+            date: "Date",
+            meal: "Meal",
             startingTime: "Starting time",
-            runTest:      "Run Test",
-            results:      "Results",
-            ok:           "OK",
-            rejected:     "Rejected",
-            loadingTA:    "Loading table availability…",
+            runTest: "Run Test",
+            results: "Results",
+            ok: "OK",
+            rejected: "Rejected",
+            loadingTA: "Loading table availability…",
         },
     
         schedule: {
-            header:       "Schedule for {date}",
+            header: "Schedule for {date}",
             round: {
-                lunchFirst:  "Lunch–1st Round",
+                lunchFirst: "Lunch–1st Round",
                 lunchSecond: "Lunch–2nd Round",
-                dinner:      "Dinner",
+                dinner: "Dinner",
             },
             table: {
-                time:         "Time",
-                name:         "Name",
+                time: "Time",
+                name: "Name",
                 totalClients: "Total Clients",
             },
-            noBookings:   "No bookings in this round.",
+            noBookings: "No bookings in this round.",
         },
     
         calendar: {
-            prev:           "Prev",
-            next:           "Next",
-            badgeBookings:  "Bookings",
-            badgeClients:   "Clients",
+            prev: "Prev",
+            next: "Next",
+            badgeBookings: "Bookings",
+            badgeClients: "Clients",
         },
     
         chart: {
             titleTotalPeople: "Total People Chart",
-            totalPeople:      "Total People",
+            totalPeople: "Total People",
         },
     
         tableUsage: "Table Usage",
     
         settings: {
             bookingWindowFrom: "Accept bookings from",
-            closeDay:          "Close a day",
-            openDay:           "Open a day",
-            openUntil:         "Open bookings until that day",
-            save:              "Save",
-            closed:            "Closed (click to open)",
-            open:              "Open (click to close)",
-            chooseDay:         "Choose a day",
-            successClosed:     "Day closed!",
-            successOpened:     "Day opened!",
-            closing:           "Closing…",
-            opening:           "Opening…",
+            closeDay: "Close a day",
+            openDay: "Open a day",
+            openUntil: "Open bookings until that day",
+            save: "Save",
+            closed: "Closed (click to open)",
+            open: "Open (click to close)",
+            chooseDay: "Choose a day",
+            successClosed: "Day closed!",
+            successOpened: "Day opened!",
+            closing: "Closing…",
+            opening: "Opening…",
         },
     };
 
@@ -4797,18 +4857,19 @@
         },
     
         overview: {
-            bookings:      "Reservas",
-            guests:        "Clientes",
+            bookings: "Reservas",
+            guests: "Clientes",
             futureBookings: "Reservas futuras",
-            pastBookings:   "Reservas pasadas",
-            dataWindow:     "Ventana de datos: {start} → {end}",
-            bookings30d:    "Reservas (30 d)",
-            guests30d:      "Clientes (30 d)",
-            avgGuests:      "Prom Clientes / Reserva",
-            uniqueNames:    "Nombres únicos",
-            vsPrevious:     "vs 30 d anteriores",
-            upcomingRange:  "Próximos {n} d",
-            pastRange:      "Últimos {n} d",
+            pastBookings: "Reservas pasadas",
+            dataWindow: "Ventana de datos: {start} → {end}",
+            bookings30d: "Reservas (30 d)",
+            guests30d: "Clientes (30 d)",
+            avgGuests: "Prom Clientes / Reserva",
+            uniqueNames: "Nombres únicos",
+            vsPrevious: "vs 30 d anteriores",
+            upcomingRange: "Próximos {n} d",
+            pastRange: "Últimos {n} d",
+            peakDayGuests: "Máximo clientes en un día", // ← added
         },
     
         modal: {

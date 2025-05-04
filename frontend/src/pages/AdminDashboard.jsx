@@ -1,3 +1,4 @@
+// frontend/src/pages/AdminDashboard.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -68,29 +69,42 @@ export default function AdminDashboard() {
         if (loading) return <p>{t("tester.loadingTA")}</p>;
 
         switch (active) {
-            case "current": return (
-                <CurrentBookings
-                    bookings={bookings}
-                    onDataRefresh={loadBookings}
-                />
-            );
-            case "future":  return (
-                <BookingsOverview
-                    mode="future"
-                    bookings={bookings}
-                    showChart={false}
-                    allowDrill={true}
-                />
-            );
-            case "metrics": return <MetricsDashboard bookings={bookings} />;
-            case "tester":  return (
-                <AlgorithmTester
-                    bookings={bookings}
-                    onRefresh={loadBookings}
-                />
-            );
-            case "settings": return <OperationalSettings />;
-            default:         return null;
+            case "current":
+                return (
+                    <CurrentBookings
+                        bookings={bookings}
+                        onDataRefresh={loadBookings}
+                    />
+                );
+            case "future":
+                return (
+                    <BookingsOverview
+                        mode="future"
+                        bookings={bookings}
+                        showChart={false}
+                        allowDrill={true}
+                    />
+                );
+            case "metrics":
+                return <MetricsDashboard bookings={bookings} />;
+            case "tester":
+                return (
+                    <AlgorithmTester
+                        bookings={bookings}
+                        onRefresh={loadBookings}
+                    />
+                );
+            case "settings":
+                /* ★ PASS bookings + refresher so that closing a day
+                   can purge its bookings and reload the list */
+                return (
+                    <OperationalSettings
+                        bookings={bookings}
+                        onRefresh={loadBookings}
+                    />
+                );
+            default:
+                return null;
         }
     };
 
@@ -102,9 +116,9 @@ export default function AdminDashboard() {
             <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
                 <div className="border-b">
                     <div className="flex items-center justify-between p-4">
-                        <span className="text-xl font-semibold">
-                            {t("admin.title")}
-                        </span>
+            <span className="text-xl font-semibold">
+              {t("admin.title")}
+            </span>
                         <code className="text-sm text-gray-500">
                             {t("admin.versionPrefix")}{version}
                         </code>

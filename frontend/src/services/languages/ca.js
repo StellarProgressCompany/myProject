@@ -116,5 +116,9 @@ export default {
         successOpened:     "Dia obert!",
         closing:           "Tancant…",
         opening:           "Obrint…",
+        lunch:              "Dinar",
+        dinner:             "Sopar",
+        processing:         "Processant…",
+        done:               "Fet",
     },
 };

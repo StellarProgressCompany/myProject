@@ -10,7 +10,7 @@ export default function MetricsDashboard({ bookings }) {
     const lang = getLanguage();
     const t = (k, p) => translate(lang, k, p);
 
-    /* StatsGrid needs the slice of bookings currently in view */
+    /* keep track of the bookings slice for the KPI grid */
     const [windowBookings, setWindowBookings] = useState(bookings);
 
     return (
@@ -18,7 +18,7 @@ export default function MetricsDashboard({ bookings }) {
             {/* KPI grid */}
             <StatsGrid bookings={windowBookings} />
 
-            {/* explorer – FUTURE mode but labelled simply “Bookings” */}
+            {/* Explorer: FUTURE mode, with chart and explicit view toggle */}
             <BookingsOverview
                 mode="future"
                 bookings={bookings}
@@ -26,6 +26,7 @@ export default function MetricsDashboard({ bookings }) {
                 allowDrill={false}
                 onWindowChange={setWindowBookings}
                 customTitle={t("overview.bookings")}
+                hideViewToggle={false}
             />
         </div>
     );

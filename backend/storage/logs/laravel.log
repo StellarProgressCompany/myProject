@@ -68,7 +68,7 @@
 #34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #36 {main}
-"} 
+"}
 [2025-02-03 16:38:16] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -144,7 +144,7 @@
 #37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #39 {main}
-"} 
+"}
 [2025-02-03 21:02:09] local.ERROR: Vite manifest not found at: /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/build/manifest.json {"view":{"view":"/mnt/c/Users/sterr/PhpstormProjects/myProject/backend/resources/views/welcome.blade.php","data":[]},"exception":"[object] (Spatie\\LaravelIgnition\\Exceptions\\ViewException(code: 0): Vite manifest not found at: /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/build/manifest.json at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php:728)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Vite.php(293): Illuminate\\Foundation\\Vite->manifest()
@@ -264,7 +264,7 @@
 #54 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #55 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #56 {main}
-"} 
+"}
 [2025-02-04 12:59:33] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -359,7 +359,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 12:59:33] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -454,7 +454,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 12:59:34] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -549,7 +549,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 12:59:34] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -644,7 +644,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 12:59:35] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -739,7 +739,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 13:27:23] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -834,7 +834,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 13:27:25] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -929,7 +929,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 13:27:25] local.ERROR: Target class [BookingController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [BookingController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -1024,7 +1024,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-04 14:37:58] local.ERROR: The "--seeded" option does not exist. {"exception":"[object] (Symfony\\Component\\Console\\Exception\\RuntimeException(code: 0): The \"--seeded\" option does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/console/Input/ArgvInput.php:223)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/console/Input/ArgvInput.php(152): Symfony\\Component\\Console\\Input\\ArgvInput->addLongOption()
@@ -1039,7 +1039,7 @@
 #9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #11 {main}
-"} 
+"}
 [2025-02-04 14:38:11] local.ERROR: The "--seeded" option does not exist. {"exception":"[object] (Symfony\\Component\\Console\\Exception\\RuntimeException(code: 0): The \"--seeded\" option does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/console/Input/ArgvInput.php:223)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/console/Input/ArgvInput.php(152): Symfony\\Component\\Console\\Input\\ArgvInput->addLongOption()
@@ -1054,7 +1054,7 @@
 #9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #11 {main}
-"} 
+"}
 [2025-02-18 17:53:24] local.ERROR: SQLSTATE[HY000] [2002] Connection timed out (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection timed out (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -1175,7 +1175,7 @@
 #60 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #61 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #62 {main}
-"} 
+"}
 [2025-02-18 17:54:28] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -1296,7 +1296,7 @@
 #60 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #61 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #62 {main}
-"} 
+"}
 [2025-02-18 17:54:28] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -1417,7 +1417,7 @@
 #60 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #61 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #62 {main}
-"} 
+"}
 [2025-02-18 17:54:48] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -1538,7 +1538,7 @@
 #60 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #61 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #62 {main}
-"} 
+"}
 [2025-02-18 17:54:48] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -1659,7 +1659,7 @@
 #60 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #61 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #62 {main}
-"} 
+"}
 [2025-02-18 18:47:18] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select * from `bookings` order by `created_at` desc) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -1780,7 +1780,7 @@
 #60 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #61 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #62 {main}
-"} 
+"}
 [2025-02-18 18:56:23] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -1856,7 +1856,7 @@
 #37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #39 {main}
-"} 
+"}
 [2025-02-18 21:29:58] local.ERROR: Target class [TableAvailabilityController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [TableAvailabilityController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -1951,7 +1951,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-18 21:43:57] local.ERROR: SQLSTATE[HY000]: General error: 1005 Can't create table `laravel`.`bookings` (errno: 150 "Foreign key constraint is incorrectly formed") (Connection: mysql, SQL: alter table `bookings` add constraint `bookings_table_availability_id_foreign` foreign key (`table_availability_id`) references `table_availabilities` (`id`) on delete cascade) {"exception":"[object] (Illuminate\\Database\\QueryException(code: HY000): SQLSTATE[HY000]: General error: 1005 Can't create table `laravel`.`bookings` (errno: 150 \"Foreign key constraint is incorrectly formed\") (Connection: mysql, SQL: alter table `bookings` add constraint `bookings_table_availability_id_foreign` foreign key (`table_availability_id`) references `table_availabilities` (`id`) on delete cascade) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(783): Illuminate\\Database\\Connection->runQueryCallback()
@@ -2047,7 +2047,7 @@
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #44 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #45 {main}
-"} 
+"}
 [2025-02-18 22:17:07] local.ERROR: SQLSTATE[42S21]: Column already exists: 1060 Duplicate column name 'meal_type' (Connection: mysql, SQL: alter table `table_availabilities` add `meal_type` varchar(255) not null default 'lunch' after `date`) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 42S21): SQLSTATE[42S21]: Column already exists: 1060 Duplicate column name 'meal_type' (Connection: mysql, SQL: alter table `table_availabilities` add `meal_type` varchar(255) not null default 'lunch' after `date`) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(783): Illuminate\\Database\\Connection->runQueryCallback()
@@ -2143,7 +2143,7 @@
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #44 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #45 {main}
-"} 
+"}
 [2025-02-27 17:50:10] local.ERROR: Class "App\Http\Controllers\Mail" not found {"exception":"[object] (Error(code: 0): Class \"App\\Http\\Controllers\\Mail\" not found at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/BookingController.php:117)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(30): App\\Http\\Controllers\\BookingController->App\\Http\\Controllers\\{closure}()
@@ -2191,7 +2191,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-02-27 17:55:09] local.ERROR: Connection could not be established with host "smtp.gmail.com:587": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution {"exception":"[object] (Symfony\\Component\\Mailer\\Exception\\TransportException(code: 0): Connection could not be established with host \"smtp.gmail.com:587\": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php:154)
 [stacktrace]
 #0 [internal function]: Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\{closure}()
@@ -2254,7 +2254,7 @@
 #57 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #58 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #59 {main}
-"} 
+"}
 [2025-02-27 17:55:20] local.ERROR: Connection could not be established with host "smtp.gmail.com:587": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution {"exception":"[object] (Symfony\\Component\\Mailer\\Exception\\TransportException(code: 0): Connection could not be established with host \"smtp.gmail.com:587\": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php:154)
 [stacktrace]
 #0 [internal function]: Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\{closure}()
@@ -2317,7 +2317,7 @@
 #57 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #58 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #59 {main}
-"} 
+"}
 [2025-02-27 17:55:32] local.ERROR: Connection could not be established with host "smtp.gmail.com:587": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution {"exception":"[object] (Symfony\\Component\\Mailer\\Exception\\TransportException(code: 0): Connection could not be established with host \"smtp.gmail.com:587\": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php:154)
 [stacktrace]
 #0 [internal function]: Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\{closure}()
@@ -2380,7 +2380,7 @@
 #57 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #58 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #59 {main}
-"} 
+"}
 [2025-02-27 18:05:33] local.ERROR: SQLSTATE[HY000] [2002] No such file or directory (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] No such file or directory (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -2456,7 +2456,7 @@
 #37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #39 {main}
-"} 
+"}
 [2025-02-27 18:06:45] local.ERROR: SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) {"exception":"[object] (Illuminate\\Database\\QueryException(code: 2002): SQLSTATE[HY000] [2002] Connection refused (Connection: mysql, SQL: select table_name as `name`, (data_length + index_length) as `size`, table_comment as `comment`, engine as `engine`, table_collation as `collation` from information_schema.tables where table_schema = 'laravel' and table_type in ('BASE TABLE', 'SYSTEM VERSIONED') order by table_name) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:829)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(983): Illuminate\\Database\\Connection->runQueryCallback()
@@ -2532,7 +2532,7 @@
 #37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #39 {main}
-"} 
+"}
 [2025-04-20 14:38:43] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2576,7 +2576,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:38:43] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2620,7 +2620,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:38:43] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2664,7 +2664,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:38:43] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2708,7 +2708,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:38:51] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showDailyAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showDailyAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2752,7 +2752,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:39:00] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2796,7 +2796,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:39:00] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2840,7 +2840,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:39:00] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2884,7 +2884,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:39:00] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2928,7 +2928,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:39:05] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showDailyAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showDailyAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -2972,7 +2972,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:46:11] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -3016,7 +3016,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:46:11] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -3060,7 +3060,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:46:11] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -3104,7 +3104,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:46:11] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showRangeAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showRangeAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -3148,7 +3148,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:46:18] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showDailyAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showDailyAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -3192,7 +3192,7 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
 [2025-04-20 14:49:11] local.ERROR: Method App\Http\Controllers\TableAvailabilityController::showDailyAvailability does not exist. {"exception":"[object] (BadMethodCallException(code: 0): Method App\\Http\\Controllers\\TableAvailabilityController::showDailyAvailability does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php:68)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): Illuminate\\Routing\\Controller->__call()
@@ -3236,7 +3236,363 @@
 #38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #40 {main}
-"} 
+"}
+[2025-04-24 15:32:26] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
+[stacktrace]
+#0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
+#1 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(155): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}()
+#2 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\TableAvailabilityController->range()
+#3 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(43): Illuminate\\Routing\\Controller->callAction()
+#4 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(259): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#5 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(205): Illuminate\\Routing\\Route->runController()
+#6 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(806): Illuminate\\Routing\\Route->run()
+#7 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Routing\\Router->Illuminate\\Routing\\{closure}()
+#8 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(159): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#11 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(125): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#12 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(87): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequestUsingNamedLimiter()
+#13 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#14 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#15 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(805): Illuminate\\Pipeline\\Pipeline->then()
+#16 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(784): Illuminate\\Routing\\Router->runRouteWithinStack()
+#17 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(748): Illuminate\\Routing\\Router->runRoute()
+#18 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(737): Illuminate\\Routing\\Router->dispatchToRoute()
+#19 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#20 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}()
+#21 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Middleware/HandleCors.php(18): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#22 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): App\\Http\\Middleware\\HandleCors->handle()
+#23 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#24 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#25 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#26 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#27 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(40): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#28 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#29 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#30 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize->handle()
+#31 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(99): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#32 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#33 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(62): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(39): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#36 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(51): Illuminate\\Foundation\\Http\\Kernel->handle()
+#41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
+#42 {main}
+"}
+[2025-04-24 15:32:27] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
+[stacktrace]
+#0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
+#1 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(155): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}()
+#2 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\TableAvailabilityController->range()
+#3 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(43): Illuminate\\Routing\\Controller->callAction()
+#4 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(259): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#5 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(205): Illuminate\\Routing\\Route->runController()
+#6 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(806): Illuminate\\Routing\\Route->run()
+#7 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Routing\\Router->Illuminate\\Routing\\{closure}()
+#8 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(159): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#11 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(125): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#12 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(87): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequestUsingNamedLimiter()
+#13 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#14 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#15 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(805): Illuminate\\Pipeline\\Pipeline->then()
+#16 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(784): Illuminate\\Routing\\Router->runRouteWithinStack()
+#17 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(748): Illuminate\\Routing\\Router->runRoute()
+#18 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(737): Illuminate\\Routing\\Router->dispatchToRoute()
+#19 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#20 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}()
+#21 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Middleware/HandleCors.php(18): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#22 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): App\\Http\\Middleware\\HandleCors->handle()
+#23 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#24 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#25 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#26 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#27 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(40): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#28 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#29 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#30 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize->handle()
+#31 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(99): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#32 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#33 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(62): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(39): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#36 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(51): Illuminate\\Foundation\\Http\\Kernel->handle()
+#41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
+#42 {main}
+"}
+[2025-04-24 15:32:27] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
+[stacktrace]
+#0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
+#1 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(155): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}()
+#2 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\TableAvailabilityController->range()
+#3 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(43): Illuminate\\Routing\\Controller->callAction()
+#4 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(259): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#5 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(205): Illuminate\\Routing\\Route->runController()
+#6 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(806): Illuminate\\Routing\\Route->run()
+#7 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Routing\\Router->Illuminate\\Routing\\{closure}()
+#8 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(159): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#11 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(125): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#12 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(87): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequestUsingNamedLimiter()
+#13 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#14 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#15 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(805): Illuminate\\Pipeline\\Pipeline->then()
+#16 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(784): Illuminate\\Routing\\Router->runRouteWithinStack()
+#17 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(748): Illuminate\\Routing\\Router->runRoute()
+#18 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(737): Illuminate\\Routing\\Router->dispatchToRoute()
+#19 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#20 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}()
+#21 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Middleware/HandleCors.php(18): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#22 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): App\\Http\\Middleware\\HandleCors->handle()
+#23 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#24 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#25 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#26 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#27 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(40): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#28 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#29 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#30 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize->handle()
+#31 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(99): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#32 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#33 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(62): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(39): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#36 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(51): Illuminate\\Foundation\\Http\\Kernel->handle()
+#41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
+#42 {main}
+"}
+[2025-04-24 15:32:27] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
+[stacktrace]
+#0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
+#1 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(155): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}()
+#2 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\TableAvailabilityController->range()
+#3 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(43): Illuminate\\Routing\\Controller->callAction()
+#4 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(259): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#5 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(205): Illuminate\\Routing\\Route->runController()
+#6 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(806): Illuminate\\Routing\\Route->run()
+#7 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Routing\\Router->Illuminate\\Routing\\{closure}()
+#8 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(159): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#11 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(125): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#12 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(87): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequestUsingNamedLimiter()
+#13 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#14 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#15 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(805): Illuminate\\Pipeline\\Pipeline->then()
+#16 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(784): Illuminate\\Routing\\Router->runRouteWithinStack()
+#17 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(748): Illuminate\\Routing\\Router->runRoute()
+#18 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(737): Illuminate\\Routing\\Router->dispatchToRoute()
+#19 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#20 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}()
+#21 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Middleware/HandleCors.php(18): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#22 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): App\\Http\\Middleware\\HandleCors->handle()
+#23 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#24 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#25 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#26 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#27 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(40): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#28 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#29 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#30 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize->handle()
+#31 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(99): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#32 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#33 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(62): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(39): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#36 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(51): Illuminate\\Foundation\\Http\\Kernel->handle()
+#41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
+#42 {main}
+"}
+[2025-04-24 15:32:29] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:95)
+[stacktrace]
+#0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
+#1 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(95): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->Illuminate\\Foundation\\Bootstrap\\{closure}()
+#2 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\TableAvailabilityController->index()
+#3 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(43): Illuminate\\Routing\\Controller->callAction()
+#4 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(259): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#5 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(205): Illuminate\\Routing\\Route->runController()
+#6 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(806): Illuminate\\Routing\\Route->run()
+#7 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Routing\\Router->Illuminate\\Routing\\{closure}()
+#8 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(159): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#11 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(125): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#12 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(87): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequestUsingNamedLimiter()
+#13 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#14 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#15 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(805): Illuminate\\Pipeline\\Pipeline->then()
+#16 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(784): Illuminate\\Routing\\Router->runRouteWithinStack()
+#17 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(748): Illuminate\\Routing\\Router->runRoute()
+#18 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(737): Illuminate\\Routing\\Router->dispatchToRoute()
+#19 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#20 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}()
+#21 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Middleware/HandleCors.php(18): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#22 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): App\\Http\\Middleware\\HandleCors->handle()
+#23 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#24 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#25 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#26 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#27 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(40): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#28 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#29 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#30 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize->handle()
+#31 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(99): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#32 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#33 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(62): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(39): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#36 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(51): Illuminate\\Foundation\\Http\\Kernel->handle()
+#41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
+#42 {main}
+"}
+[2025-04-24 16:48:36] local.ERROR: Connection could not be established with host "smtp.gmail.com:587": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution {"exception":"[object] (Symfony\\Component\\Mailer\\Exception\\TransportException(code: 0): Connection could not be established with host \"smtp.gmail.com:587\": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php:154)
+[stacktrace]
+#0 [internal function]: Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\{closure}()
+#1 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php(157): stream_socket_client()
+#2 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(275): Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->initialize()
+#3 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(210): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->start()
+#4 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/AbstractTransport.php(69): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->doSend()
+#5 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(137): Symfony\\Component\\Mailer\\Transport\\AbstractTransport->send()
+#6 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(573): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->send()
+#7 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(335): Illuminate\\Mail\\Mailer->sendSymfonyMessage()
+#8 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailable.php(205): Illuminate\\Mail\\Mailer->send()
+#9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Support/Traits/Localizable.php(19): Illuminate\\Mail\\Mailable->Illuminate\\Mail\\{closure}()
+#10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailable.php(198): Illuminate\\Mail\\Mailable->withLocale()
+#11 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(357): Illuminate\\Mail\\Mailable->send()
+#12 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(301): Illuminate\\Mail\\Mailer->sendMailable()
+#13 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/PendingMail.php(124): Illuminate\\Mail\\Mailer->send()
+#14 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/BookingController.php(110): Illuminate\\Mail\\PendingMail->send()
+#15 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(30): App\\Http\\Controllers\\BookingController->App\\Http\\Controllers\\{closure}()
+#16 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(509): Illuminate\\Database\\Connection->transaction()
+#17 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(355): Illuminate\\Database\\DatabaseManager->__call()
+#18 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/BookingController.php(69): Illuminate\\Support\\Facades\\Facade::__callStatic()
+#19 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\BookingController->store()
+#20 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(43): Illuminate\\Routing\\Controller->callAction()
+#21 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(259): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#22 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(205): Illuminate\\Routing\\Route->runController()
+#23 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(806): Illuminate\\Routing\\Route->run()
+#24 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Routing\\Router->Illuminate\\Routing\\{closure}()
+#25 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#26 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#27 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(159): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#28 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(125): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#29 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(87): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequestUsingNamedLimiter()
+#30 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#31 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#32 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(805): Illuminate\\Pipeline\\Pipeline->then()
+#33 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(784): Illuminate\\Routing\\Router->runRouteWithinStack()
+#34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(748): Illuminate\\Routing\\Router->runRoute()
+#35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(737): Illuminate\\Routing\\Router->dispatchToRoute()
+#36 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}()
+#38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Middleware/HandleCors.php(18): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): App\\Http\\Middleware\\HandleCors->handle()
+#40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#44 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(40): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#45 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#46 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#47 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize->handle()
+#48 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(99): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#49 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#50 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(62): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#51 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#52 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(39): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#53 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#54 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#55 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#56 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#57 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(51): Illuminate\\Foundation\\Http\\Kernel->handle()
+#58 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
+#59 {main}
+"}
+[2025-04-24 16:49:37] local.ERROR: Connection could not be established with host "smtp.gmail.com:587": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution {"exception":"[object] (Symfony\\Component\\Mailer\\Exception\\TransportException(code: 0): Connection could not be established with host \"smtp.gmail.com:587\": stream_socket_client(): php_network_getaddresses: getaddrinfo for smtp.gmail.com failed: Temporary failure in name resolution at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php:154)
+[stacktrace]
+#0 [internal function]: Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\{closure}()
+#1 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/Stream/SocketStream.php(157): stream_socket_client()
+#2 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(275): Symfony\\Component\\Mailer\\Transport\\Smtp\\Stream\\SocketStream->initialize()
+#3 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(210): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->start()
+#4 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/AbstractTransport.php(69): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->doSend()
+#5 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/symfony/mailer/Transport/Smtp/SmtpTransport.php(137): Symfony\\Component\\Mailer\\Transport\\AbstractTransport->send()
+#6 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(573): Symfony\\Component\\Mailer\\Transport\\Smtp\\SmtpTransport->send()
+#7 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(335): Illuminate\\Mail\\Mailer->sendSymfonyMessage()
+#8 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailable.php(205): Illuminate\\Mail\\Mailer->send()
+#9 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Support/Traits/Localizable.php(19): Illuminate\\Mail\\Mailable->Illuminate\\Mail\\{closure}()
+#10 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailable.php(198): Illuminate\\Mail\\Mailable->withLocale()
+#11 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(357): Illuminate\\Mail\\Mailable->send()
+#12 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/Mailer.php(301): Illuminate\\Mail\\Mailer->sendMailable()
+#13 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Mail/PendingMail.php(124): Illuminate\\Mail\\Mailer->send()
+#14 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/BookingController.php(110): Illuminate\\Mail\\PendingMail->send()
+#15 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Concerns/ManagesTransactions.php(30): App\\Http\\Controllers\\BookingController->App\\Http\\Controllers\\{closure}()
+#16 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/DatabaseManager.php(509): Illuminate\\Database\\Connection->transaction()
+#17 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(355): Illuminate\\Database\\DatabaseManager->__call()
+#18 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/BookingController.php(69): Illuminate\\Support\\Facades\\Facade::__callStatic()
+#19 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Controller.php(54): App\\Http\\Controllers\\BookingController->store()
+#20 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/ControllerDispatcher.php(43): Illuminate\\Routing\\Controller->callAction()
+#21 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(259): Illuminate\\Routing\\ControllerDispatcher->dispatch()
+#22 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Route.php(205): Illuminate\\Routing\\Route->runController()
+#23 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(806): Illuminate\\Routing\\Route->run()
+#24 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Routing\\Router->Illuminate\\Routing\\{closure}()
+#25 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/SubstituteBindings.php(50): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#26 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\SubstituteBindings->handle()
+#27 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(159): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#28 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(125): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequest()
+#29 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Middleware/ThrottleRequests.php(87): Illuminate\\Routing\\Middleware\\ThrottleRequests->handleRequestUsingNamedLimiter()
+#30 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Routing\\Middleware\\ThrottleRequests->handle()
+#31 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#32 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(805): Illuminate\\Pipeline\\Pipeline->then()
+#33 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(784): Illuminate\\Routing\\Router->runRouteWithinStack()
+#34 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(748): Illuminate\\Routing\\Router->runRoute()
+#35 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Routing/Router.php(737): Illuminate\\Routing\\Router->dispatchToRoute()
+#36 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(200): Illuminate\\Routing\\Router->dispatch()
+#37 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(144): Illuminate\\Foundation\\Http\\Kernel->Illuminate\\Foundation\\Http\\{closure}()
+#38 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Middleware/HandleCors.php(18): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#39 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): App\\Http\\Middleware\\HandleCors->handle()
+#40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ConvertEmptyStringsToNull.php(31): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ConvertEmptyStringsToNull->handle()
+#43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TransformsRequest.php(21): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#44 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/TrimStrings.php(40): Illuminate\\Foundation\\Http\\Middleware\\TransformsRequest->handle()
+#45 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\TrimStrings->handle()
+#46 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/ValidatePostSize.php(27): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#47 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\ValidatePostSize->handle()
+#48 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Middleware/PreventRequestsDuringMaintenance.php(99): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#49 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Foundation\\Http\\Middleware\\PreventRequestsDuringMaintenance->handle()
+#50 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/HandleCors.php(62): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#51 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\HandleCors->handle()
+#52 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Http/Middleware/TrustProxies.php(39): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#53 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(183): Illuminate\\Http\\Middleware\\TrustProxies->handle()
+#54 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Pipeline/Pipeline.php(119): Illuminate\\Pipeline\\Pipeline->Illuminate\\Pipeline\\{closure}()
+#55 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(175): Illuminate\\Pipeline\\Pipeline->then()
+#56 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter()
+#57 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(51): Illuminate\\Foundation\\Http\\Kernel->handle()
+#58 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
+#59 {main}
+"}
 [2025-04-30 18:58:15] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3282,7 +3638,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:15] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3328,7 +3684,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:18] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3374,7 +3730,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:18] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3420,7 +3776,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:19] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3466,7 +3822,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:20] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3512,7 +3868,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:23] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3558,7 +3914,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:23] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3604,7 +3960,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:23] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3650,7 +4006,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:24] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3696,7 +4052,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:51] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3742,7 +4098,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:51] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3788,7 +4144,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:51] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3834,7 +4190,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:58:58] local.ERROR: Trying to access array offset on value of type null {"exception":"[object] (ErrorException(code: 0): Trying to access array offset on value of type null at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Services/BookingAlgorithmService.php:144)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3882,7 +4238,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-04-30 18:59:11] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3928,7 +4284,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:11] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -3974,7 +4330,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:11] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4020,7 +4376,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:11] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4066,7 +4422,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:20] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4112,7 +4468,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:20] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4158,7 +4514,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:31] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4204,7 +4560,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:32] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4250,7 +4606,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:32] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4296,7 +4652,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:32] local.ERROR: foreach() argument must be of type array|object, null given {"exception":"[object] (ErrorException(code: 0): foreach() argument must be of type array|object, null given at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:155)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4342,7 +4698,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 18:59:50] local.ERROR: Trying to access array offset on value of type null {"exception":"[object] (ErrorException(code: 0): Trying to access array offset on value of type null at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Services/BookingAlgorithmService.php:144)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4390,7 +4746,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-04-30 19:55:18] local.ERROR: Trying to access array offset on value of type null {"exception":"[object] (ErrorException(code: 0): Trying to access array offset on value of type null at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Services/BookingAlgorithmService.php:144)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4438,7 +4794,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-04-30 19:56:05] local.ERROR: Trying to access array offset on value of type null {"exception":"[object] (ErrorException(code: 0): Trying to access array offset on value of type null at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Services/BookingAlgorithmService.php:144)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(255): Illuminate\\Foundation\\Bootstrap\\HandleExceptions->handleError()
@@ -4486,7 +4842,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-04-30 21:05:36] local.ERROR: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '2025-04-30-lunch-2' for key 'table_availabilities_date_meal_type_capacity_unique' (Connection: mysql, SQL: insert into `table_availabilities` (`date`, `meal_type`, `capacity`, `available_count`, `updated_at`, `created_at`) values (2025-04-30, lunch, 2, 4, 2025-04-30 21:05:36, 2025-04-30 21:05:36)) {"exception":"[object] (Illuminate\\Database\\UniqueConstraintViolationException(code: 23000): SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '2025-04-30-lunch-2' for key 'table_availabilities_date_meal_type_capacity_unique' (Connection: mysql, SQL: insert into `table_availabilities` (`date`, `meal_type`, `capacity`, `available_count`, `updated_at`, `created_at`) values (2025-04-30, lunch, 2, 4, 2025-04-30 21:05:36, 2025-04-30 21:05:36)) at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php:824)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Database/Connection.php(783): Illuminate\\Database\\Connection->runQueryCallback()
@@ -4590,7 +4946,7 @@
 #47 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(201): Symfony\\Component\\Console\\Application->run()
 #48 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/artisan(37): Illuminate\\Foundation\\Console\\Kernel->handle()
 #49 {main}
-"} 
+"}
 [2025-04-30 21:33:16] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4636,7 +4992,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 21:33:17] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4682,7 +5038,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 21:33:23] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4728,7 +5084,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 21:33:23] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4774,7 +5130,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 21:33:24] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4820,7 +5176,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 21:33:24] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4866,7 +5222,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 21:36:57] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4912,7 +5268,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-04-30 21:36:59] local.ERROR: Missing config: restaurant.slot_step {"exception":"[object] (RuntimeException(code: 0): Missing config: restaurant.slot_step at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php:30)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/app/Http/Controllers/TableAvailabilityController.php(48): App\\Http\\Controllers\\TableAvailabilityController->minutesStep()
@@ -4958,7 +5314,7 @@
 #40 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #41 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #42 {main}
-"} 
+"}
 [2025-05-04 18:47:46] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5053,7 +5409,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 18:47:52] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5148,7 +5504,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 18:48:07] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5243,7 +5599,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 18:48:12] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5338,7 +5694,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 18:48:42] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5433,7 +5789,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 18:48:52] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5528,7 +5884,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 18:49:01] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5623,7 +5979,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 18:49:06] local.ERROR: Target class [OpenDayController] does not exist. {"exception":"[object] (Illuminate\\Contracts\\Container\\BindingResolutionException(code: 0): Target class [OpenDayController] does not exist. at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php:914)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Container/Container.php(795): Illuminate\\Container\\Container->build()
@@ -5718,7 +6074,7 @@
 #42 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #43 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #44 {main}
-"} 
+"}
 [2025-05-04 21:59:08] local.ERROR: Could not parse '{"id":7,"date":"2025-05-07","meal_type":"lunch","capacity":2,"available_count":4,"created_at":"2025-05-04T21:57:30.000000Z","updated_at":"2025-05-04T21:57:30.000000Z"}->date 15:30:00': Failed to parse time string ({"id":7,"date":"2025-05-07","meal_type":"lunch","capacity":2,"available_count":4,"created_at":"2025-05-04T21:57:30.000000Z","updated_at":"2025-05-04T21:57:30.000000Z"}->date 15:30:00) at position 0 ({): Unexpected character {"exception":"[object] (Carbon\\Exceptions\\InvalidFormatException(code: 0): Could not parse '{\"id\":7,\"date\":\"2025-05-07\",\"meal_type\":\"lunch\",\"capacity\":2,\"available_count\":4,\"created_at\":\"2025-05-04T21:57:30.000000Z\",\"updated_at\":\"2025-05-04T21:57:30.000000Z\"}->date 15:30:00': Failed to parse time string ({\"id\":7,\"date\":\"2025-05-07\",\"meal_type\":\"lunch\",\"capacity\":2,\"available_count\":4,\"created_at\":\"2025-05-04T21:57:30.000000Z\",\"updated_at\":\"2025-05-04T21:57:30.000000Z\"}->date 15:30:00) at position 0 ({): Unexpected character at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php:198)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php(224): Carbon\\Carbon::rawParse()
@@ -5871,7 +6227,7 @@
 #46 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #47 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #48 {main}
-"} 
+"}
 [2025-05-04 21:59:27] local.ERROR: Could not parse '{"id":7,"date":"2025-05-07","meal_type":"lunch","capacity":2,"available_count":4,"created_at":"2025-05-04T21:57:30.000000Z","updated_at":"2025-05-04T21:57:30.000000Z"}->date 15:30:00': Failed to parse time string ({"id":7,"date":"2025-05-07","meal_type":"lunch","capacity":2,"available_count":4,"created_at":"2025-05-04T21:57:30.000000Z","updated_at":"2025-05-04T21:57:30.000000Z"}->date 15:30:00) at position 0 ({): Unexpected character {"exception":"[object] (Carbon\\Exceptions\\InvalidFormatException(code: 0): Could not parse '{\"id\":7,\"date\":\"2025-05-07\",\"meal_type\":\"lunch\",\"capacity\":2,\"available_count\":4,\"created_at\":\"2025-05-04T21:57:30.000000Z\",\"updated_at\":\"2025-05-04T21:57:30.000000Z\"}->date 15:30:00': Failed to parse time string ({\"id\":7,\"date\":\"2025-05-07\",\"meal_type\":\"lunch\",\"capacity\":2,\"available_count\":4,\"created_at\":\"2025-05-04T21:57:30.000000Z\",\"updated_at\":\"2025-05-04T21:57:30.000000Z\"}->date 15:30:00) at position 0 ({): Unexpected character at /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php:198)
 [stacktrace]
 #0 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/nesbot/carbon/src/Carbon/Traits/Creator.php(224): Carbon\\Carbon::rawParse()
@@ -6024,4 +6380,4 @@
 #46 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/public/index.php(52): Illuminate\\Foundation\\Http\\Kernel->handle()
 #47 /mnt/c/Users/sterr/PhpstormProjects/myProject/backend/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(16): require_once('...')
 #48 {main}
-"} 
+"}

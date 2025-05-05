@@ -1,13 +1,10 @@
 // frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
+
 import React, { useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays, subDays, isSameDay } from "date-fns";
 import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
-import {
-    IconChevronLeft,
-    IconChevronRight,
-} from "@tabler/icons-react";
-
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import axios from "axios";
 import { getDayMealTypes } from "../../../services/datePicker";
 import { translate, getLanguage } from "../../../services/i18n";
@@ -31,7 +28,7 @@ export default function BookingsCompactView({
     const t = (k, p) => translate(lang, k, p);
     const locale = localeMap[lang] || enUS;
 
-    // ─── dynamic booking window horizon ───
+    // dynamic booking window horizon
     const [bookingWindowDays, setBookingWindowDays] = useState(30);
     useEffect(() => {
         axios
@@ -66,8 +63,7 @@ export default function BookingsCompactView({
     const getDayStats = (day) => {
         const key = format(day, "yyyy-MM-dd");
         const dayBookings = bookings.filter(
-            (b) =>
-                (b.table_availability?.date || b.date || "").slice(0, 10) === key
+            (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
         );
         const totalClients = dayBookings.reduce(
             (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
@@ -82,20 +78,19 @@ export default function BookingsCompactView({
         getDayMealTypes(d.getDay()).length === 0;
     const isBlocked = (d) => d > addDays(today, bookingWindowDays);
 
-    /* ───────── UI ───────── */
     return (
-        <div className="relative inline-flex">
+        <div className="relative flex w-full items-center">
             {/* left chevron */}
             <button
                 onClick={() => onOffsetChange(offset - 1)}
-                className="absolute -left-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
                 aria-label={t("calendar.prev")}
             >
                 <IconChevronLeft className="w-5 h-5 text-gray-500" />
             </button>
 
             {/* day buttons container */}
-            <div className="flex space-x-2 p-2 bg-white rounded shadow">
+            <div className="flex-1 flex justify-between space-x-4 p-4 bg-white rounded shadow overflow-x-auto">
                 {days.map((day) => {
                     const { bookings: bc, clients } = getDayStats(day);
                     const isSel = selectedDate && isSameDay(day, selectedDate);
@@ -120,22 +115,20 @@ export default function BookingsCompactView({
                         <button
                             key={day.toISOString()}
                             onClick={() => onSelectDay(day)}
-                            className={`${bg} ${txt} flex flex-col items-center w-16 py-2 rounded hover:bg-blue-200 transition`}
+                            className={`${bg} ${txt} flex-shrink-0 flex flex-col items-center w-28 py-3 rounded hover:bg-blue-200 transition`}
                             title={format(day, "EEEE, MMMM d, yyyy", { locale })}
                         >
               <span className="text-xs font-semibold">
                 {format(day, "E", { locale })}
               </span>
-                            <span className="text-xl font-bold">
+                            <span className="text-2xl font-bold">
                 {format(day, "d", { locale })}
               </span>
-                            <span className="text-xs">
-                {format(day, "MMM", { locale })}
-              </span>
-                            <span className="mt-1 text-[10px] leading-none">
+                            <span className="text-sm">{format(day, "MMM", { locale })}</span>
+                            <span className="mt-2 text-xs leading-none">
                 {bc} {t("calendar.badgeBookings")}
               </span>
-                            <span className="text-[10px] leading-none">
+                            <span className="text-xs leading-none">
                 {clients} {t("calendar.badgeClients")}
               </span>
                         </button>
@@ -146,7 +139,7 @@ export default function BookingsCompactView({
             {/* right chevron */}
             <button
                 onClick={() => onOffsetChange(offset + 1)}
-                className="absolute -right-6 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
                 aria-label={t("calendar.next")}
             >
                 <IconChevronRight className="w-5 h-5 text-gray-500" />

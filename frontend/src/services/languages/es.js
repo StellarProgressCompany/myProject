@@ -116,5 +116,9 @@ export default {
         successOpened:     "¡Día abierto!",
         closing:           "Cerrando…",
         opening:           "Abriendo…",
+        lunch:   "Comida",
+        dinner:  "Cena",
+        processing: "Procesando…",
+        done:       "Hecho",
     },
 };

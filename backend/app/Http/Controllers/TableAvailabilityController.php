@@ -6,6 +6,7 @@ use App\Models\TableAvailability;
 use App\Models\Booking;
 use App\Models\ClosedDay;
 use App\Models\SystemSetting;
+use App\Models\MealOverride;                       // ← NEW
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
@@ -87,7 +88,7 @@ class TableAvailabilityController extends Controller
         return $availability;
     }
 
-    /*────────────────── endpoints ──────────────────*/
+    /*────────────────── single-day endpoint ──────────────────*/
     public function index(Request $request)
     {
         $date     = trim($request->query('date', ''));
@@ -97,20 +98,26 @@ class TableAvailabilityController extends Controller
             return response()->json([], 400);
         }
 
-        /* always guarantee stock exists */
+        /* seed stock if needed */
         $this->calendar->ensureStockForDate($date);
 
-        /* shortcut indicators */
-        if (! $this->calendar->isOpen($date)) {
-            if (ClosedDay::where('date', $date)->exists()) {
-                return response()->json(self::CLOSED_INDICATOR);
-            }
-            $openFrom = SystemSetting::getValue('booking_open_from');
-            if ($openFrom && $date < $openFrom) {
-                return response()->json(self::BLOCKED_INDICATOR);
-            }
+        /* quick-out indicators */
+        if (ClosedDay::where('date', $date)->exists()) {
+            return response()->json(self::CLOSED_INDICATOR);
+        }
+        if (
+            MealOverride::where('date', $date)
+                ->where("{$mealType}_closed", true)
+                ->exists()
+        ) {
+            return response()->json(self::CLOSED_INDICATOR);
+        }
+        $openFrom = SystemSetting::getValue('booking_open_from');
+        if ($openFrom && $date < $openFrom) {
+            return response()->json(self::BLOCKED_INDICATOR);
         }
 
+        /* normal availability build */
         $rows = TableAvailability::where('date', $date)
             ->where('meal_type', $mealType)
             ->get()
@@ -135,6 +142,7 @@ class TableAvailabilityController extends Controller
         return response()->json($payload);
     }
 
+    /*────────────────── multi-day endpoint ──────────────────*/
     public function range(Request $request)
     {
         $start    = $request->query('start');
@@ -151,7 +159,7 @@ class TableAvailabilityController extends Controller
             return response()->json(['error' => 'end must be after start'], 400);
         }
 
-        /* seed each date before querying */
+        /* seed stock for each date in range */
         for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
             $this->calendar->ensureStockForDate($d->format('Y-m-d'));
         }
@@ -172,18 +180,32 @@ class TableAvailabilityController extends Controller
         while ($cursor->lte($endDate)) {
             $dateStr = $cursor->format('Y-m-d');
 
+            /* full day closed? */
             if (ClosedDay::where('date', $dateStr)->exists()) {
                 $results[$dateStr] = self::CLOSED_INDICATOR;
                 $cursor->addDay();
                 continue;
             }
 
+            /* per-meal closed? */
+            if (
+                MealOverride::where('date', $dateStr)
+                    ->where("{$mealType}_closed", true)
+                    ->exists()
+            ) {
+                $results[$dateStr] = self::CLOSED_INDICATOR;
+                $cursor->addDay();
+                continue;
+            }
+
+            /* booking window not open yet? */
             if ($openFrom && $dateStr < $openFrom) {
                 $results[$dateStr] = self::BLOCKED_INDICATOR;
                 $cursor->addDay();
                 continue;
             }
 
+            /* weekly schedule */
             $dow         = $cursor->dayOfWeek;
             $servedMeals = $schedule[$dow] ?? [];
             if (empty($servedMeals)) {
@@ -197,6 +219,7 @@ class TableAvailabilityController extends Controller
                 continue;
             }
 
+            /* build availability */
             $dayRows = $rows->where('date', $dateStr);
             if ($dayRows->isEmpty()) {
                 $results[$dateStr] = [];

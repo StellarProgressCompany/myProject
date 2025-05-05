@@ -1,3 +1,5 @@
+// frontend/src/services/languages/en.js
+
 export default {
     admin: {
         title: "My Admin",
@@ -116,5 +118,14 @@ export default {
         successOpened: "Day opened!",
         closing: "Closing…",
         opening: "Opening…",
+        clickToToggle: "click to toggle",
+        openLunch: "Open lunch",
+        closeLunch: "Close lunch",
+        openDinner: "Open dinner",
+        closeDinner: "Close dinner",
+        lunch: "Lunch",
+        dinner: "Dinner",
+        processing: "Processing…",
+        done: "Done",
     },
 };

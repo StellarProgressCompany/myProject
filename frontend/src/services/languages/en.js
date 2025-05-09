@@ -39,11 +39,12 @@ export default {
         vsPrevious: "vs previous 30 d",
         upcomingRange: "Upcoming {n} d",
         pastRange: "Past {n} d",
-        peakDayGuests: "Peak Day Guests", // ← added
+        peakDayGuests: "Peak Day Guests",
     },
 
     modal: {
         addTitle: "Add Manual Booking",
+        editTitle: "Edit Booking",
         dateDisplay: "{weekday}, {month} {day}, {year}",
         fullName: "Full Name",
         guests: "Guests",
@@ -53,6 +54,9 @@ export default {
         time: "Time",
         close: "Close",
         save: "Save",
+        delete: "Delete",
+        confirmDelete: "Delete this booking?",
+        deleteError: "Error deleting booking",
         closedDay: "Sorry, we’re closed that day.",
         errorRequired: "Please fill in all required fields.",
         saveError: "Error saving — please try again.",
@@ -87,6 +91,7 @@ export default {
             time: "Time",
             name: "Name",
             totalClients: "Total Clients",
+            edit: "Edit",
         },
         noBookings: "No bookings in this round.",
     },
@@ -103,7 +108,15 @@ export default {
         totalPeople: "Total People",
     },
 
-    tableUsage: "Table Usage",
+    tableUsage: {
+        title: "Table Usage",
+        move: "Move booking",
+        cancel: "Cancel",
+        pickSource: "Pick booking to move",
+        pickTarget: "Pick target table",
+        moving: "Moving…",
+        done: "Done!",
+    },
 
     settings: {
         bookingWindowFrom: "Accept bookings from",

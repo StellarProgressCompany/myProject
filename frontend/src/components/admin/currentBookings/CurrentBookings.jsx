@@ -1,4 +1,3 @@
-// frontend/src/components/admin/currentBookings/CurrentBookings.jsx
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays } from "date-fns";
@@ -35,8 +34,8 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     const t      = (key, vars) => translate(lang, key, vars);
     const locale = localeMap[lang] || enUS;
 
-    const [offset, setOffset]               = useState(0);
-    const [isAdding, setIsAdding]           = useState(false);
+    const [offset, setOffset]                 = useState(0);
+    const [isAdding, setIsAdding]             = useState(false);
     const [editingBooking, setEditingBooking] = useState(null);
 
     const [tableAvailability, setTableAvailability] = useState({});
@@ -93,6 +92,11 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
             ? t("admin.today")
             : format(dateObj, "EEEE, MMMM d", { locale });
 
+    /* handler when clicking a booking in the schedule */
+    const handleBookingClick = (booking) => {
+        setEditingBooking(booking);
+    };
+
     return (
         <div className="bg-white p-4 rounded shadow">
             {/* header + controls */}
@@ -144,6 +148,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
                     tableAvailability={tableAvailability}
                     onClose={() => {}}
                     enableZoom
+                    onBookingClick={handleBookingClick}
                 />
             )}
 

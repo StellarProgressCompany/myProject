@@ -14,6 +14,7 @@ class TableAvailability extends Model
         'meal_type',
         'capacity',
         'available_count',
+        'position',
     ];
 
     public function bookings()

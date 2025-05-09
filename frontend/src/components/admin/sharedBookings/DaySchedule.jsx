@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
 import TableUsage from "./TableUsage";
 import { translate, getLanguage } from "../../../services/i18n";
+import { IconPencil } from "@tabler/icons-react";
 
 const localeMap = { en: enUS, es: esLocale, ca: caLocale };
 const getBookingDate = (b) =>
@@ -16,6 +17,8 @@ export default function DaySchedule({
                                         tableAvailability,
                                         onClose,
                                         enableZoom = false,
+                                        onBookingClick = () => {},
+                                        onRefresh = () => {},
                                     }) {
     const lang   = getLanguage();
     const t      = (k, p) => translate(lang, k, p);
@@ -125,26 +128,56 @@ export default function DaySchedule({
                                     <th className="px-3 py-2 text-left font-semibold">
                                         {t("schedule.table.totalClients")}
                                     </th>
+                                    <th className="px-3 py-2 text-left font-semibold">
+                                        {t("schedule.table.edit") || "Edit"}
+                                    </th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {rows.map((bk) => (
-                                    <tr key={bk.id} className={`${bg} hover:bg-yellow-50 transition`}>
-                                        <td className="px-3 py-2">{bk.reserved_time.slice(0, 5)}</td>
-                                        <td className="px-3 py-2 truncate max-w-[160px]">{bk.full_name}</td>
+                                    <tr
+                                        key={bk.id}
+                                        className={`${bg} hover:bg-yellow-50 transition cursor-pointer`}
+                                        onClick={() => onBookingClick(bk)}
+                                    >
+                                        <td className="px-3 py-2">
+                                            {bk.reserved_time.slice(0, 5)}
+                                        </td>
+                                        <td className="px-3 py-2 truncate max-w-[160px]">
+                                            {bk.full_name}
+                                        </td>
                                         <td className="px-3 py-2">
                                             {bk.total_adults + bk.total_kids}
+                                        </td>
+                                        <td className="px-3 py-2 text-center">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onBookingClick(bk);
+                                                }}
+                                                className="text-gray-600 hover:text-gray-900"
+                                                title={t("schedule.table.edit") || "Edit"}
+                                            >
+                                                <IconPencil className="w-4 h-4" />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))}
                                 </tbody>
                             </table>
                         ) : (
-                            <p className="text-gray-500 mb-3">{t("schedule.noBookings")}</p>
+                            <p className="text-gray-500 mb-3">
+                                {t("schedule.noBookings")}
+                            </p>
                         )}
 
                         {showFloor && (
-                            <TableUsage capacityTotals={fullStock} bookings={rows} expanded />
+                            <TableUsage
+                                capacityTotals={fullStock}
+                                bookings={rows}
+                                expanded
+                                onRefresh={onRefresh}
+                            />
                         )}
                     </div>
                 );
@@ -159,4 +192,6 @@ DaySchedule.propTypes = {
     tableAvailability: PropTypes.object.isRequired,
     onClose:           PropTypes.func.isRequired,
     enableZoom:        PropTypes.bool,
+    onBookingClick:    PropTypes.func,
+    onRefresh:         PropTypes.func,
 };

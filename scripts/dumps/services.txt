@@ -1,0 +1,676 @@
+└── frontend/src/services
+    ├── frontend/src/services/bookingService.js
+    ├── frontend/src/services/datePicker.js
+    ├── frontend/src/services/i18n.js
+    ├── frontend/src/services/languages/ca.js
+    ├── frontend/src/services/languages/en.js
+    ├── frontend/src/services/languages/es.js
+    ├── frontend/src/services/mealOverrides.js
+    ├── frontend/src/services/settingsService.js
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/bookingService.js
+    import axios from "axios";
+    axios.defaults.baseURL = ""; // proxy via Vite
+    
+    /*──────────────────────────────────────────────
+      Simple in-memory cache for table availability
+    ──────────────────────────────────────────────*/
+    const _taCache = new Map();
+    const buildKey = (start, end, meal) => `${start}|${end}|${meal}`;
+    
+    /**
+     * Clear every cached /api/table-availability-range response.
+     * Call this after any action (e.g. closing/opening a day)
+     * that could invalidate previously-fetched data.
+     */
+    export function clearAvailabilityCache() {
+        _taCache.clear();
+    }
+    
+    export async function fetchTableAvailabilityRange(
+        start,
+        end,
+        mealType = "lunch"
+    ) {
+        const key = buildKey(start, end, mealType);
+        const hit = _taCache.get(key);
+    
+        if (hit?.status === "resolved") return hit.data;
+    
+        if (hit?.status === "pending") return hit.promise;
+    
+        const promise = axios
+            .get("/api/table-availability-range", {
+                params: { start, end, mealType },
+            })
+            .then((res) => {
+                _taCache.set(key, { status: "resolved", data: res.data });
+                return res.data;
+            })
+            .catch((err) => {
+                _taCache.delete(key);
+                throw err;
+            });
+    
+        _taCache.set(key, { status: "pending", promise });
+        return promise;
+    }
+    
+    /*──────────────────────────────────────────────
+      Other booking-related helpers
+    ──────────────────────────────────────────────*/
+    export async function fetchAvailableTimeSlots(params) {
+        const { data } = await axios.get("/api/table-availability", { params });
+        return data;
+    }
+    
+    export async function fetchAllBookings() {
+        const { data } = await axios.get("/api/bookings");
+        return data.data;
+    }
+    
+    export async function createBooking(payload) {
+        const { data } = await axios.post("/api/bookings", payload);
+        return data;
+    }
+    
+    export async function updateBooking(id, payload) {
+        const { data } = await axios.patch(`/api/bookings/${id}`, payload);
+        return data;
+    }
+    
+    export async function deleteBooking(id) {
+        const { data } = await axios.delete(`/api/bookings/${id}`);
+        return data;
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/datePicker.js
+    import { isBefore, isAfter, format } from "date-fns";
+    
+    /**
+     * dayOfWeek: 0=Sun,1=Mon…6=Sat
+     */
+    export function getDayMealTypes(dayOfWeek) {
+        switch (dayOfWeek) {
+            case 1: // Mon
+            case 2: // Tue
+                return []; // closed
+            case 3: // Wed
+            case 4: // Thu
+                return ["lunch"];
+            case 5: // Fri
+            case 6: // Sat
+            case 0: // Sun
+                return ["lunch", "dinner"];
+            default:
+                return [];
+        }
+    }
+    
+    export function sumAvailability(dayAvailability) {
+        if (!dayAvailability || typeof dayAvailability !== "object") return 0;
+        let sum = 0;
+    
+        // lunch rounds
+        ["first_round", "second_round"].forEach((rk) => {
+            Object.values(dayAvailability[rk]?.availability || {}).forEach((v) => {
+                sum += v;
+            });
+        });
+    
+        // dinner
+        Object.values(dayAvailability.dinner_round?.availability || {}).forEach((v) => {
+            sum += v;
+        });
+    
+        return sum;
+    }
+    
+    /**
+     * true if dateA < dateB or same calendar day
+     */
+    export function isBeforeOrSameDay(dateA, dateB) {
+        return isBefore(dateA, dateB) || format(dateA, "yyyy-MM-dd") === format(dateB, "yyyy-MM-dd");
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/i18n.js
+    // frontend/src/services/i18n.js
+    
+    import ca from "./languages/ca";
+    import es from "./languages/es";
+    import en from "./languages/en";
+    
+    const translations = { ca, es, en };
+    
+    // Look first in either storage key for a saved language, default to Catalan
+    const STORAGE_KEYS = ["adminLang", "lang"];
+    function detectStoredLang() {
+        for (const key of STORAGE_KEYS) {
+            const v = localStorage.getItem(key);
+            if (v && translations[v]) return v;
+        }
+        return "ca";
+    }
+    
+    let currentLang = detectStoredLang();
+    
+    export function setLanguage(lang) {
+        if (!translations[lang]) return;
+        currentLang = lang;
+        STORAGE_KEYS.forEach((k) => localStorage.setItem(k, lang));
+    }
+    
+    export function getLanguage() {
+        return currentLang;
+    }
+    
+    /**
+     * translate()
+     *
+     * Usage:
+     *   translate("en", "admin.nav.current")
+     *   translate("modal.dateDisplay", { weekday, day, month, year })
+     */
+    export function translate(arg1, arg2, arg3, arg4) {
+        let lang, fullPath, params = {};
+    
+        if (translations[arg1]) {
+            // Style A: translate(lang, "section.path", params?)
+            lang = arg1;
+            if (typeof arg2 === "string" && (arg3 === undefined || typeof arg3 === "object")) {
+                fullPath = arg2;
+                params   = arg3 || {};
+            } else {
+                fullPath = [arg2, arg3].filter((x) => typeof x === "string").join(".");
+                params   = arg4 || {};
+            }
+        } else {
+            // Style B: translate("section.path", params?)
+            lang     = currentLang;
+            fullPath = arg1;
+            params   = arg2 || {};
+        }
+    
+        const deepGet = (obj, path) =>
+            path.split(".").reduce((acc, key) =>
+                acc && acc[key] !== undefined ? acc[key] : null, obj
+            );
+    
+        let text =
+            deepGet(translations[lang], fullPath) ||
+            deepGet(translations.en,   fullPath) ||
+            `!${fullPath}!`;
+    
+        // interpolate {tokens}
+        if (typeof text === "string" && text.includes("{")) {
+            text = text.replace(/\{(\w+?)\}/g, (_, token) =>
+                Object.prototype.hasOwnProperty.call(params, token)
+                    ? params[token]
+                    : `{${token}}`
+            );
+        }
+    
+        return text;
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/ca.js
+    export default {
+        admin: {
+            title: "El meu Admin",
+            versionPrefix: "v",
+            language: "Llengua",
+            nav: {
+                current: "Reserves actuals",
+                future: "Reserves futures",
+                past: "Reserves passades",
+                metrics: "Mètriques",
+                tester: "Prova d'algorisme",
+                settings: "Ajustos",
+            },
+            refresh: "Actualitza",
+            logout: "Tanca sessió",
+            manualBooking: "+ Reserva manual",
+            today: "Avui",
+            bookings: "Reserves",
+            totalClients: "Total Clients",
+            expandFloor: "Expandir sala",
+            hideFloor: "Amaga sala",
+            close: "Tanca",
+            compact: "Compacte",
+            calendar: "Calendari",
+        },
+    
+        overview: {
+            bookings: "Reserves",
+            guests: "Clients",
+            futureBookings: "Reserves futures",
+            pastBookings: "Reserves passades",
+            dataWindow: "Finestra de dades: {start} → {end}",
+            bookings30d: "Reserves (30 d)",
+            guests30d: "Clients (30 d)",
+            avgGuests: "Mitjana clients / reserva",
+            uniqueNames: "Noms únics",
+            vsPrevious: "vs 30 d anteriors",
+            upcomingRange: "Properes {n} d",
+            pastRange: "Passades {n} d",
+            peakDayGuests: "Màxim clients en un dia", // ← added
+        },
+    
+        modal: {
+            addTitle:      "Afegir reserva manual",
+            dateDisplay:   "{weekday}, {day} {month} {year}",
+            fullName:      "Nom complet",
+            guests:        "Clients",
+            phoneOptional: "Telèfon (opcional)",
+            meal:  { lunch: "Dinar", dinner: "Sopar" },
+            round: { first: "1a Torn", second: "2a Torn" },
+            time:        "Hora",
+            close:       "Tanca",
+            save:        "Desa",
+            closedDay:   "Ho sentim, estem tancats aquell dia.",
+            errorRequired: "Si us plau omple tots els camps obligatoris.",
+            saveError:     "Error en desar — torna-ho a provar.",
+        },
+    
+        datePicker: {
+            upcoming: "Properes {n} d",
+            past:     "Passades {n} d",
+        },
+    
+        tester: {
+            title:        "Prova d'algorisme",
+            partySizes:   "Mides de grup (separades per comes)",
+            date:         "Data",
+            meal:         "Àpat",
+            startingTime: "Hora inicial",
+            runTest:      "Executa prova",
+            results:      "Resultats",
+            ok:           "Correcte",
+            rejected:     "Rebutjat",
+            loadingTA:    "Carregant disponibilitat de taules…",
+        },
+    
+        schedule: {
+            header:       "Horari per a {date}",
+            round: {
+                lunchFirst:  "Dinar–1r Torn",
+                lunchSecond: "Dinar–2n Torn",
+                dinner:      "Sopar",
+            },
+            table: {
+                time:         "Hora",
+                name:         "Nom",
+                totalClients: "Clients totals",
+            },
+            noBookings:   "Cap reserva en aquest torn.",
+        },
+    
+        calendar: {
+            prev:           "Ant.",
+            next:           "Seg.",
+            badgeBookings:  "Reserves",
+            badgeClients:   "Clients",
+        },
+    
+        chart: {
+            titleTotalPeople: "Gràfic de persones totals",
+            totalPeople:      "Persones totals",
+        },
+    
+        tableUsage: "Ús de taules",
+    
+        settings: {
+            bookingWindowFrom: "Acceptar reserves a partir de",
+            closeDay:          "Tancar un dia",
+            openDay:           "Obrir un dia",
+            openUntil:         "Obrir reserves fins a aquest dia",
+            save:              "Desa",
+            closed:            "Tancat (clic per obrir)",
+            open:              "Obert (clic per tancar)",
+            chooseDay:         "Tria un dia",
+            successClosed:     "Dia tancat!",
+            successOpened:     "Dia obert!",
+            closing:           "Tancant…",
+            opening:           "Obrint…",
+            lunch:              "Dinar",
+            dinner:             "Sopar",
+            processing:         "Processant…",
+            done:               "Fet",
+        },
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/en.js
+    // frontend/src/services/languages/en.js
+    
+    export default {
+        admin: {
+            title: "My Admin",
+            versionPrefix: "v",
+            language: "Language",
+            nav: {
+                current: "Current Bookings",
+                future: "Future Bookings",
+                past: "Past Bookings",
+                metrics: "Metrics",
+                tester: "Algorithm Tester",
+                settings: "Settings",
+            },
+            refresh: "Refresh",
+            logout: "Log Out",
+            manualBooking: "+ Manual Booking",
+            today: "Today",
+            bookings: "Bookings",
+            totalClients: "Total Clients",
+            expandFloor: "Expand floor",
+            hideFloor: "Hide floor",
+            close: "Close",
+            compact: "Compact",
+            calendar: "Calendar",
+        },
+    
+        overview: {
+            bookings: "Bookings",
+            guests: "Guests",
+            futureBookings: "Future Bookings",
+            pastBookings: "Past Bookings",
+            dataWindow: "Data window: {start} → {end}",
+            bookings30d: "Bookings (30 d)",
+            guests30d: "Guests (30 d)",
+            avgGuests: "Avg Guests / Booking",
+            uniqueNames: "Unique Names",
+            vsPrevious: "vs previous 30 d",
+            upcomingRange: "Upcoming {n} d",
+            pastRange: "Past {n} d",
+            peakDayGuests: "Peak Day Guests",
+        },
+    
+        modal: {
+            addTitle: "Add Manual Booking",
+            editTitle: "Edit Booking",
+            dateDisplay: "{weekday}, {month} {day}, {year}",
+            fullName: "Full Name",
+            guests: "Guests",
+            phoneOptional: "Phone (optional)",
+            meal: { lunch: "Lunch", dinner: "Dinner" },
+            round: { first: "1st Round", second: "2nd Round" },
+            time: "Time",
+            close: "Close",
+            save: "Save",
+            delete: "Delete",
+            confirmDelete: "Delete this booking?",
+            deleteError: "Error deleting booking",
+            closedDay: "Sorry, we’re closed that day.",
+            errorRequired: "Please fill in all required fields.",
+            saveError: "Error saving — please try again.",
+        },
+    
+        datePicker: {
+            upcoming: "Upcoming {n} d",
+            past: "Past {n} d",
+        },
+    
+        tester: {
+            title: "Algorithm Tester",
+            partySizes: "Party sizes (comma-separated)",
+            date: "Date",
+            meal: "Meal",
+            startingTime: "Starting time",
+            runTest: "Run Test",
+            results: "Results",
+            ok: "OK",
+            rejected: "Rejected",
+            loadingTA: "Loading table availability…",
+        },
+    
+        schedule: {
+            header: "Schedule for {date}",
+            round: {
+                lunchFirst: "Lunch–1st Round",
+                lunchSecond: "Lunch–2nd Round",
+                dinner: "Dinner",
+            },
+            table: {
+                time: "Time",
+                name: "Name",
+                totalClients: "Total Clients",
+                edit: "Edit",
+            },
+            noBookings: "No bookings in this round.",
+        },
+    
+        calendar: {
+            prev: "Prev",
+            next: "Next",
+            badgeBookings: "Bookings",
+            badgeClients: "Clients",
+        },
+    
+        chart: {
+            titleTotalPeople: "Total People Chart",
+            totalPeople: "Total People",
+        },
+    
+        tableUsage: {
+            title: "Table Usage",
+            move: "Move booking",
+            cancel: "Cancel",
+            pickSource: "Pick booking to move",
+            pickTarget: "Pick target table",
+            moving: "Moving…",
+            done: "Done!",
+        },
+    
+        settings: {
+            bookingWindowFrom: "Accept bookings from",
+            closeDay: "Close a day",
+            openDay: "Open a day",
+            openUntil: "Open bookings until that day",
+            save: "Save",
+            closed: "Closed (click to open)",
+            open: "Open (click to close)",
+            chooseDay: "Choose a day",
+            successClosed: "Day closed!",
+            successOpened: "Day opened!",
+            closing: "Closing…",
+            opening: "Opening…",
+            clickToToggle: "click to toggle",
+            openLunch: "Open lunch",
+            closeLunch: "Close lunch",
+            openDinner: "Open dinner",
+            closeDinner: "Close dinner",
+            lunch: "Lunch",
+            dinner: "Dinner",
+            processing: "Processing…",
+            done: "Done",
+        },
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/es.js
+    export default {
+        admin: {
+            title:         "Mi Admin",
+            versionPrefix: "v",
+            language:      "Idioma",
+            nav: {
+                current:  "Reservas actuales",
+                future:   "Reservas futuras",
+                past:     "Reservas pasadas",
+                metrics:  "Métricas",
+                tester:   "Probador de algoritmo",
+                settings: "Ajustes",
+            },
+            refresh:       "Actualizar",
+            logout:        "Cerrar sesión",
+            manualBooking: "+ Reserva manual",
+            today:         "Hoy",
+            bookings:      "Reservas",
+            totalClients:  "Total Clientes",
+            expandFloor:   "Expandir sala",
+            hideFloor:     "Ocultar sala",
+            close:         "Cerrar",
+            compact:       "Compacto",
+            calendar:      "Calendario",
+        },
+    
+        overview: {
+            bookings: "Reservas",
+            guests: "Clientes",
+            futureBookings: "Reservas futuras",
+            pastBookings: "Reservas pasadas",
+            dataWindow: "Ventana de datos: {start} → {end}",
+            bookings30d: "Reservas (30 d)",
+            guests30d: "Clientes (30 d)",
+            avgGuests: "Prom Clientes / Reserva",
+            uniqueNames: "Nombres únicos",
+            vsPrevious: "vs 30 d anteriores",
+            upcomingRange: "Próximos {n} d",
+            pastRange: "Últimos {n} d",
+            peakDayGuests: "Máximo clientes en un día", // ← added
+        },
+    
+        modal: {
+            addTitle:      "Añadir reserva manual",
+            dateDisplay:   "{weekday}, {day} {month} {year}",
+            fullName:      "Nombre completo",
+            guests:        "Clientes",
+            phoneOptional: "Teléfono (opcional)",
+            meal:  { lunch: "Comida", dinner: "Cena" },
+            round: { first: "1ª Turno", second: "2ª Turno" },
+            time:        "Hora",
+            close:       "Cerrar",
+            save:        "Guardar",
+            closedDay:   "Lo sentimos, ese día estamos cerrados.",
+            errorRequired: "Por favor complete todos los campos obligatorios.",
+            saveError:     "Error al guardar — inténtalo de nuevo.",
+        },
+    
+        datePicker: {
+            upcoming: "Próximos {n} d",
+            past:     "Últimos {n} d",
+        },
+    
+        tester: {
+            title:        "Probador de algoritmo",
+            partySizes:   "Tamaños de grupo (separados por coma)",
+            date:         "Fecha",
+            meal:         "Comida",
+            startingTime: "Hora inicial",
+            runTest:      "Ejecutar prueba",
+            results:      "Resultados",
+            ok:           "OK",
+            rejected:     "Rechazado",
+            loadingTA:    "Cargando disponibilidad de mesas…",
+        },
+    
+        schedule: {
+            header:       "Horario para {date}",
+            round: {
+                lunchFirst:  "Comida–1er Turno",
+                lunchSecond: "Comida–2º Turno",
+                dinner:      "Cena",
+            },
+            table: {
+                time:         "Hora",
+                name:         "Nombre",
+                totalClients: "Clientes totales",
+            },
+            noBookings:   "Sin reservas en este turno.",
+        },
+    
+        calendar: {
+            prev:           "Anterior",
+            next:           "Siguiente",
+            badgeBookings:  "Reservas",
+            badgeClients:   "Clientes",
+        },
+    
+        chart: {
+            titleTotalPeople: "Gráfico de personas totales",
+            totalPeople:      "Personas totales",
+        },
+    
+        tableUsage: "Uso de mesas",
+    
+        settings: {
+            bookingWindowFrom: "Aceptar reservas a partir de",
+            closeDay:          "Cerrar un día",
+            openDay:           "Abrir un día",
+            openUntil:         "Abrir reservas hasta ese día",
+            save:              "Guardar",
+            closed:            "Cerrado (clic para abrir)",
+            open:              "Abierto (clic para cerrar)",
+            chooseDay:         "Elige un día",
+            successClosed:     "Día cerrado",
+            successOpened:     "¡Día abierto!",
+            closing:           "Cerrando…",
+            opening:           "Abriendo…",
+            lunch:   "Comida",
+            dinner:  "Cena",
+            processing: "Procesando…",
+            done:       "Hecho",
+        },
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/mealOverrides.js
+    /* Simple fetch helpers for meal-override endpoints */
+    
+    export async function fetchMealOverrides() {
+        const resp = await fetch("/api/meal-overrides");
+        const data = await resp.json();
+        return Array.isArray(data) ? data : [];
+    }
+    
+    export async function toggleMealOverride(dateYMD, mealType) {
+        await fetch("/api/meal-overrides/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: dateYMD, meal_type: mealType }),
+        });
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/settingsService.js
+    import axios from "axios";
+    
+    /* ───────────────────────────────
+       Close / open a specific day
+       ─────────────────────────────── */
+    
+    /**
+     * Mark a calendar day as “closed”.
+     * Backend will usually toggle, but we expose
+     * a single-purpose helper for clarity.
+     *
+     * @param {string} dateYMD – “YYYY-MM-DD”
+     */
+    export async function closeSpecificDay(dateYMD) {
+        const { data } = await axios.post("/api/closed-days/toggle", {
+            date: dateYMD,
+        });
+        return data;           // whatever the API echoes back
+    }
+    
+    /* ───────────────────────────────
+       Booking-window helpers
+       ─────────────────────────────── */
+    
+    /**
+     * Extend the booking window so guests can
+     * book **up to and including** this date.
+     *
+     * @param {string} dateYMD – “YYYY-MM-DD”
+     */
+    export async function openBookingWindowUntil(dateYMD) {
+        const { data } = await axios.put("/api/settings/booking-open-until", {
+            booking_open_until: dateYMD,
+        });
+        return data.booking_open_until;
+    }
+

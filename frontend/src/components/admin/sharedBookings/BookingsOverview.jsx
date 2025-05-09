@@ -22,9 +22,9 @@ import { translate, getLanguage } from "../../../services/i18n";
 /* helper – stable “YYYY-MM-DD” */
 const ymd = (d) => format(d, "yyyy-MM-dd");
 
-/* ────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────────
    Segmented-control style toggle
-   ────────────────────────────────────────────────*/
+   ────────────────────────────────────────────────────────────────*/
 function ViewToggle({ value, onChange }) {
     const t = (k,p) => translate(getLanguage(), k, p);
     const opts = [
@@ -270,6 +270,7 @@ export default function BookingsOverview({
                         tableAvailability={ta}
                         onClose={() => setSelDay(null)}
                         enableZoom
+                        onBookingClick={setEditingBooking}
                     />
                 </div>
             )}

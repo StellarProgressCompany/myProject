@@ -24,7 +24,7 @@ class BookingController extends Controller
     ───────────────────────────────────────────────────────────*/
     public function index()
     {
-        $bookings = Booking::with('tableAvailability')
+        $bookings = Booking::with('tableAvailability', 'details')
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -162,18 +162,119 @@ class BookingController extends Controller
     ───────────────────────────────────────────────────────────*/
     public function update(Request $request, Booking $booking)
     {
-        $booking->update($request->validate([
-            'reserved_time' => 'sometimes|date_format:H:i:s',
-            'total_adults'  => 'sometimes|integer|min:1',
-            'total_kids'    => 'sometimes|integer|min:0',
-            'full_name'     => 'sometimes|string',
-            'phone'         => 'sometimes|nullable|string',
-        ]));
-
-        return response()->json([
-            'message' => 'booking updated',
-            'data'    => $booking->fresh('tableAvailability'),
+        $data = $request->validate([
+            'reserved_time'     => 'sometimes|date_format:H:i:s',
+            'total_adults'      => 'sometimes|integer|min:1',
+            'total_kids'        => 'sometimes|integer|min:0',
+            'full_name'         => 'sometimes|string',
+            'phone'             => 'sometimes|nullable|string',
+            'email'             => 'sometimes|nullable|email',
+            /* manual table move – pick any other capacity that still has stock */
+            'capacity_override' => 'sometimes|integer|in:2,4,6',
         ]);
+
+        return DB::transaction(function () use ($data, $booking) {
+
+            $origTA   = $booking->tableAvailability;  // eager-loaded
+            $date     = $origTA->date;
+            $mealType = $origTA->meal_type;
+
+            /*────────────────────────────────────────────────
+              1) Manual re-assign (no algorithm)
+            ────────────────────────────────────────────────*/
+            if (isset($data['capacity_override'])) {
+                $cap = $data['capacity_override'];
+                unset($data['capacity_override']);
+
+                $target = TableAvailability::where('date', $date)
+                    ->where('meal_type', $mealType)
+                    ->where('capacity', $cap)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $target) {
+                    return response()->json(['error' => 'No such table capacity on that date.'], 400);
+                }
+
+                $occupied = Booking::where('table_availability_id', $target->id)
+                    ->where('id', '!=', $booking->id)
+                    ->count();
+
+                if ($occupied >= $target->available_count) {
+                    return response()->json(['error' => 'No free table of that capacity.'], 400);
+                }
+
+                $booking->table_availability_id = $target->id;
+            }
+
+            /*────────────────────────────────────────────────
+              2) Fields that may require re-allocation
+            ────────────────────────────────────────────────*/
+            $partyChanged = array_key_exists('total_adults', $data)
+                || array_key_exists('total_kids', $data);
+            $timeChanged  = array_key_exists('reserved_time', $data);
+
+            if ($partyChanged || $timeChanged) {
+                $partySize = ($data['total_adults'] ?? $booking->total_adults)
+                    + ($data['total_kids']   ?? $booking->total_kids);
+                $timeHHMM  = $data['reserved_time'] ?? $booking->reserved_time;
+                $longStay  = $booking->long_stay;
+
+                $algo   = new BookingAlgorithmService();
+                $assign = $algo->tryAllocate(
+                    $date,
+                    $mealType,
+                    $timeHHMM,
+                    $partySize,
+                    $longStay
+                );
+
+                if (isset($assign['error'])) {
+                    return response()->json(['error' => $assign['error']], 400);
+                }
+
+                // Remove existing extra-details
+                $booking->details()->delete();
+
+                // Persist new assignment
+                $first = true;
+                foreach ($assign as $slot) {
+                    $ta = TableAvailability::where('date',      $date)
+                        ->where('meal_type', $mealType)
+                        ->where('capacity',  $slot['capacity'])
+                        ->lockForUpdate()
+                        ->firstOrFail();
+
+                    if ($first) {
+                        $booking->update([
+                            'table_availability_id' => $ta->id,
+                            'reserved_time'         => $timeHHMM,
+                            'total_adults'          => $data['total_adults'] ?? $booking->total_adults,
+                            'total_kids'            => $data['total_kids']   ?? $booking->total_kids,
+                            'full_name'             => $data['full_name']    ?? $booking->full_name,
+                            'phone'                 => $data['phone']        ?? $booking->phone,
+                            'email'                 => $data['email']        ?? $booking->email,
+                        ]);
+                        $first = false;
+                    } else {
+                        BookingDetail::create([
+                            'booking_id'            => $booking->id,
+                            'table_availability_id' => $ta->id,
+                            'capacity'              => $slot['capacity'],
+                            'extra_chair'           => (bool) ($slot['extra_chair'] ?? false),
+                        ]);
+                    }
+                }
+            } else {
+                // No re-allocation needed: just update other fields
+                $booking->update($data);
+            }
+
+            return response()->json([
+                'message' => 'booking updated',
+                'data'    => $booking->fresh(['tableAvailability', 'details']),
+            ]);
+        });
     }
 
     public function destroy(Booking $booking)

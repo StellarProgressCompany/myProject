@@ -128,6 +128,7 @@ backend/app/Http/Controllers/BookingController.php
     use App\Models\TableAvailability;
     use App\Models\ClosedDay;
     use App\Models\SystemSetting;
+    use App\Models\MealOverride;                          // ← NEW
     use Illuminate\Http\Request;
     use Illuminate\Support\Facades\DB;
     use Illuminate\Support\Facades\Mail;
@@ -139,15 +140,21 @@ backend/app/Http/Controllers/BookingController.php
     
     class BookingController extends Controller
     {
+        /*───────────────────────────────────────────────────────────
+          List all bookings (admin)
+        ───────────────────────────────────────────────────────────*/
         public function index()
         {
-            $bookings = Booking::with('tableAvailability')
-                ->orderBy('created_at','desc')
+            $bookings = Booking::with('tableAvailability', 'details')
+                ->orderBy('created_at', 'desc')
                 ->get();
     
-            return response()->json(['data'=>$bookings]);
+            return response()->json(['data' => $bookings]);
         }
     
+        /*───────────────────────────────────────────────────────────
+          Create a new booking (public / admin)
+        ───────────────────────────────────────────────────────────*/
         public function store(Request $request)
         {
             $validated = $request->validate([
@@ -165,7 +172,7 @@ backend/app/Http/Controllers/BookingController.php
                 'long_stay'        => 'boolean',
             ]);
     
-            // ❌ before-open date check
+            /* ❌ booking-window not yet open */
             $openFrom = SystemSetting::getValue('booking_open_from');
             if ($openFrom && $validated['date'] < $openFrom) {
                 return response()->json([
@@ -173,13 +180,25 @@ backend/app/Http/Controllers/BookingController.php
                 ], 400);
             }
     
-            // ❌ manually closed-day check
-            if (ClosedDay::where('date',$validated['date'])->exists()) {
+            /* ❌ full-day closure */
+            if (ClosedDay::where('date', $validated['date'])->exists()) {
                 return response()->json([
                     'error' => 'The restaurant is closed on the selected date.'
                 ], 400);
             }
     
+            /* ❌ per-meal closure */
+            if (
+                MealOverride::where('date', $validated['date'])
+                    ->where("{$validated['meal_type']}_closed", true)
+                    ->exists()
+            ) {
+                return response()->json([
+                    'error' => 'The selected service (lunch/dinner) is closed on that date.'
+                ], 400);
+            }
+    
+            /* run allocation algorithm */
             $partySize = $validated['total_adults'] + $validated['total_kids'];
             $longStay  = $validated['long_stay'] ?? false;
     
@@ -193,45 +212,51 @@ backend/app/Http/Controllers/BookingController.php
             );
     
             if (isset($assign['error'])) {
-                return response()->json(['error'=>$assign['error']], 400);
+                return response()->json(['error' => $assign['error']], 400);
             }
     
+            /* persist booking & details atomically */
             return DB::transaction(function () use ($validated, $assign, $longStay) {
                 $master = null;
+    
                 foreach ($assign as $i => $slot) {
-                    $ta = TableAvailability::where('date',$validated['date'])
-                        ->where('meal_type',$validated['meal_type'])
-                        ->where('capacity',$slot['capacity'])
+                    $ta = TableAvailability::where('date',        $validated['date'])
+                        ->where('meal_type',   $validated['meal_type'])
+                        ->where('capacity',    $slot['capacity'])
+                        ->lockForUpdate()
                         ->firstOrFail();
     
-                    if ($i===0) {
+                    if ($i === 0) {
                         $master = Booking::create([
-                            'table_availability_id'=> $ta->id,
-                            'reserved_time'        => $validated['reserved_time'],
-                            'total_adults'         => $validated['total_adults'],
-                            'total_kids'           => $validated['total_kids'],
-                            'full_name'            => $validated['full_name'],
-                            'phone'                => $validated['phone'] ?? null,
-                            'email'                => $validated['email'] ?? null,
-                            'special_requests'     => $validated['special_requests'] ?? null,
-                            'gdpr_consent'         => $validated['gdpr_consent'] ?? false,
-                            'marketing_opt_in'     => $validated['marketing_opt_in'] ?? false,
-                            'long_stay'            => $longStay,
+                            'table_availability_id' => $ta->id,
+                            'reserved_time'         => $validated['reserved_time'],
+                            'total_adults'          => $validated['total_adults'],
+                            'total_kids'            => $validated['total_kids'],
+                            'full_name'             => $validated['full_name'],
+                            'phone'                 => $validated['phone'] ?? null,
+                            'email'                 => $validated['email'] ?? null,
+                            'special_requests'      => $validated['special_requests'] ?? null,
+                            'gdpr_consent'          => $validated['gdpr_consent'] ?? false,
+                            'marketing_opt_in'      => $validated['marketing_opt_in'] ?? false,
+                            'long_stay'             => $longStay,
                         ]);
                     } else {
                         BookingDetail::create([
                             'booking_id'            => $master->id,
                             'table_availability_id' => $ta->id,
                             'capacity'              => $slot['capacity'],
-                            'extra_chair'           => (bool)($slot['extra_chair'] ?? false),
+                            'extra_chair'           => (bool) ($slot['extra_chair'] ?? false),
                         ]);
                     }
                 }
     
+                /* optional e-mails */
                 if ($master->email) {
-                    Mail::to($master->email)
-                        ->send(new BookingConfirmationMail($master));
-                    $mealDT = Carbon::parse("$master->tableAvailability->date $master->reserved_time");
+                    Mail::to($master->email)->send(new BookingConfirmationMail($master));
+    
+                    $mealDT = Carbon::parse(
+                        "{$master->tableAvailability->date} {$master->reserved_time}"
+                    );
                     $remind = $mealDT->copy()->subHours(24);
                     $survey = $mealDT->copy()->addHours(3);
     
@@ -247,32 +272,136 @@ backend/app/Http/Controllers/BookingController.php
                 }
     
                 return response()->json([
-                    'message'=>'Booked successfully!',
-                    'data'=> $master->load(['tableAvailability','details'])
-                ],201);
+                    'message' => 'Booked successfully!',
+                    'data'    => $master->load(['tableAvailability', 'details']),
+                ], 201);
             });
         }
     
+        /*───────────────────────────────────────────────────────────
+          Update / delete  (admin)
+        ───────────────────────────────────────────────────────────*/
         public function update(Request $request, Booking $booking)
         {
-            $booking->update($request->validate([
-                'reserved_time'=>'sometimes|date_format:H:i:s',
-                'total_adults' =>'sometimes|integer|min:1',
-                'total_kids'   =>'sometimes|integer|min:0',
-                'full_name'    =>'sometimes|string',
-                'phone'        =>'sometimes|nullable|string',
-            ]));
-    
-            return response()->json([
-                'message'=>'booking updated',
-                'data'   =>$booking->fresh('tableAvailability')
+            $data = $request->validate([
+                'reserved_time'     => 'sometimes|date_format:H:i:s',
+                'total_adults'      => 'sometimes|integer|min:1',
+                'total_kids'        => 'sometimes|integer|min:0',
+                'full_name'         => 'sometimes|string',
+                'phone'             => 'sometimes|nullable|string',
+                'email'             => 'sometimes|nullable|email',
+                /* manual table move – pick any other capacity that still has stock */
+                'capacity_override' => 'sometimes|integer|in:2,4,6',
             ]);
+    
+            return DB::transaction(function () use ($data, $booking) {
+    
+                $origTA   = $booking->tableAvailability;  // eager-loaded
+                $date     = $origTA->date;
+                $mealType = $origTA->meal_type;
+    
+                /*────────────────────────────────────────────────
+                  1) Manual re-assign (no algorithm)
+                ────────────────────────────────────────────────*/
+                if (isset($data['capacity_override'])) {
+                    $cap = $data['capacity_override'];
+                    unset($data['capacity_override']);
+    
+                    $target = TableAvailability::where('date', $date)
+                        ->where('meal_type', $mealType)
+                        ->where('capacity', $cap)
+                        ->lockForUpdate()
+                        ->first();
+    
+                    if (! $target) {
+                        return response()->json(['error' => 'No such table capacity on that date.'], 400);
+                    }
+    
+                    $occupied = Booking::where('table_availability_id', $target->id)
+                        ->where('id', '!=', $booking->id)
+                        ->count();
+    
+                    if ($occupied >= $target->available_count) {
+                        return response()->json(['error' => 'No free table of that capacity.'], 400);
+                    }
+    
+                    $booking->table_availability_id = $target->id;
+                }
+    
+                /*────────────────────────────────────────────────
+                  2) Fields that may require re-allocation
+                ────────────────────────────────────────────────*/
+                $partyChanged = array_key_exists('total_adults', $data)
+                    || array_key_exists('total_kids', $data);
+                $timeChanged  = array_key_exists('reserved_time', $data);
+    
+                if ($partyChanged || $timeChanged) {
+                    $partySize = ($data['total_adults'] ?? $booking->total_adults)
+                        + ($data['total_kids']   ?? $booking->total_kids);
+                    $timeHHMM  = $data['reserved_time'] ?? $booking->reserved_time;
+                    $longStay  = $booking->long_stay;
+    
+                    $algo   = new BookingAlgorithmService();
+                    $assign = $algo->tryAllocate(
+                        $date,
+                        $mealType,
+                        $timeHHMM,
+                        $partySize,
+                        $longStay
+                    );
+    
+                    if (isset($assign['error'])) {
+                        return response()->json(['error' => $assign['error']], 400);
+                    }
+    
+                    // Remove existing extra-details
+                    $booking->details()->delete();
+    
+                    // Persist new assignment
+                    $first = true;
+                    foreach ($assign as $slot) {
+                        $ta = TableAvailability::where('date',      $date)
+                            ->where('meal_type', $mealType)
+                            ->where('capacity',  $slot['capacity'])
+                            ->lockForUpdate()
+                            ->firstOrFail();
+    
+                        if ($first) {
+                            $booking->update([
+                                'table_availability_id' => $ta->id,
+                                'reserved_time'         => $timeHHMM,
+                                'total_adults'          => $data['total_adults'] ?? $booking->total_adults,
+                                'total_kids'            => $data['total_kids']   ?? $booking->total_kids,
+                                'full_name'             => $data['full_name']    ?? $booking->full_name,
+                                'phone'                 => $data['phone']        ?? $booking->phone,
+                                'email'                 => $data['email']        ?? $booking->email,
+                            ]);
+                            $first = false;
+                        } else {
+                            BookingDetail::create([
+                                'booking_id'            => $booking->id,
+                                'table_availability_id' => $ta->id,
+                                'capacity'              => $slot['capacity'],
+                                'extra_chair'           => (bool) ($slot['extra_chair'] ?? false),
+                            ]);
+                        }
+                    }
+                } else {
+                    // No re-allocation needed: just update other fields
+                    $booking->update($data);
+                }
+    
+                return response()->json([
+                    'message' => 'booking updated',
+                    'data'    => $booking->fresh(['tableAvailability', 'details']),
+                ]);
+            });
         }
     
         public function destroy(Booking $booking)
         {
             $booking->delete();
-            return response()->json(['message'=>'booking deleted']);
+            return response()->json(['message' => 'booking deleted']);
         }
     }
 
@@ -301,6 +430,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
     use App\Models\Booking;
     use App\Models\ClosedDay;
     use App\Models\SystemSetting;
+    use App\Models\MealOverride;                       // ← NEW
     use Illuminate\Http\Request;
     use Illuminate\Support\Carbon;
     use Illuminate\Support\Facades\Config;
@@ -382,7 +512,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return $availability;
         }
     
-        /*────────────────── endpoints ──────────────────*/
+        /*────────────────── single-day endpoint ──────────────────*/
         public function index(Request $request)
         {
             $date     = trim($request->query('date', ''));
@@ -392,20 +522,26 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                 return response()->json([], 400);
             }
     
-            /* always guarantee stock exists */
+            /* seed stock if needed */
             $this->calendar->ensureStockForDate($date);
     
-            /* shortcut indicators */
-            if (! $this->calendar->isOpen($date)) {
-                if (ClosedDay::where('date', $date)->exists()) {
-                    return response()->json(self::CLOSED_INDICATOR);
-                }
-                $openFrom = SystemSetting::getValue('booking_open_from');
-                if ($openFrom && $date < $openFrom) {
-                    return response()->json(self::BLOCKED_INDICATOR);
-                }
+            /* quick-out indicators */
+            if (ClosedDay::where('date', $date)->exists()) {
+                return response()->json(self::CLOSED_INDICATOR);
+            }
+            if (
+                MealOverride::where('date', $date)
+                    ->where("{$mealType}_closed", true)
+                    ->exists()
+            ) {
+                return response()->json(self::CLOSED_INDICATOR);
+            }
+            $openFrom = SystemSetting::getValue('booking_open_from');
+            if ($openFrom && $date < $openFrom) {
+                return response()->json(self::BLOCKED_INDICATOR);
             }
     
+            /* normal availability build */
             $rows = TableAvailability::where('date', $date)
                 ->where('meal_type', $mealType)
                 ->get()
@@ -430,6 +566,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             return response()->json($payload);
         }
     
+        /*────────────────── multi-day endpoint ──────────────────*/
         public function range(Request $request)
         {
             $start    = $request->query('start');
@@ -446,7 +583,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                 return response()->json(['error' => 'end must be after start'], 400);
             }
     
-            /* seed each date before querying */
+            /* seed stock for each date in range */
             for ($d = $startDate->copy(); $d->lte($endDate); $d->addDay()) {
                 $this->calendar->ensureStockForDate($d->format('Y-m-d'));
             }
@@ -467,18 +604,32 @@ backend/app/Http/Controllers/TableAvailabilityController.php
             while ($cursor->lte($endDate)) {
                 $dateStr = $cursor->format('Y-m-d');
     
+                /* full day closed? */
                 if (ClosedDay::where('date', $dateStr)->exists()) {
                     $results[$dateStr] = self::CLOSED_INDICATOR;
                     $cursor->addDay();
                     continue;
                 }
     
+                /* per-meal closed? */
+                if (
+                    MealOverride::where('date', $dateStr)
+                        ->where("{$mealType}_closed", true)
+                        ->exists()
+                ) {
+                    $results[$dateStr] = self::CLOSED_INDICATOR;
+                    $cursor->addDay();
+                    continue;
+                }
+    
+                /* booking window not open yet? */
                 if ($openFrom && $dateStr < $openFrom) {
                     $results[$dateStr] = self::BLOCKED_INDICATOR;
                     $cursor->addDay();
                     continue;
                 }
     
+                /* weekly schedule */
                 $dow         = $cursor->dayOfWeek;
                 $servedMeals = $schedule[$dow] ?? [];
                 if (empty($servedMeals)) {
@@ -492,6 +643,7 @@ backend/app/Http/Controllers/TableAvailabilityController.php
                     continue;
                 }
     
+                /* build availability */
                 $dayRows = $rows->where('date', $dateStr);
                 if ($dayRows->isEmpty()) {
                     $results[$dateStr] = [];
@@ -1117,6 +1269,7 @@ backend/app/Models/TableAvailability.php
             'meal_type',
             'capacity',
             'available_count',
+            'position',
         ];
     
         public function bookings()
@@ -1936,11 +2089,17 @@ backend/routes/api.php
     
     use Illuminate\Http\Request;
     use Illuminate\Support\Facades\Route;
-    use App\Http\Controllers\{BookingController,TableAvailabilityController,
-        ClosedDayController,OpenDayController,SystemSettingController,MetaController};
+    use App\Http\Controllers\{
+        BookingController,
+        TableAvailabilityController,
+        ClosedDayController,
+        OpenDayController,
+        SystemSettingController,
+        MealOverrideController,             // ← NEW
+        MetaController
+    };
     
     Route::get('/', fn () => response()->json(['message' => 'API root']));
-    
     Route::middleware('auth:sanctum')->get('/user', fn (Request $r) => $r->user());
     
     /* Availability */
@@ -1956,15 +2115,19 @@ backend/routes/api.php
     /* Calendar overrides & settings */
     Route::get ('/closed-days',        [ClosedDayController::class,'index']);
     Route::post('/closed-days/toggle', [ClosedDayController::class,'toggle']);
-    Route::get ( '/open-days',         [OpenDayController::class, 'index']);
-    Route::post( '/open-days/toggle',  [OpenDayController::class, 'toggle']);
+    Route::get ('/open-days',          [OpenDayController::class,'index']);
+    Route::post('/open-days/toggle',   [OpenDayController::class,'toggle']);
+    
+    /* NEW meal-overrides */
+    Route::get ('/meal-overrides',         [MealOverrideController::class,'index']);
+    Route::post('/meal-overrides/toggle',  [MealOverrideController::class,'toggle']);
     
     Route::get ('/settings/booking-open-from', [SystemSettingController::class,'show']);
     Route::put ('/settings/booking-open-from', [SystemSettingController::class,'update']);
     
     /* ─── Meta helpers consumed by the SPA ────────────────────────────── */
-    Route::get('/meta/horizon-days',    [MetaController::class,'horizonDays']);
-    Route::get('/meta/service-schedule',[MetaController::class,'serviceSchedule']);  // ← NEW
+    Route::get('/meta/horizon-days',     [MetaController::class,'horizonDays']);
+    Route::get('/meta/service-schedule', [MetaController::class,'serviceSchedule']);
 
 ––––––––––––––––––––––––
 backend/config/mail.php

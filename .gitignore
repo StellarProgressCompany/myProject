@@ -1,31 +1,37 @@
-### Node modules ###
-/node_modules/
+# ─── ENVIRONMENT & SECRETS ────────────────────────────────────────────────
+# Laravel environment file (don’t commit your credentials!)
+/backend/.env
+/.env
+.env.*.local
+
+# ─── PHP / Laravel ────────────────────────────────────────────────────────
+/backend/vendor/
+/backend/storage/
+/backend/node_modules/            # if you ever run JS tools in backend
+/phpunit.result.cache
+.phpunit.cache
+
+# ─── JavaScript ──────────────────────────────────────────────────────────
 /frontend-admin/node_modules/
 /frontend-booking/node_modules/
-/backend/node_modules/
+/node_modules/
 
-### Build outputs ###
 /frontend-admin/dist/
 /frontend-booking/dist/
-/public/build
-/public/hot
-/public/storage
-/storage/*.key
-/vendor
+/public/build/
+/public/hot/
 
-### Environment & logs ###
-.env
-.env.backup
-.env.production
-.phpunit.result.cache
-Homestead.json
-Homestead.yaml
-auth.json
-npm-debug.log*
-yarn-error.log*
-/.phpunit.cache
+# ─── LOGS & DEBUG ─────────────────────────────────────────────────────────
+/npm-debug.log*
+/yarn-error.log*
 
-### IDE/editor settings ###
+# ─── IDE & OS ─────────────────────────────────────────────────────────────
 /.idea/
 /.vscode/
-/.fleet
+/.fleet/
+/*.swp
+.DS_Store
+Thumbs.db
+
+# ─── Miscellaneous build artifacts ───────────────────────────────────────
+/scripts/dumps/                  # if you keep database dumps around

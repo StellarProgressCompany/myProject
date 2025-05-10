@@ -2,6 +2,25 @@
 
 All notable changes of the PHPUnit 10.5 release series are documented in this file using the [Keep a CHANGELOG](https://keepachangelog.com/) principles.
 
+## [10.5.46] - 2025-05-02
+
+### Added
+
+* `displayDetailsOnAllIssues` attribute on the `<phpunit>` element of the XML configuration file and `--display-all-issues` CLI option for controlling whether PHPUnit should display details on all issues that are triggered (default: `false`)
+* `failOnAllIssues` attribute on the `<phpunit>` element of the XML configuration file and `--fail-on-all-issues` CLI option for controlling whether PHPUnit should fail on all issues that are triggered (default: `false`)
+
+### Changed
+
+* [#5956](https://github.com/sebastianbergmann/phpunit/issues/5956): Improved handling of deprecated `E_STRICT` constant
+* Improved message when test is considered risky for printing unexpected output
+
+## [10.5.45] - 2025-02-06
+
+### Changed
+
+* [#6117](https://github.com/sebastianbergmann/phpunit/issues/6117): Include source location information for issues triggered during test in `--debug` output
+* [#6119](https://github.com/sebastianbergmann/phpunit/issues/6119): Improve message for errors that occur while parsing attributes
+
 ## [10.5.44] - 2025-01-31
 
 ### Fixed
@@ -395,6 +414,8 @@ All notable changes of the PHPUnit 10.5 release series are documented in this fi
 
 * [#5563](https://github.com/sebastianbergmann/phpunit/issues/5563): `createMockForIntersectionOfInterfaces()` does not automatically register mock object for expectation verification
 
+[10.5.46]: https://github.com/sebastianbergmann/phpunit/compare/10.5.45...10.5.46
+[10.5.45]: https://github.com/sebastianbergmann/phpunit/compare/10.5.44...10.5.45
 [10.5.44]: https://github.com/sebastianbergmann/phpunit/compare/10.5.43...10.5.44
 [10.5.43]: https://github.com/sebastianbergmann/phpunit/compare/10.5.42...10.5.43
 [10.5.42]: https://github.com/sebastianbergmann/phpunit/compare/10.5.41...10.5.42

@@ -621,7 +621,6 @@
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/CurrentBookings.jsx
-    // frontend/src/components/admin/currentBookings/CurrentBookings.jsx
     import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
     import { format, addDays } from "date-fns";
@@ -658,8 +657,8 @@
         const t      = (key, vars) => translate(lang, key, vars);
         const locale = localeMap[lang] || enUS;
     
-        const [offset, setOffset]               = useState(0);
-        const [isAdding, setIsAdding]           = useState(false);
+        const [offset, setOffset]                 = useState(0);
+        const [isAdding, setIsAdding]             = useState(false);
         const [editingBooking, setEditingBooking] = useState(null);
     
         const [tableAvailability, setTableAvailability] = useState({});
@@ -716,6 +715,11 @@
                 ? t("admin.today")
                 : format(dateObj, "EEEE, MMMM d", { locale });
     
+        /* handler when clicking a booking in the schedule */
+        const handleBookingClick = (booking) => {
+            setEditingBooking(booking);
+        };
+    
         return (
             <div className="bg-white p-4 rounded shadow">
                 {/* header + controls */}
@@ -767,6 +771,7 @@
                         tableAvailability={tableAvailability}
                         onClose={() => {}}
                         enableZoom
+                        onBookingClick={handleBookingClick}
                     />
                 )}
     
@@ -803,24 +808,83 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/currentBookings/EditBookingModal.jsx
     // frontend/src/components/admin/currentBookings/EditBookingModal.jsx
-    // (unchanged – reproduced verbatim)
-    import React, { useState } from "react";
+    import React, { useState, useMemo, useEffect } from "react";
     import PropTypes from "prop-types";
-    import { updateBooking, deleteBooking } from "../../../services/bookingService";
+    import {
+        updateBooking,
+        deleteBooking,
+    } from "../../../services/bookingService";
+    import { translate, getLanguage } from "../../../services/i18n";
+    import { IconTrash, IconDeviceFloppy } from "@tabler/icons-react";
+    
+    /* ─── slot helpers (same as AddBookingModal) ───────────────────── */
+    const buildSlots = (start, end) => {
+        const out = [];
+        let [h, m] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        while (h < eh || (h === eh && m <= em)) {
+            out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+            m += 15;
+            if (m === 60) {
+                h += 1;
+                m = 0;
+            }
+        }
+        return out;
+    };
+    const lunchFirstSlots  = buildSlots("13:00", "14:00");
+    const lunchSecondSlots = buildSlots("15:00", "16:00");
+    const dinnerSlots      = buildSlots("20:00", "22:00");
+    /* ──────────────────────────────────────────────────────────────── */
     
     export default function EditBookingModal({ booking, onClose, onSaved }) {
-        const [fullName, setFullName] = useState(booking.full_name);
-        const [adults, setAdults] = useState(booking.total_adults);
-        const [kids, setKids] = useState(booking.total_kids);
-        const [phone, setPhone] = useState(booking.phone || "");
-        const [time, setTime] = useState(booking.reserved_time.slice(0, 5));
-        const [saving, setSaving] = useState(false);
-        const [error, setError] = useState("");
+        /* ─── i18n ─── */
+        const lang = getLanguage();
+        const t    = (k, p) => translate(lang, k, p);
     
+        /* ─── form state ─── */
+        const [fullName, setFullName] = useState(booking.full_name);
+        const [adults,   setAdults]   = useState(booking.total_adults);
+        const [kids,     setKids]     = useState(booking.total_kids);
+        const [phone,    setPhone]    = useState(booking.phone || "");
+    
+        /* meal / round derived from original booking */
+        const mealType = booking.table_availability?.meal_type || "lunch";
+        const initialRound =
+            mealType === "lunch"
+                ? booking.reserved_time < "15:00:00"
+                    ? "first"
+                    : "second"
+                : null;
+    
+        const [round, setRound] = useState(initialRound);
+    
+        /* time select options depend on meal / round */
+        const timeOptions = useMemo(() => {
+            if (mealType === "dinner") return dinnerSlots;
+            return round === "first" ? lunchFirstSlots : lunchSecondSlots;
+        }, [mealType, round]);
+    
+        /* ensure selected time always valid */
+        const [time, setTime] = useState(booking.reserved_time.slice(0, 5));
+        useEffect(() => {
+            if (!timeOptions.includes(`${time}:00`)) {
+                const fallback = timeOptions[0];
+                setTime(fallback.slice(0, 5));
+            }
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [timeOptions]);
+    
+        /* saving / error state */
+        const [saving, setSaving] = useState(false);
+        const [error,  setError]  = useState("");
+    
+        /* ─── save handler ─── */
         const handleSave = async () => {
             if (saving) return;
+    
             if (!fullName.trim() || adults < 1) {
-                return setError("Name and at least 1 adult required.");
+                return setError(t("modal.errorRequired"));
             }
             setSaving(true);
             setError("");
@@ -828,25 +892,24 @@
             try {
                 await updateBooking(booking.id, {
                     full_name:
-                        fullName.trim() !== booking.full_name
-                            ? fullName.trim()
-                            : undefined,
+                        fullName.trim() !== booking.full_name ? fullName.trim() : undefined,
                     total_adults: adults,
-                    total_kids: kids,
-                    phone: phone || null,
+                    total_kids:   kids,
+                    phone:        phone || null,
                     reserved_time: `${time}:00`,
                 });
                 onSaved();
             } catch (e) {
                 console.error(e);
-                setError(e.response?.data?.error ?? "Update failed");
+                setError(e.response?.data?.error ?? t("modal.saveError"));
             } finally {
                 setSaving(false);
             }
         };
     
+        /* ─── delete handler ─── */
         const handleDelete = async () => {
-            if (!window.confirm("Delete this booking?")) return;
+            if (!window.confirm(t("modal.confirmDelete") || "Delete this booking?")) return;
             setSaving(true);
     
             try {
@@ -854,27 +917,34 @@
                 onSaved();
             } catch (e) {
                 console.error(e);
-                setError("Delete failed");
+                setError(t("modal.deleteError") || "Delete failed");
             } finally {
                 setSaving(false);
             }
         };
     
+        /* ─── ui ─── */
         return (
             <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
                 <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
-                    <h3 className="text-lg font-bold mb-4">Edit Booking</h3>
+                    <h3 className="text-lg font-bold mb-4">{t("modal.editTitle") || "Edit Booking"}</h3>
     
-                    <label className="block mb-1 text-sm font-medium">Full Name</label>
+                    {/* Full name */}
+                    <label className="block mb-1 text-sm font-medium">
+                        {t("modal.fullName")}
+                    </label>
                     <input
                         className="w-full border p-2 mb-3 rounded"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                     />
     
+                    {/* party size */}
                     <div className="grid grid-cols-2 gap-2 mb-3">
                         <div>
-                            <label className="block mb-1 text-sm font-medium">Adults</label>
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("schedule.table.adults") || "Adults"}
+                            </label>
                             <input
                                 type="number"
                                 min={1}
@@ -884,7 +954,9 @@
                             />
                         </div>
                         <div>
-                            <label className="block mb-1 text-sm font-medium">Kids</label>
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("schedule.table.kids") || "Kids"}
+                            </label>
                             <input
                                 type="number"
                                 min={0}
@@ -895,39 +967,73 @@
                         </div>
                     </div>
     
-                    <label className="block mb-1 text-sm font-medium">Phone</label>
+                    {/* phone */}
+                    <label className="block mb-1 text-sm font-medium">
+                        {t("modal.phoneOptional")}
+                    </label>
                     <input
                         className="w-full border p-2 mb-3 rounded"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                     />
     
-                    <label className="block mb-1 text-sm font-medium">Time (HH:MM)</label>
-                    <input
-                        type="time"
-                        step={900}
+                    {/* lunch round selector (only for lunch) */}
+                    {mealType === "lunch" && (
+                        <div className="flex space-x-4 mb-3">
+                            <label className="flex items-center space-x-1">
+                                <input
+                                    type="radio"
+                                    checked={round === "first"}
+                                    onChange={() => setRound("first")}
+                                />
+                                <span>{t("modal.round.first")}</span>
+                            </label>
+                            <label className="flex items-center space-x-1">
+                                <input
+                                    type="radio"
+                                    checked={round === "second"}
+                                    onChange={() => setRound("second")}
+                                />
+                                <span>{t("modal.round.second")}</span>
+                            </label>
+                        </div>
+                    )}
+    
+                    {/* time select */}
+                    <label className="block mb-1 text-sm font-medium">
+                        {t("modal.time")}
+                    </label>
+                    <select
                         className="w-full border p-2 mb-3 rounded"
                         value={time}
                         onChange={(e) => setTime(e.target.value)}
-                    />
+                    >
+                        {timeOptions.map((tOpt) => (
+                            <option key={tOpt} value={tOpt.slice(0, 5)}>
+                                {tOpt.slice(0, 5)}
+                            </option>
+                        ))}
+                    </select>
     
                     {error && <p className="text-red-600 mb-2">{error}</p>}
     
                     <div className="flex justify-between items-center">
                         <button
                             onClick={handleDelete}
-                            className="px-3 py-1 text-red-600 underline disabled:opacity-50"
+                            className="flex items-center text-red-600 hover:text-red-700 disabled:opacity-50"
                             disabled={saving}
                         >
-                            Delete
+                            <IconTrash className="w-5 h-5 mr-1" />
+                            {t("modal.delete") || "Delete"}
                         </button>
+    
                         <div className="space-x-2">
                             <button
                                 onClick={onClose}
                                 className="px-4 py-1 border rounded"
                                 disabled={saving}
                             >
-                                Close
+                                {t("modal.close")}
                             </button>
                             <button
                                 onClick={handleSave}
@@ -937,7 +1043,10 @@
                                 {saving ? (
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                 ) : (
-                                    "Save"
+                                    <>
+                                        <IconDeviceFloppy className="w-4 h-4 mr-1" />
+                                        {t("modal.save")}
+                                    </>
                                 )}
                             </button>
                         </div>
@@ -949,13 +1058,13 @@
     
     EditBookingModal.propTypes = {
         booking: PropTypes.shape({
-            id: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
-                .isRequired,
-            full_name: PropTypes.string,
-            total_adults: PropTypes.number,
-            total_kids: PropTypes.number,
-            phone: PropTypes.string,
-            reserved_time: PropTypes.string,
+            id:                PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+            full_name:         PropTypes.string,
+            total_adults:      PropTypes.number,
+            total_kids:        PropTypes.number,
+            phone:             PropTypes.string,
+            reserved_time:     PropTypes.string,
+            table_availability: PropTypes.object,
         }).isRequired,
         onClose: PropTypes.func.isRequired,
         onSaved: PropTypes.func.isRequired,
@@ -1340,32 +1449,45 @@
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/settings/OperationalSettings.jsx
     // frontend/src/components/admin/settings/OperationalSettings.jsx
+    import React, {
+        useState,
+        useEffect,
+        useCallback,
+        useMemo,
+    } from "react";
+    import { format }          from "date-fns";
+    import { AnimatePresence }  from "framer-motion";
+    import toast, { Toaster }   from "react-hot-toast";
     
-    import React, { useState, useEffect, useCallback } from "react";
-    import { format } from "date-fns";
-    import { motion, AnimatePresence } from "framer-motion";
+    import BookingsCalendarView       from "../sharedBookings/BookingsCalendarView";
+    import SkeletonCalendar           from "../../datePicker/SkeletonCalendar";
     
-    import BookingsCalendarView      from "../sharedBookings/BookingsCalendarView";
-    import { clearAvailabilityCache } from "../../../services/bookingService";
-    import { getDayMealTypes }        from "../../../services/datePicker";
+    import {
+        clearAvailabilityCache,
+    } from "../../../services/bookingService";
+    import {
+        getDayMealTypes,
+    } from "../../../services/datePicker";
+    import {
+        fetchMealOverrides,
+        toggleMealOverride,
+    } from "../../../services/mealOverrides";
+    
     import { translate, getLanguage } from "../../../services/i18n";
-    import { fetchMealOverrides, toggleMealOverride } from "../../../services/mealOverrides";
     
-    import SkeletonCalendar from "../../datePicker/SkeletonCalendar.jsx";
-    
-    /* ────── HTTP helpers ────── */
+    /* ────── simple fetch helpers for open / close endpoints ────── */
     async function toggleClosedDay(dateYMD) {
         await fetch("/api/closed-days/toggle", {
-            method: "POST",
+            method : "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ date: dateYMD }),
+            body   : JSON.stringify({ date: dateYMD }),
         });
     }
     async function toggleOpenDay(dateYMD) {
         await fetch("/api/open-days/toggle", {
-            method: "POST",
+            method : "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ date: dateYMD }),
+            body   : JSON.stringify({ date: dateYMD }),
         });
     }
     async function fetchClosedDays() {
@@ -1378,127 +1500,93 @@
         const j = await r.json();
         return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
     }
-    async function deleteBookingsForDate(dateYMD) {
-        await fetch(`/api/bookings/by-date/${dateYMD}`, { method: "DELETE" });
-    }
     
-    /* success tick */
-    const SuccessTick = ({ id }) => (
-        <AnimatePresence mode="wait">
-            <motion.div
-                key={id}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1.25, opacity: 1 }}
-                exit={{ scale: 0, opacity: 0 }}
-                transition={{ type: "spring", stiffness: 260, damping: 20 }}
-                className="absolute top-2 right-2 text-green-600 pointer-events-none select-none"
-            >
-                ✓
-            </motion.div>
-        </AnimatePresence>
-    );
-    
-    /* progress button */
-    function ProgressButton({
-                                colour      = "blue",
-                                idleLabel,
-                                loadingLabel,
-                                successLabel,
-                                onClick,
-                                disabled = false,
-                            }) {
-        const [state, setState]   = useState("idle");  // idle | loading | success
-        const [progress, setProg] = useState(0);
-        const timerRef = React.useRef(null);
-    
-        React.useEffect(() => {
-            if (state !== "loading") return;
-            timerRef.current = setInterval(() => {
-                setProg((p) => (p < 95 ? p + 1 : p));
-            }, 25);
-            return () => clearInterval(timerRef.current);
-        }, [state]);
-    
-        const start = () => { setProg(0); setState("loading"); };
-        const finish= () => {
-            clearInterval(timerRef.current);
-            setProg(100); setState("success");
-            setTimeout(() => { setState("idle"); setProg(0); }, 1500);
-        };
-    
-        const handle = async () => {
-            if (state === "loading" || disabled) return;
-            try {
-                start();
-                await onClick();
-                finish();
-            } catch (e) {
-                clearInterval(timerRef.current);
-                console.error(e);
-                setState("idle");
-                setProg(0);
-                alert(e?.response?.data?.error || "Action failed");
-            }
-        };
-    
-        const base = state === "success" ? "green" : colour;
-        const colourClasses = {
-            blue:  "bg-blue-600 hover:bg-blue-700",
-            red:   "bg-red-600 hover:bg-red-700",
+    /* ──────────────────────────────────────────────────────────────
+       UI helpers
+    ────────────────────────────────────────────────────────────────*/
+    function PillButton({
+                            label,
+                            colour,           // "green" | "red" | "gray"
+                            onClick,
+                            disabled = false,
+                        }) {
+        const colours = {
             green: "bg-green-600 hover:bg-green-700",
-        }[base];
-    
+            red  : "bg-red-600 hover:bg-red-700",
+            gray : "bg-gray-200 hover:bg-gray-300 text-gray-600",
+        };
         return (
             <button
                 type="button"
-                onClick={handle}
-                disabled={state === "loading" || disabled}
-                className={`relative flex-1 px-4 py-2 rounded text-white font-medium disabled:opacity-50 ${colourClasses}`}
+                onClick={onClick}
+                disabled={disabled}
+                className={`px-4 py-2 rounded shadow text-white font-medium disabled:opacity-50 ${colours[colour]}`}
             >
-          <span className="relative z-10">
-            {state === "idle"    && idleLabel}
-              {state === "loading" && loadingLabel}
-              {state === "success" && successLabel}
-          </span>
-                {state === "loading" && (
-                    <motion.span
-                        style={{ scaleX: progress / 100 }}
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: progress / 100 }}
-                        className="absolute inset-0 bg-white/30 origin-left rounded"
-                    />
-                )}
+                {label}
             </button>
         );
     }
     
-    /*──────────────────────────────────────────────
-      Operational Settings
-    ──────────────────────────────────────────────*/
-    export default function OperationalSettings({ bookings = [], onRefresh = () => {} }) {
-        const t = (k,v) => translate(getLanguage(), k, v);
+    function MealToggle({
+                            label,
+                            isOpen,
+                            onToggle,
+                        }) {
+        return (
+            <button
+                onClick={onToggle}
+                className={`
+            min-w-[110px] py-3 rounded text-white font-semibold shadow
+            ${isOpen ? "bg-green-600 hover:bg-green-700" : "bg-red-500 hover:bg-red-600"}
+          `}
+            >
+                {label}
+            </button>
+        );
+    }
     
-        /* component state */
-        const [selDate,   setSelDate] = useState(null);
-        const [blip,      setBlip]    = useState(null);
-        const [closedDays, setClosed] = useState([]);
-        const [openDays,   setOpen]   = useState([]);
-        const [mealOv,     setMealOv] = useState([]);
-        const [loading,    setLoad]   = useState(true);
+    /* ──────────────────────────────────────────────────────────────
+       Main component
+    ────────────────────────────────────────────────────────────────*/
+    export default function OperationalSettings({
+                                                    bookings = [],
+                                                    onRefresh = () => {},
+                                                }) {
+        const t = (k, p) => translate(getLanguage(), k, p);
     
-        /* future bookings slice for calendar */
-        const todayYMD = new Date().toISOString().slice(0,10);
-        const futureBookings = bookings.filter((b) => {
-            const d = (b.table_availability?.date || b.date || "").slice(0,10);
-            return d >= todayYMD;
-        });
+        /* ─── local state ─── */
+        const [selDate,         setSelDate] = useState(null);
+        const [closedDays,      setClosed]  = useState([]);
+        const [openDays,        setOpen]    = useState([]);
+        const [mealOverrides,   setMealOv]  = useState([]);
+        const [loading,         setLoad]    = useState(true);
     
-        /* fetch helpers */
-        const refreshClosed = useCallback(async () => setClosed(await fetchClosedDays()), []);
-        const refreshOpen   = useCallback(async () => setOpen(await fetchOpenDays()), []);
-        const refreshMealOv = useCallback(async () => setMealOv(await fetchMealOverrides()), []);
+        /* ─── pull future bookings for the calendar ─── */
+        const todayYMD = new Date().toISOString().slice(0, 10);
+        const futureBookings = useMemo(
+            () =>
+                bookings.filter((b) => {
+                    const d = (b.table_availability?.date || b.date || "").slice(0, 10);
+                    return d >= todayYMD;
+                }),
+            [bookings, todayYMD]
+        );
     
-        /* initial load */
+        /* ─── remote fetch helpers ─── */
+        const refreshClosed = useCallback(
+            async () => setClosed(await fetchClosedDays()),
+            []
+        );
+        const refreshOpen   = useCallback(
+            async () => setOpen(await fetchOpenDays()),
+            []
+        );
+        const refreshMealOv = useCallback(
+            async () => setMealOv(await fetchMealOverrides()),
+            []
+        );
+    
+        /* ─── initial load ─── */
         useEffect(() => {
             (async () => {
                 setLoad(true);
@@ -1507,97 +1595,82 @@
             })();
         }, [refreshClosed, refreshOpen, refreshMealOv]);
     
-        /* derive flags for selected date */
-        const ymdKey = selDate ? format(selDate, "yyyy-MM-dd") : null;
-        const scheduleMeals   = selDate ? getDayMealTypes(selDate.getDay()) : [];
-        const scheduleClosed  = selDate && scheduleMeals.length === 0;
+        /* ─── derive status for the selected day ─── */
+        const ymdKey = selDate && format(selDate, "yyyy-MM-dd");
+    
+        const scheduleMeals    = selDate ? getDayMealTypes(selDate.getDay()) : [];
+        const scheduleIsClosed = scheduleMeals.length === 0;
+    
         const exceptionallyClosed = selDate && closedDays.includes(ymdKey);
         const exceptionallyOpen   = selDate && openDays.includes(ymdKey);
     
-        const mealRow     = mealOv.find((row) => row.date === ymdKey) || {};
-        const lunchClosed = !!mealRow.lunch_closed;
-        const dinnerClosed= !!mealRow.dinner_closed;
+        const mealRow =
+            mealOverrides.find((row) => row.date === ymdKey) || {};
+        const lunchClosed  = !!mealRow.lunch_closed;
+        const dinnerClosed = !!mealRow.dinner_closed;
     
-        const isClosedNow =
-            (scheduleClosed && !exceptionallyOpen) ||
+        /* master flags */
+        const dayIsClosed =
+            (scheduleIsClosed && !exceptionallyOpen) ||
             exceptionallyClosed ||
             (lunchClosed && dinnerClosed);
     
-        /* final arrays: filter full-day closures */
+        const dayIsOpen = !dayIsClosed;
+    
+        /* ─── action wrappers with toast feedback ─── */
+        const withToast = (label, fn) => async () => {
+            const id = toast.loading(label);
+            try {
+                await fn();
+                await Promise.all([refreshClosed(), refreshOpen(), refreshMealOv()]);
+                await onRefresh();
+                clearAvailabilityCache();
+                toast.success(t("settings.done"), { id });
+            } catch (e) {
+                console.error(e);
+                toast.error(e?.response?.data?.error || "Error", { id });
+            }
+        };
+    
+        /* ─── handlers ─── */
+        const handleToggleDay = withToast(
+            dayIsClosed ? t("settings.opening") : t("settings.closing"),
+            async () => {
+                if (dayIsClosed) {
+                    await toggleOpenDay(ymdKey);
+                } else {
+                    await toggleClosedDay(ymdKey);
+                }
+            }
+        );
+    
+        const handleToggleLunch = withToast(
+            lunchClosed ? t("settings.opening") : t("settings.closing"),
+            async () => {
+                await toggleMealOverride(ymdKey, "lunch");
+            }
+        );
+    
+        const handleToggleDinner = withToast(
+            dinnerClosed ? t("settings.opening") : t("settings.closing"),
+            async () => {
+                await toggleMealOverride(ymdKey, "dinner");
+            }
+        );
+    
+        /* ─── closed colouring for calendar ─── */
         const closedEffective = [
             ...closedDays.filter((d) => !openDays.includes(d)),
-            ...mealOv
+            ...mealOverrides
                 .filter((o) => o.lunch_closed && o.dinner_closed)
                 .map((o) => o.date),
         ];
     
-        /* permissions ------------------------------------------------*/
-        const canCloseDay = selDate && (
-            (!scheduleClosed && !exceptionallyClosed) ||
-            (scheduleClosed && exceptionallyOpen)
-        );
-        const canOpenDay = selDate && (
-            (scheduleClosed && !exceptionallyOpen) ||
-            (!scheduleClosed && exceptionallyClosed)
-        );
-        const canToggleLunch  = selDate && scheduleMeals.includes("lunch");
-        const canToggleDinner = selDate && scheduleMeals.includes("dinner");
-    
-        /* handlers ---------------------------------------------------*/
-        const doCloseDay = async () => {
-            if (!selDate) return;
-            if (scheduleClosed && exceptionallyOpen) {
-                await toggleOpenDay(ymdKey);
-                await refreshOpen();
-            } else {
-                await toggleClosedDay(ymdKey);
-                await refreshClosed();
-            }
-            await deleteBookingsForDate(ymdKey);
-            await onRefresh();
-            clearAvailabilityCache();
-            setBlip("close");
-            setTimeout(() => setBlip(null), 1500);
-        };
-    
-        const doOpenDay = async () => {
-            if (!selDate) return;
-            if (scheduleClosed && !exceptionallyOpen) {
-                await toggleOpenDay(ymdKey);
-                await refreshOpen();
-            } else {
-                await toggleClosedDay(ymdKey);
-                await refreshClosed();
-            }
-            await onRefresh();
-            clearAvailabilityCache();
-            setBlip("open");
-            setTimeout(() => setBlip(null), 1500);
-        };
-    
-        const toggleLunch = async () => {
-            if (!selDate) return;
-            await toggleMealOverride(ymdKey, "lunch");
-            await refreshMealOv();
-            await onRefresh();
-            clearAvailabilityCache();
-            setBlip("lunch");
-            setTimeout(() => setBlip(null), 1500);
-        };
-        const toggleDinner = async () => {
-            if (!selDate) return;
-            await toggleMealOverride(ymdKey, "dinner");
-            await refreshMealOv();
-            await onRefresh();
-            clearAvailabilityCache();
-            setBlip("dinner");
-            setTimeout(() => setBlip(null), 1500);
-        };
-    
-        /* UI ---------------------------------------------------------*/
+        /* ─── UI ─── */
         return (
             <div className="relative space-y-6">
-                {blip && <SuccessTick id={blip} />}
+                {/* react-hot-toast needs one toaster host */}
+                <Toaster position="top-center" />
     
                 {loading ? (
                     <SkeletonCalendar />
@@ -1613,52 +1686,82 @@
                     />
                 )}
     
-                <div className="flex flex-col gap-4">
-                    <div className="flex gap-4">
-                        <ProgressButton
-                            colour="red"
-                            idleLabel={t("settings.closeDay")}
-                            loadingLabel={t("settings.closing")}
-                            successLabel={t("settings.successClosed")}
-                            onClick={doCloseDay}
-                            disabled={!canCloseDay || loading}
-                        />
-                        <ProgressButton
-                            colour="green"
-                            idleLabel={t("settings.openDay")}
-                            loadingLabel={t("settings.opening")}
-                            successLabel={t("settings.successOpened")}
-                            onClick={doOpenDay}
-                            disabled={!canOpenDay || loading}
-                        />
-                    </div>
-                    <div className="flex gap-4">
-                        <ProgressButton
-                            colour={lunchClosed ? "green" : "red"}
-                            idleLabel={lunchClosed ? t("settings.openLunch") : t("settings.closeLunch")}
-                            loadingLabel={t("settings.processing")}
-                            successLabel={t("settings.done")}
-                            onClick={toggleLunch}
-                            disabled={!canToggleLunch || loading}
-                        />
-                        <ProgressButton
-                            colour={dinnerClosed ? "green" : "red"}
-                            idleLabel={dinnerClosed ? t("settings.openDinner") : t("settings.closeDinner")}
-                            loadingLabel={t("settings.processing")}
-                            successLabel={t("settings.done")}
-                            onClick={toggleDinner}
-                            disabled={!canToggleDinner || loading}
-                        />
-                    </div>
-                </div>
-    
+                {/* info + actions for the selected date */}
                 {selDate && (
-                    <p className="text-sm text-gray-600">
-                        <strong>{format(selDate, "PPP")}</strong> –{" "}
-                        {isClosedNow ? t("settings.closed") : t("settings.open")} ·{" "}
-                        {t("settings.lunch")}: {lunchClosed ? t("settings.closed") : t("settings.open")},{" "}
-                        {t("settings.dinner")}: {dinnerClosed ? t("settings.closed") : t("settings.open")}
-                    </p>
+                    <div className="bg-white rounded shadow p-6 space-y-6">
+                        {/* headline */}
+                        <div className="flex items-start justify-between">
+                            <h2 className="text-xl font-bold">
+                                {format(selDate, "PPPP")}
+                            </h2>
+                            <button
+                                className="text-red-600 underline"
+                                onClick={() => setSelDate(null)}
+                            >
+                                {t("admin.close")}
+                            </button>
+                        </div>
+    
+                        {/* DAY status + toggle */}
+                        <div className="flex items-center gap-4">
+                <span
+                    className={`
+                    font-semibold
+                    ${dayIsOpen ? "text-green-600" : "text-red-600"}
+                  `}
+                >
+                  {dayIsOpen
+                      ? t("settings.open") + " "
+                      : t("settings.closed") + " "}
+                    ({t("settings.clickToToggle") || "clic per tancar"})
+                </span>
+    
+                            <PillButton
+                                label={
+                                    dayIsOpen
+                                        ? t("settings.closeDay")
+                                        : t("settings.openDay")
+                                }
+                                colour={dayIsOpen ? "red" : "green"}
+                                onClick={handleToggleDay}
+                            />
+                        </div>
+    
+                        {/* Meal toggles – only when the *day* is open */}
+                        {dayIsOpen && (
+                            <>
+                                <hr />
+    
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    {/* Lunch */}
+                                    {scheduleMeals.includes("lunch") && (
+                                        <MealToggle
+                                            label={
+                                                lunchClosed
+                                                    ? t("settings.openLunch") || "Obrir Dinar"
+                                                    : t("settings.closeLunch") || "Tancar Dinar"
+                                            }
+                                            isOpen={!lunchClosed}
+                                            onToggle={handleToggleLunch}
+                                        />
+                                    )}
+    
+                                    {/* Dinner */}
+                                    {scheduleMeals.includes("dinner") && (
+                                        <MealToggle
+                                            label={
+                                                dinnerClosed
+                                                    ? t("settings.openDinner") || "Obrir Sopar"
+                                                    : t("settings.closeDinner") || "Tancar Sopar"
+                                            }
+                                            isOpen={!dinnerClosed}
+                                            onToggle={handleToggleDinner}
+                                        />
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
                 )}
             </div>
         );
@@ -2143,9 +2246,9 @@
     /* helper – stable “YYYY-MM-DD” */
     const ymd = (d) => format(d, "yyyy-MM-dd");
     
-    /* ────────────────────────────────────────────────
+    /* ────────────────────────────────────────────────────────────────
        Segmented-control style toggle
-       ────────────────────────────────────────────────*/
+       ────────────────────────────────────────────────────────────────*/
     function ViewToggle({ value, onChange }) {
         const t = (k,p) => translate(getLanguage(), k, p);
         const opts = [
@@ -2391,6 +2494,7 @@
                             tableAvailability={ta}
                             onClose={() => setSelDay(null)}
                             enableZoom
+                            onBookingClick={setEditingBooking}
                         />
                     </div>
                 )}
@@ -2428,6 +2532,7 @@
     import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
     import TableUsage from "./TableUsage";
     import { translate, getLanguage } from "../../../services/i18n";
+    import { IconPencil } from "@tabler/icons-react";
     
     const localeMap = { en: enUS, es: esLocale, ca: caLocale };
     const getBookingDate = (b) =>
@@ -2439,6 +2544,8 @@
                                             tableAvailability,
                                             onClose,
                                             enableZoom = false,
+                                            onBookingClick = () => {},
+                                            onRefresh = () => {},
                                         }) {
         const lang   = getLanguage();
         const t      = (k, p) => translate(lang, k, p);
@@ -2548,26 +2655,56 @@
                                         <th className="px-3 py-2 text-left font-semibold">
                                             {t("schedule.table.totalClients")}
                                         </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.edit") || "Edit"}
+                                        </th>
                                     </tr>
                                     </thead>
                                     <tbody>
                                     {rows.map((bk) => (
-                                        <tr key={bk.id} className={`${bg} hover:bg-yellow-50 transition`}>
-                                            <td className="px-3 py-2">{bk.reserved_time.slice(0, 5)}</td>
-                                            <td className="px-3 py-2 truncate max-w-[160px]">{bk.full_name}</td>
+                                        <tr
+                                            key={bk.id}
+                                            className={`${bg} hover:bg-yellow-50 transition cursor-pointer`}
+                                            onClick={() => onBookingClick(bk)}
+                                        >
+                                            <td className="px-3 py-2">
+                                                {bk.reserved_time.slice(0, 5)}
+                                            </td>
+                                            <td className="px-3 py-2 truncate max-w-[160px]">
+                                                {bk.full_name}
+                                            </td>
                                             <td className="px-3 py-2">
                                                 {bk.total_adults + bk.total_kids}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onBookingClick(bk);
+                                                    }}
+                                                    className="text-gray-600 hover:text-gray-900"
+                                                    title={t("schedule.table.edit") || "Edit"}
+                                                >
+                                                    <IconPencil className="w-4 h-4" />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                     </tbody>
                                 </table>
                             ) : (
-                                <p className="text-gray-500 mb-3">{t("schedule.noBookings")}</p>
+                                <p className="text-gray-500 mb-3">
+                                    {t("schedule.noBookings")}
+                                </p>
                             )}
     
                             {showFloor && (
-                                <TableUsage capacityTotals={fullStock} bookings={rows} expanded />
+                                <TableUsage
+                                    capacityTotals={fullStock}
+                                    bookings={rows}
+                                    expanded
+                                    onRefresh={onRefresh}
+                                />
                             )}
                         </div>
                     );
@@ -2582,98 +2719,196 @@
         tableAvailability: PropTypes.object.isRequired,
         onClose:           PropTypes.func.isRequired,
         enableZoom:        PropTypes.bool,
+        onBookingClick:    PropTypes.func,
+        onRefresh:         PropTypes.func,
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/components/admin/sharedBookings/TableUsage.jsx
     // frontend/src/components/admin/sharedBookings/TableUsage.jsx
-    import React from "react";
-    import PropTypes from "prop-types";
+    import React, { useState } from "react";
+    import PropTypes           from "prop-types";
+    import { updateBooking }   from "../../../services/bookingService";
     import { translate, getLanguage } from "../../../services/i18n";
+    import { IconArrowsShuffle } from "@tabler/icons-react";
     
     export default function TableUsage({
                                            capacityTotals = {},
-                                           bookings = [],
-                                           expanded = false,
-                                           seatSize = 35,
+                                           bookings       = [],
+                                           expanded       = false,
+                                           seatSize       = 35,
+                                           onRefresh      = () => {},
                                        }) {
+        /* ── i18n helpers ────────────────────────────────────────── */
         const lang = getLanguage();
-        const t    = (k, p) => translate(lang, k, p);
+        const t    = (k,p) => translate(lang, k, p);
     
-        /* capacities list */
-        const capacities = Object.keys(capacityTotals)
+        /* ── local UI state ──────────────────────────────────────── */
+        const [moveMode,      setMoveMode]      = useState(false);
+        const [sourceBk,      setSourceBk]      = useState(null); // booking obj
+        const [sourceIdx,     setSourceIdx]     = useState(null); // table index
+        const [bounceIdx,     setBounceIdx]     = useState(null); // anim target
+        const [status,        setStatus]        = useState("");
+    
+        const resetMove = () => {
+            setMoveMode(false);
+            setSourceBk(null);
+            setSourceIdx(null);
+            setBounceIdx(null);
+            setStatus("");
+        };
+    
+        /* ── build table grid  (same algorithm as before) ────────── */
+        const caps = Object.keys(capacityTotals)
             .map(Number)
-            .filter((c) => !isNaN(c))
-            .sort((a, b) => a - b);
+            .filter(Number.isFinite)
+            .sort((a,b) => a-b);
     
-        /* flat table array */
-        const tables = [];
-        capacities.forEach((cap) => {
-            for (let i = 0; i < (capacityTotals[cap] || 0); i++) {
-                tables.push({ cap, booked: false });
+        const tables = [];       // flattened grid
+        caps.forEach(cap => {
+            for (let i=0;i<(capacityTotals[cap]||0);i++){
+                tables.push({ cap, booked:false, booking:null });
             }
         });
     
-        /* mark booked */
-        const freePtr = {};
-        capacities.forEach((cap) => (freePtr[cap] = 0));
-    
-        bookings.forEach((bk) => {
+        /* place bookings */
+        const ptr = {}; caps.forEach(c => (ptr[c]=0));
+        bookings.forEach(bk=>{
             const cap = bk.table_availability?.capacity || 0;
-            let idx = -1,
-                seen = 0;
-            for (let i = 0; i < tables.length; i++) {
-                if (tables[i].cap === cap) {
-                    if (seen === freePtr[cap]) {
-                        idx = i;
-                        break;
-                    }
+            let idx=-1, seen=0;
+            for (let i=0;i<tables.length;i++){
+                if (tables[i].cap===cap){
+                    if (seen===ptr[cap]){ idx=i; break; }
                     seen++;
                 }
             }
-            if (idx !== -1) {
+            if (idx!==-1){
                 tables[idx] = {
                     cap,
-                    booked: true,
-                    name: bk.full_name,
-                    guests: (bk.total_adults || 0) + (bk.total_kids || 0),
+                    booked : true,
+                    booking: bk,
+                    name   : bk.full_name,
+                    guests : (bk.total_adults||0)+(bk.total_kids||0),
                 };
             }
-            freePtr[cap]++;
+            ptr[cap]++;
         });
     
-        /* ui helpers */
-        const scale   = expanded ? 1.6 : 1;
-        const sizePx  = (cap) => cap * seatSize * scale;
-        const bgClass = (t) => (t.booked ? "bg-green-300" : "bg-gray-200");
+        /* ── helpers for style / pointer / clickability ──────────── */
+        const scale  = expanded ? 1.6 : 1;
+        const sizePx = (cap)=>cap*seatSize*scale;
     
+        const selectable = (tbl) => {
+            if (!moveMode) return false;
+            if (!sourceBk)               return tbl.booked;                 // step 1
+            /* step 2 – any EMPTY table is ok */
+            return !tbl.booked;
+        };
+    
+        const classForTable = (tbl, idx) => {
+            let cls = `relative flex flex-col items-center justify-center 
+                       border rounded-2xl shadow-sm ${
+                tbl.booked ? "bg-green-300" : "bg-gray-200"
+            }`;
+    
+            if (idx===sourceIdx) cls += " ring-4 ring-amber-400 bg-amber-200";
+            if (idx===bounceIdx) cls += " animate-bounce";
+            if (selectable(tbl))  cls += " cursor-pointer hover:ring-2 hover:ring-indigo-400";
+            if (moveMode && !selectable(tbl)) cls += " cursor-not-allowed opacity-50";
+    
+            return cls;
+        };
+    
+        /* ── click handler ───────────────────────────────────────── */
+        const handleClick = async (tbl, idx)=>{
+            if (!moveMode) return;
+    
+            /* step ① – pick a booked source table */
+            if (!sourceBk){
+                if (!tbl.booked) return;
+                setSourceBk(tbl.booking);
+                setSourceIdx(idx);
+                setStatus(t("tableUsage.pickTarget")||"Tap an empty table");
+                return;
+            }
+    
+            /* step ② – pick ANY empty table */
+            if (tbl.booked) return;
+    
+            try{
+                setStatus(t("tableUsage.moving")||"Moving…");
+                await updateBooking(sourceBk.id,{ capacity_override: tbl.cap });
+                setBounceIdx(idx);
+                setStatus(t("tableUsage.done")||"Done!");
+    
+                /* let the bounce play, then refresh */
+                setTimeout(async ()=>{
+                    await onRefresh();
+                    window.location.reload();
+                }, 550);
+            }catch(err){
+                console.error(err);
+                setStatus(err.response?.data?.error || "Error");
+                setTimeout(resetMove, 1500);
+            }
+        };
+    
+        /* ── render ──────────────────────────────────────────────── */
         return (
-            <div className="mt-3">
-                <p className="text-sm font-semibold mb-1">{t("tableUsage")}</p>
-                <div className="flex flex-wrap gap-3">
-                    {tables.map((t, i) => (
+            <div className="mt-3 space-y-3">
+                {/* header row */}
+                <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{t("tableUsage.title")}</p>
+    
+                    <button
+                        onClick={()=>{
+                            if (moveMode) resetMove();
+                            else{
+                                setMoveMode(true);
+                                setStatus(t("tableUsage.pickSource")||"Tap a booked table");
+                            }
+                        }}
+                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm font-medium shadow
+                            ${
+                            moveMode
+                                ? "bg-red-600 text-white hover:bg-red-700"
+                                : "bg-indigo-600 text-white hover:bg-indigo-700"
+                        }`}
+                    >
+                        <IconArrowsShuffle className="w-4 h-4"/>
+                        {moveMode
+                            ? t("tableUsage.cancel")||"Cancel"
+                            : t("tableUsage.move")  ||"Move booking"}
+                    </button>
+                </div>
+    
+                {status && <p className="text-xs italic text-gray-600">{status}</p>}
+    
+                {/* table grid */}
+                <div className="flex flex-wrap gap-3 select-none">
+                    {tables.map((tbl,idx)=>(
                         <div
-                            key={i}
-                            className={`relative flex flex-col items-center justify-center border rounded-2xl shadow-sm ${bgClass(
-                                t
-                            )}`}
-                            style={{
-                                width:  sizePx(t.cap),
-                                height: sizePx(t.cap) * 0.75,
-                            }}
-                            title={t.booked ? `${t.name} (${t.guests})` : `${t.cap}-top`}
+                            key={idx}
+                            className={classForTable(tbl,idx)}
+                            style={{ width:sizePx(tbl.cap), height:sizePx(tbl.cap)*0.75 }}
+                            title={tbl.booked
+                                ? `${tbl.name} (${tbl.guests})`
+                                : `${tbl.cap}-top`}
+                            onClick={()=>handleClick(tbl,idx)}
                         >
-                            {t.booked ? (
+                            {tbl.booked ? (
                                 <>
-                    <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
-                      {t.name}
-                    </span>
+                                    <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
+                                        {tbl.name}
+                                    </span>
                                     <span className="text-xs">
-                      {t.guests}/{t.cap}
-                    </span>
+                                        {tbl.guests}/{tbl.cap}
+                                    </span>
                                 </>
-                            ) : (
-                                <span className="text-xs text-gray-600">{t.cap}</span>
+                            ):(
+                                <span className="text-xs text-gray-600">
+                                    {tbl.cap}
+                                </span>
                             )}
                         </div>
                     ))}
@@ -2687,6 +2922,7 @@
         bookings:       PropTypes.array,
         expanded:       PropTypes.bool,
         seatSize:       PropTypes.number,
+        onRefresh:      PropTypes.func,
     };
 
 ––––––––––––––––––––––––
@@ -4740,11 +4976,17 @@
             successOpened:     "Dia obert!",
             closing:           "Tancant…",
             opening:           "Obrint…",
+            lunch:              "Dinar",
+            dinner:             "Sopar",
+            processing:         "Processant…",
+            done:               "Fet",
         },
     };
 
 ––––––––––––––––––––––––
 /mnt/c/Users/sterr/PhpstormProjects/myProject/frontend/src/services/languages/en.js
+    // frontend/src/services/languages/en.js
+    
     export default {
         admin: {
             title: "My Admin",
@@ -4784,11 +5026,12 @@
             vsPrevious: "vs previous 30 d",
             upcomingRange: "Upcoming {n} d",
             pastRange: "Past {n} d",
-            peakDayGuests: "Peak Day Guests", // ← added
+            peakDayGuests: "Peak Day Guests",
         },
     
         modal: {
             addTitle: "Add Manual Booking",
+            editTitle: "Edit Booking",
             dateDisplay: "{weekday}, {month} {day}, {year}",
             fullName: "Full Name",
             guests: "Guests",
@@ -4798,6 +5041,9 @@
             time: "Time",
             close: "Close",
             save: "Save",
+            delete: "Delete",
+            confirmDelete: "Delete this booking?",
+            deleteError: "Error deleting booking",
             closedDay: "Sorry, we’re closed that day.",
             errorRequired: "Please fill in all required fields.",
             saveError: "Error saving — please try again.",
@@ -4832,6 +5078,7 @@
                 time: "Time",
                 name: "Name",
                 totalClients: "Total Clients",
+                edit: "Edit",
             },
             noBookings: "No bookings in this round.",
         },
@@ -4848,7 +5095,15 @@
             totalPeople: "Total People",
         },
     
-        tableUsage: "Table Usage",
+        tableUsage: {
+            title: "Table Usage",
+            move: "Move booking",
+            cancel: "Cancel",
+            pickSource: "Pick booking to move",
+            pickTarget: "Pick target table",
+            moving: "Moving…",
+            done: "Done!",
+        },
     
         settings: {
             bookingWindowFrom: "Accept bookings from",
@@ -4863,6 +5118,15 @@
             successOpened: "Day opened!",
             closing: "Closing…",
             opening: "Opening…",
+            clickToToggle: "click to toggle",
+            openLunch: "Open lunch",
+            closeLunch: "Close lunch",
+            openDinner: "Open dinner",
+            closeDinner: "Close dinner",
+            lunch: "Lunch",
+            dinner: "Dinner",
+            processing: "Processing…",
+            done: "Done",
         },
     };
 
@@ -4986,6 +5250,10 @@
             successOpened:     "¡Día abierto!",
             closing:           "Cerrando…",
             opening:           "Abriendo…",
+            lunch:   "Comida",
+            dinner:  "Cena",
+            processing: "Procesando…",
+            done:       "Hecho",
         },
     };
 

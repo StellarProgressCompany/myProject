@@ -3,31 +3,34 @@ set -e
 
 # ── Locate the project root via Git
 PROJECT_ROOT="$(git rev-parse --show-toplevel)"
-SRC="$PROJECT_ROOT/frontend/src/components/admin"
+SRC="$PROJECT_ROOT/frontend-admin"
 
 # ── Prepare a dumps directory under scripts/
 DUMP_DIR="$PROJECT_ROOT/scripts/dumps"
 mkdir -p "$DUMP_DIR"
 
 # ── Output file
-OUT="$DUMP_DIR/admin.txt"
+OUT="$DUMP_DIR/frontend-admin.txt"
 
-# ── Sanity check: make sure frontend/src exists
+# ── Sanity check: make sure frontend-booking exists
 if [[ ! -d "$SRC" ]]; then
   echo "❌ Error: source dir not found: $SRC"
   exit 1
 fi
 
-# ── 1) Print a simple tree header
+# ── 1) Print a simple tree header, excluding *.json and node_modules/*
 echo "└── frontend" > "$OUT"
 find "$SRC" -type f \
+     ! -name '*.json' \
+     ! -path '*/node_modules/*' \
   | sed -E 's|^'"$PROJECT_ROOT"'|    ├── |' \
-  | sort \
-  >> "$OUT"
+  | sort >> "$OUT"
 echo >> "$OUT"
 
-# ── 2) For each file: separator, full path, then its contents (indented)
+# ── 2) For each remaining file: separator, full path, then its contents (indented)
 find "$SRC" -type f \
+     ! -name '*.json' \
+     ! -path '*/node_modules/*' \
   | sort \
   | while read -r FILE; do
       echo "––––––––––––––––––––––––" >> "$OUT"

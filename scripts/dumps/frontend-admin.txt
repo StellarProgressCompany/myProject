@@ -1,0 +1,4096 @@
+└── frontend
+    ├── /frontend-admin/eslint.config.js
+    ├── /frontend-admin/index.html
+    ├── /frontend-admin/postcss.config.js
+    ├── /frontend-admin/src/.env
+    ├── /frontend-admin/src/App.jsx
+    ├── /frontend-admin/src/components/admin/algorithmTest/AlgorithmTester.jsx
+    ├── /frontend-admin/src/components/admin/currentBookings/AddBookingModal.jsx
+    ├── /frontend-admin/src/components/admin/currentBookings/CurrentBookings.jsx
+    ├── /frontend-admin/src/components/admin/currentBookings/EditBookingModal.jsx
+    ├── /frontend-admin/src/components/admin/futureBookings/FutureBookings.jsx
+    ├── /frontend-admin/src/components/admin/metrics/MetricsDashboard.jsx
+    ├── /frontend-admin/src/components/admin/metrics/StatsGrid.jsx
+    ├── /frontend-admin/src/components/admin/metrics/VisualizeBookings.jsx
+    ├── /frontend-admin/src/components/admin/settings/OperationalSettings.jsx
+    ├── /frontend-admin/src/components/admin/settings/SkeletonCalendar.jsx
+    ├── /frontend-admin/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+    ├── /frontend-admin/src/components/admin/sharedBookings/BookingsChart.jsx
+    ├── /frontend-admin/src/components/admin/sharedBookings/BookingsCompactView.jsx
+    ├── /frontend-admin/src/components/admin/sharedBookings/BookingsOverview.jsx
+    ├── /frontend-admin/src/components/admin/sharedBookings/DaySchedule.jsx
+    ├── /frontend-admin/src/components/admin/sharedBookings/TableUsage.jsx
+    ├── /frontend-admin/src/components/admin/utils/LanguagePicker.jsx
+    ├── /frontend-admin/src/components/layout/AnimatedBackground.jsx
+    ├── /frontend-admin/src/components/layout/Layout.jsx
+    ├── /frontend-admin/src/components/layout/ProtectedRoute.jsx
+    ├── /frontend-admin/src/index.css
+    ├── /frontend-admin/src/main.jsx
+    ├── /frontend-admin/src/pages/AdminDashboard.jsx
+    ├── /frontend-admin/src/pages/LoginPage.jsx
+    ├── /frontend-admin/src/services/bookingService.js
+    ├── /frontend-admin/src/services/datePicker.js
+    ├── /frontend-admin/src/services/i18n.js
+    ├── /frontend-admin/src/services/languages/ca.js
+    ├── /frontend-admin/src/services/languages/en.js
+    ├── /frontend-admin/src/services/languages/es.js
+    ├── /frontend-admin/src/services/mealOverrides.js
+    ├── /frontend-admin/src/services/settingsService.js
+    ├── /frontend-admin/tailwind.config.js
+    ├── /frontend-admin/vite.config.js
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/eslint.config.js
+    import js from '@eslint/js'
+    import globals from 'globals'
+    import react from 'eslint-plugin-react'
+    import reactHooks from 'eslint-plugin-react-hooks'
+    import reactRefresh from 'eslint-plugin-react-refresh'
+    
+    export default [
+      { ignores: ['dist'] },
+      {
+        files: ['**/*.{js,jsx}'],
+        languageOptions: {
+          ecmaVersion: 2020,
+          globals: globals.browser,
+          parserOptions: {
+            ecmaVersion: 'latest',
+            ecmaFeatures: { jsx: true },
+            sourceType: 'module',
+          },
+        },
+        settings: { react: { version: '18.3' } },
+        plugins: {
+          react,
+          'react-hooks': reactHooks,
+          'react-refresh': reactRefresh,
+        },
+        rules: {
+          ...js.configs.recommended.rules,
+          ...react.configs.recommended.rules,
+          ...react.configs['jsx-runtime'].rules,
+          ...reactHooks.configs.recommended.rules,
+          'react/jsx-no-target-blank': 'off',
+          'react-refresh/only-export-components': [
+            'warn',
+            { allowConstantExport: true },
+          ],
+        },
+      },
+    ]
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/index.html
+    <!-- index.html at the root of your project (frontend/index.html) -->
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Stellar Progress Admin</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    </head>
+    <body>
+    <div id="root"></div>
+    <!-- Vite will inject the built script here -->
+    <script type="module" src="/src/main.jsx"></script>
+    </body>
+    </html>
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/postcss.config.js
+    export default {
+      plugins: {
+        tailwindcss: {},
+        autoprefixer: {},
+      },
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/.env
+    VITE_API_URL=http://localhost:8000/api
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/App.jsx
+    // frontend-admin/src/App.jsx
+    import React from 'react';
+    import { BrowserRouter, Routes, Route } from 'react-router-dom';
+    
+    import LoginPage from './pages/LoginPage';
+    import AdminDashboard from './pages/AdminDashboard';
+    import ProtectedRoute from './components/layout/ProtectedRoute';
+    
+    export default function App() {
+        return (
+            <BrowserRouter>
+                <Routes>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route
+                        path="/*"
+                        element={
+                            <ProtectedRoute>
+                                <AdminDashboard />
+                            </ProtectedRoute>
+                        }
+                    />
+                </Routes>
+            </BrowserRouter>
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/algorithmTest/AlgorithmTester.jsx
+    // frontend/src/components/admin/algorithmTest/AlgorithmTester.jsx
+    
+    import React, { useState, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import { format, parseISO, isValid, addMinutes } from "date-fns";
+    import {
+        IconPlayerPlay,
+        IconCheck,
+        IconX,
+        IconClock,
+    } from "@tabler/icons-react";
+    import {
+        createBooking,
+        fetchTableAvailabilityRange,
+    } from "../../../services/bookingService";
+    import DaySchedule from "../sharedBookings/DaySchedule";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    function SkeletonDaySchedule() {
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+            </div>
+        );
+    }
+    
+    export default function AlgorithmTester({ bookings = [], onRefresh = () => {} }) {
+        const lang = getLanguage();
+        const t    = (key, vars) => translate(lang, key, vars);
+    
+        const todayISO = format(new Date(), "yyyy-MM-dd");
+        const [sizesRaw, setSizesRaw]     = useState("");
+        const [dateStr, setDateStr]       = useState(todayISO);
+        const [meal, setMeal]             = useState("lunch");
+        const [time, setTime]             = useState("13:00");
+        const [running, setRunning]       = useState(false);
+        const [results, setResults]       = useState([]);
+        const [ta, setTA]                 = useState({});
+        const [loadingTA, setLoadingTA]   = useState(false);
+    
+        const dateObj = isValid(parseISO(dateStr)) ? parseISO(dateStr) : null;
+    
+        const loadTA = async () => {
+            if (!dateStr) return;
+            setLoadingTA(true);
+            try {
+                const [lunch, dinner] = await Promise.all([
+                    fetchTableAvailabilityRange(dateStr, dateStr, "lunch"),
+                    fetchTableAvailabilityRange(dateStr, dateStr, "dinner"),
+                ]);
+                const merged = {};
+                [lunch, dinner].forEach((src) =>
+                    Object.entries(src).forEach(([d, obj]) => {
+                        merged[d] = merged[d]
+                            ? { ...merged[d], ...obj }
+                            : obj;
+                    })
+                );
+                setTA(merged);
+            } catch {
+                setTA({});
+            } finally {
+                setLoadingTA(false);
+            }
+        };
+    
+        useEffect(() => {
+            loadTA();
+        }, [dateStr]);
+    
+        const run = async () => {
+            const parts = sizesRaw
+                .split(/[,\s]+/)
+                .map((t) => parseInt(t, 10))
+                .filter((n) => n > 0 && Number.isFinite(n));
+    
+            if (parts.length === 0) {
+                alert(t("tester.partySizes"));
+                return;
+            }
+    
+            setRunning(true);
+            setResults([]);
+            let baseTime = time;
+            const log = [];
+    
+            for (let i = 0; i < parts.length; i++) {
+                const guests = parts[i];
+                if (i > 0) {
+                    const [h, m] = baseTime.split(":").map(Number);
+                    const t2 = addMinutes(new Date(0, 0, 0, h, m), 2);
+                    baseTime = format(t2, "HH:mm");
+                }
+                try {
+                    await createBooking({
+                        date:           dateStr,
+                        meal_type:      meal,
+                        reserved_time:  `${baseTime}:00`,
+                        total_adults:   guests,
+                        total_kids:     0,
+                        full_name:      `TEST-${guests}-${Date.now()}`,
+                        phone:          null,
+                        email:          null,
+                        special_requests: null,
+                        gdpr_consent:     false,
+                        marketing_opt_in: false,
+                        long_stay:        false,
+                    });
+                    log.push({ size: guests, ok: true, msg: t("tester.ok") });
+                } catch (e) {
+                    log.push({
+                        size: guests,
+                        ok:   false,
+                        msg:  e?.response?.data?.error || t("tester.rejected"),
+                    });
+                }
+            }
+    
+            setResults(log);
+            setRunning(false);
+            if (typeof onRefresh === "function") await onRefresh();
+            await loadTA();
+        };
+    
+        const dayBookings = bookings.filter(
+            (b) => (b.table_availability?.date || b.date) === dateStr
+        );
+    
+        return (
+            <div className="space-y-8">
+                {/* Control panel */}
+                <div className="bg-white p-6 rounded shadow max-w-lg">
+                    <h2 className="text-xl font-bold mb-4 flex items-center">
+                        <IconClock className="w-5 h-5 mr-2" />
+                        {t("tester.title")}
+                    </h2>
+    
+                    <label className="block text-sm font-medium mb-1">
+                        {t("tester.partySizes")}
+                    </label>
+                    <input
+                        className="w-full border rounded p-2 mb-4"
+                        placeholder={t("tester.partySizes")}
+                        value={sizesRaw}
+                        onChange={(e) => setSizesRaw(e.target.value)}
+                    />
+    
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label className="block text-sm font-medium mb-1">
+                                {t("tester.date")}
+                            </label>
+                            <input
+                                type="date"
+                                className="w-full border rounded p-2"
+                                value={dateStr}
+                                onChange={(e) => setDateStr(e.target.value)}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1">
+                                {t("tester.meal")}
+                            </label>
+                            <select
+                                className="w-full border rounded p-2"
+                                value={meal}
+                                onChange={(e) => setMeal(e.target.value)}
+                            >
+                                <option value="lunch">Lunch</option>
+                                <option value="dinner">Dinner</option>
+                            </select>
+                        </div>
+                    </div>
+    
+                    <label className="block text-sm font-medium mb-1">
+                        {t("tester.startingTime")}
+                    </label>
+                    <input
+                        type="time"
+                        step={900}
+                        className="w-full border rounded p-2 mb-6"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                    />
+    
+                    <button
+                        onClick={run}
+                        disabled={running}
+                        className="flex items-center px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        <IconPlayerPlay className="w-5 h-5 mr-2" />
+                        {running ? `${t("tester.runTest")}…` : t("tester.runTest")}
+                    </button>
+    
+                    {results.length > 0 && (
+                        <div className="mt-6">
+                            <h4 className="font-semibold mb-2">{t("tester.results")}</h4>
+                            <ul className="space-y-1 text-sm">
+                                {results.map((r, i) => (
+                                    <li
+                                        key={i}
+                                        className={`flex items-center ${
+                                            r.ok ? "text-green-700" : "text-red-600"
+                                        }`}
+                                    >
+                                        {r.ok ? (
+                                            <IconCheck className="w-4 h-4 mr-1" />
+                                        ) : (
+                                            <IconX className="w-4 h-4 mr-1" />
+                                        )}
+                                        {r.size} → {r.msg}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+    
+                {/* Day schedule */}
+                {dateObj && (
+                    loadingTA ? (
+                        <SkeletonDaySchedule />
+                    ) : (
+                        <DaySchedule
+                            selectedDate={dateObj}
+                            bookings={dayBookings}
+                            tableAvailability={ta}
+                            onClose={() => {}}
+                            enableZoom
+                        />
+                    )
+                )}
+    
+                {loadingTA && (
+                    <p className="text-sm text-gray-500">{t("tester.loadingTA")}</p>
+                )}
+            </div>
+        );
+    }
+    
+    AlgorithmTester.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object),
+        onRefresh: PropTypes.func,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/currentBookings/AddBookingModal.jsx
+    // frontend/src/components/admin/currentBookings/AddBookingModal.jsx
+    import React, { useState, useMemo, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import { format } from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    import { createBooking } from "../../../services/bookingService";
+    import { getDayMealTypes } from "../../../services/datePicker";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    
+    // helper to build 15-minute slot list
+    const buildSlots = (start, end) => {
+        const out = [];
+        let [h, m] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        while (h < eh || (h === eh && m <= em)) {
+            out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+            m += 15;
+            if (m === 60) { h += 1; m = 0; }
+        }
+        return out;
+    };
+    
+    const lunchFirstSlots  = buildSlots("13:00", "14:00");
+    const lunchSecondSlots = buildSlots("15:00", "16:00");
+    const dinnerSlots      = buildSlots("20:00", "22:00");
+    
+    export default function AddBookingModal({ dateObj, onClose, onSaved }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        const allowedMeals = useMemo(
+            () => getDayMealTypes(dateObj.getDay()),
+            [dateObj]
+        );
+    
+        // form state
+        const [mealType, setMealType] = useState(
+            allowedMeals.includes("lunch") ? "lunch" : "dinner"
+        );
+        const [round, setRound]       = useState("first");
+        const [time, setTime]         = useState(lunchFirstSlots[0]);
+        const [fullName, setFullName] = useState("");
+        const [party, setParty]       = useState(2);
+        const [phone, setPhone]       = useState("");
+        const [saving, setSaving]     = useState(false);
+        const [error, setError]       = useState("");
+    
+        // keep time options valid
+        const timeOptions = useMemo(() => {
+            if (mealType === "lunch")
+                return round === "first" ? lunchFirstSlots : lunchSecondSlots;
+            return dinnerSlots;
+        }, [mealType, round]);
+    
+        useEffect(() => {
+            if (!timeOptions.includes(time)) setTime(timeOptions[0]);
+        }, [timeOptions, time]);
+    
+        // save handler
+        const saveBooking = async () => {
+            if (saving) return;
+            if (!fullName.trim() || party < 1) {
+                setError(
+                    t("modal.errorRequired")
+                );
+                return;
+            }
+            setSaving(true); setError("");
+            try {
+                await createBooking({
+                    date: format(dateObj, "yyyy-MM-dd"),
+                    meal_type: mealType,
+                    reserved_time: time,
+                    total_adults: party,
+                    total_kids: 0,
+                    full_name: fullName.trim(),
+                    phone: phone || null,
+                    email: null,
+                    special_requests: null,
+                    gdpr_consent: false,
+                    marketing_opt_in: false,
+                });
+                onSaved();
+            } catch (e) {
+                setError(
+                    e.response?.data?.error || t("modal.saveError")
+                );
+            } finally { setSaving(false); }
+        };
+    
+        const closedDay = allowedMeals.length === 0;
+    
+        return (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
+                    <h3 className="text-lg font-bold mb-4">
+                        {t("modal.addTitle")}
+                    </h3>
+    
+                    {/* localized date line */}
+                    <p className="text-sm mb-4">
+                        {format(dateObj, "EEEE, d MMMM yyyy", { locale })}
+                    </p>
+    
+                    {closedDay ? (
+                        <p className="text-red-600 font-semibold mb-4">
+                            {t("modal.closedDay")}
+                        </p>
+                    ) : (
+                        <>
+                            {/* name */}
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("modal.fullName")}
+                            </label>
+                            <input
+                                className="w-full border p-2 mb-3 rounded"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                            />
+    
+                            {/* party */}
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("modal.guests")}
+                            </label>
+                            <input
+                                type="number"
+                                min={1}
+                                className="w-full border p-2 mb-3 rounded"
+                                value={party}
+                                onChange={(e) => setParty(Number(e.target.value))}
+                            />
+    
+                            {/* phone */}
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("modal.phoneOptional")}
+                            </label>
+                            <input
+                                className="w-full border p-2 mb-3 rounded"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                            />
+    
+                            {/* meal radio */}
+                            <div className="flex space-x-4 mb-3">
+                                {allowedMeals.includes("lunch") && (
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={mealType === "lunch"}
+                                            onChange={() => setMealType("lunch")}
+                                        />
+                                        <span>{t("modal.meal.lunch")}</span>
+                                    </label>
+                                )}
+                                {allowedMeals.includes("dinner") && (
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={mealType === "dinner"}
+                                            onChange={() => setMealType("dinner")}
+                                        />
+                                        <span>{t("modal.meal.dinner")}</span>
+                                    </label>
+                                )}
+                            </div>
+    
+                            {/* round radio */}
+                            {mealType === "lunch" && (
+                                <div className="flex space-x-4 mb-3">
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={round === "first"}
+                                            onChange={() => setRound("first")}
+                                        />
+                                        <span>{t("modal.round.first")}</span>
+                                    </label>
+                                    <label className="flex items-center space-x-1">
+                                        <input
+                                            type="radio"
+                                            checked={round === "second"}
+                                            onChange={() => setRound("second")}
+                                        />
+                                        <span>{t("modal.round.second")}</span>
+                                    </label>
+                                </div>
+                            )}
+    
+                            {/* time select */}
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("modal.time")}
+                            </label>
+                            <select
+                                className="w-full border p-2 mb-3 rounded"
+                                value={time}
+                                onChange={(e) => setTime(e.target.value)}
+                            >
+                                {timeOptions.map((tOpt) => (
+                                    <option key={tOpt} value={tOpt}>
+                                        {tOpt.slice(0, 5)}
+                                    </option>
+                                ))}
+                            </select>
+                        </>
+                    )}
+    
+                    {error && <p className="text-red-600 mb-2">{error}</p>}
+    
+                    <div className="flex justify-end space-x-2">
+                        <button
+                            onClick={onClose}
+                            className="px-4 py-1 border rounded"
+                            disabled={saving}
+                        >
+                            {t("modal.close")}
+                        </button>
+                        {!closedDay && (
+                            <button
+                                onClick={saveBooking}
+                                className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    t("modal.save")
+                                )}
+                            </button>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    AddBookingModal.propTypes = {
+        dateObj: PropTypes.instanceOf(Date).isRequired,
+        onClose: PropTypes.func.isRequired,
+        onSaved: PropTypes.func.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/currentBookings/CurrentBookings.jsx
+    import React, { useState, useMemo, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import { format, addDays } from "date-fns";
+    import {
+        IconChevronLeft,
+        IconChevronRight,
+    } from "@tabler/icons-react";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    
+    import AddBookingModal from "./AddBookingModal";
+    import EditBookingModal from "./EditBookingModal";
+    import DaySchedule from "../sharedBookings/DaySchedule";
+    import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    /* ───────── helpers ───────── */
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10); // always "YYYY-MM-DD"
+    
+    function SkeletonDaySchedule() {
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow animate-pulse space-y-4">
+                <div className="h-6 bg-gray-200 rounded w-3/4" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+                <div className="h-4 bg-gray-200 rounded" />
+            </div>
+        );
+    }
+    
+    export default function CurrentBookings({ bookings, onDataRefresh }) {
+        const lang   = getLanguage();
+        const t      = (key, vars) => translate(lang, key, vars);
+        const locale = localeMap[lang] || enUS;
+    
+        const [offset, setOffset]                 = useState(0);
+        const [isAdding, setIsAdding]             = useState(false);
+        const [editingBooking, setEditingBooking] = useState(null);
+    
+        const [tableAvailability, setTableAvailability] = useState({});
+        const [loadingTA, setLoadingTA]                 = useState(false);
+    
+        const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
+        const dateStr = format(dateObj, "yyyy-MM-dd");
+    
+        /* bookings for the selected day */
+        const todaysBookings = useMemo(
+            () => bookings.filter((b) => getBookingDate(b) === dateStr),
+            [bookings, dateStr]
+        );
+    
+        const totalBookings = todaysBookings.length;
+        const totalClients  = todaysBookings.reduce(
+            (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
+            0
+        );
+    
+        /* ─── load table-availability for the chosen date ─── */
+        useEffect(() => {
+            let cancelled = false;
+            setLoadingTA(true);
+    
+            Promise.all([
+                fetchTableAvailabilityRange(dateStr, dateStr, "lunch"),
+                fetchTableAvailabilityRange(dateStr, dateStr, "dinner"),
+            ])
+                .then(([lunch, dinner]) => {
+                    if (cancelled) return;
+                    const merged = {};
+                    [lunch, dinner].forEach((src) =>
+                        Object.entries(src).forEach(([d, info]) => {
+                            merged[d] = merged[d] ? { ...merged[d], ...info } : info;
+                        })
+                    );
+                    setTableAvailability(merged);
+                })
+                .catch(() => {
+                    if (!cancelled) setTableAvailability({});
+                })
+                .finally(() => {
+                    if (!cancelled) setLoadingTA(false);
+                });
+    
+            return () => {
+                cancelled = true;
+            };
+        }, [dateStr]);
+    
+        const title =
+            offset === 0
+                ? t("admin.today")
+                : format(dateObj, "EEEE, MMMM d", { locale });
+    
+        /* handler when clicking a booking in the schedule */
+        const handleBookingClick = (booking) => {
+            setEditingBooking(booking);
+        };
+    
+        return (
+            <div className="bg-white p-4 rounded shadow">
+                {/* header + controls */}
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <h2 className="text-xl font-bold">{title}</h2>
+                    <div className="space-x-2 flex items-center">
+                        <button
+                            onClick={() => setOffset((o) => o - 1)}
+                            className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                            aria-label={t("calendar.prev")}
+                        >
+                            <IconChevronLeft className="w-5 h-5 text-gray-500" />
+                        </button>
+                        <button
+                            onClick={() => setOffset((o) => o + 1)}
+                            className="w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100"
+                            aria-label={t("calendar.next")}
+                        >
+                            <IconChevronRight className="w-5 h-5 text-gray-500" />
+                        </button>
+                        <button
+                            onClick={() => setIsAdding(true)}
+                            className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                        >
+                            {t("admin.manualBooking")}
+                        </button>
+                    </div>
+                </div>
+    
+                {/* metrics */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="bg-blue-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("admin.bookings")}</p>
+                        <p className="text-xl font-bold">{totalBookings}</p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("admin.totalClients")}</p>
+                        <p className="text-xl font-bold">{totalClients}</p>
+                    </div>
+                </div>
+    
+                {/* day schedule or skeleton */}
+                {loadingTA ? (
+                    <SkeletonDaySchedule />
+                ) : (
+                    <DaySchedule
+                        selectedDate={dateObj}
+                        bookings={todaysBookings}
+                        tableAvailability={tableAvailability}
+                        onClose={() => {}}
+                        enableZoom
+                        onBookingClick={handleBookingClick}
+                    />
+                )}
+    
+                {/* add / edit modals */}
+                {isAdding && (
+                    <AddBookingModal
+                        dateObj={dateObj}
+                        onClose={() => setIsAdding(false)}
+                        onSaved={() => {
+                            setIsAdding(false);
+                            onDataRefresh();
+                        }}
+                    />
+                )}
+                {editingBooking && (
+                    <EditBookingModal
+                        booking={editingBooking}
+                        onClose={() => setEditingBooking(null)}
+                        onSaved={() => {
+                            setEditingBooking(null);
+                            onDataRefresh();
+                        }}
+                    />
+                )}
+            </div>
+        );
+    }
+    
+    CurrentBookings.propTypes = {
+        bookings:      PropTypes.array.isRequired,
+        onDataRefresh: PropTypes.func.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/currentBookings/EditBookingModal.jsx
+    // frontend/src/components/admin/currentBookings/EditBookingModal.jsx
+    import React, { useState, useMemo, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import {
+        updateBooking,
+        deleteBooking,
+    } from "../../../services/bookingService";
+    import { translate, getLanguage } from "../../../services/i18n";
+    import { IconTrash, IconDeviceFloppy } from "@tabler/icons-react";
+    
+    /* ─── slot helpers (same as AddBookingModal) ───────────────────── */
+    const buildSlots = (start, end) => {
+        const out = [];
+        let [h, m] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        while (h < eh || (h === eh && m <= em)) {
+            out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+            m += 15;
+            if (m === 60) {
+                h += 1;
+                m = 0;
+            }
+        }
+        return out;
+    };
+    const lunchFirstSlots  = buildSlots("13:00", "14:00");
+    const lunchSecondSlots = buildSlots("15:00", "16:00");
+    const dinnerSlots      = buildSlots("20:00", "22:00");
+    /* ──────────────────────────────────────────────────────────────── */
+    
+    export default function EditBookingModal({ booking, onClose, onSaved }) {
+        /* ─── i18n ─── */
+        const lang = getLanguage();
+        const t    = (k, p) => translate(lang, k, p);
+    
+        /* ─── form state ─── */
+        const [fullName, setFullName] = useState(booking.full_name);
+        const [adults,   setAdults]   = useState(booking.total_adults);
+        const [kids,     setKids]     = useState(booking.total_kids);
+        const [phone,    setPhone]    = useState(booking.phone || "");
+    
+        /* meal / round derived from original booking */
+        const mealType = booking.table_availability?.meal_type || "lunch";
+        const initialRound =
+            mealType === "lunch"
+                ? booking.reserved_time < "15:00:00"
+                    ? "first"
+                    : "second"
+                : null;
+    
+        const [round, setRound] = useState(initialRound);
+    
+        /* time select options depend on meal / round */
+        const timeOptions = useMemo(() => {
+            if (mealType === "dinner") return dinnerSlots;
+            return round === "first" ? lunchFirstSlots : lunchSecondSlots;
+        }, [mealType, round]);
+    
+        /* ensure selected time always valid */
+        const [time, setTime] = useState(booking.reserved_time.slice(0, 5));
+        useEffect(() => {
+            if (!timeOptions.includes(`${time}:00`)) {
+                const fallback = timeOptions[0];
+                setTime(fallback.slice(0, 5));
+            }
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [timeOptions]);
+    
+        /* saving / error state */
+        const [saving, setSaving] = useState(false);
+        const [error,  setError]  = useState("");
+    
+        /* ─── save handler ─── */
+        const handleSave = async () => {
+            if (saving) return;
+    
+            if (!fullName.trim() || adults < 1) {
+                return setError(t("modal.errorRequired"));
+            }
+            setSaving(true);
+            setError("");
+    
+            try {
+                await updateBooking(booking.id, {
+                    full_name:
+                        fullName.trim() !== booking.full_name ? fullName.trim() : undefined,
+                    total_adults: adults,
+                    total_kids:   kids,
+                    phone:        phone || null,
+                    reserved_time: `${time}:00`,
+                });
+                onSaved();
+            } catch (e) {
+                console.error(e);
+                setError(e.response?.data?.error ?? t("modal.saveError"));
+            } finally {
+                setSaving(false);
+            }
+        };
+    
+        /* ─── delete handler ─── */
+        const handleDelete = async () => {
+            if (!window.confirm(t("modal.confirmDelete") || "Delete this booking?")) return;
+            setSaving(true);
+    
+            try {
+                await deleteBooking(booking.id);
+                onSaved();
+            } catch (e) {
+                console.error(e);
+                setError(t("modal.deleteError") || "Delete failed");
+            } finally {
+                setSaving(false);
+            }
+        };
+    
+        /* ─── ui ─── */
+        return (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+                <div className="bg-white p-6 rounded shadow-lg w-full max-w-sm">
+                    <h3 className="text-lg font-bold mb-4">{t("modal.editTitle") || "Edit Booking"}</h3>
+    
+                    {/* Full name */}
+                    <label className="block mb-1 text-sm font-medium">
+                        {t("modal.fullName")}
+                    </label>
+                    <input
+                        className="w-full border p-2 mb-3 rounded"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                    />
+    
+                    {/* party size */}
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                        <div>
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("schedule.table.adults") || "Adults"}
+                            </label>
+                            <input
+                                type="number"
+                                min={1}
+                                className="w-full border p-2 rounded"
+                                value={adults}
+                                onChange={(e) => setAdults(Number(e.target.value))}
+                            />
+                        </div>
+                        <div>
+                            <label className="block mb-1 text-sm font-medium">
+                                {t("schedule.table.kids") || "Kids"}
+                            </label>
+                            <input
+                                type="number"
+                                min={0}
+                                className="w-full border p-2 rounded"
+                                value={kids}
+                                onChange={(e) => setKids(Number(e.target.value))}
+                            />
+                        </div>
+                    </div>
+    
+                    {/* phone */}
+                    <label className="block mb-1 text-sm font-medium">
+                        {t("modal.phoneOptional")}
+                    </label>
+                    <input
+                        className="w-full border p-2 mb-3 rounded"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                    />
+    
+                    {/* lunch round selector (only for lunch) */}
+                    {mealType === "lunch" && (
+                        <div className="flex space-x-4 mb-3">
+                            <label className="flex items-center space-x-1">
+                                <input
+                                    type="radio"
+                                    checked={round === "first"}
+                                    onChange={() => setRound("first")}
+                                />
+                                <span>{t("modal.round.first")}</span>
+                            </label>
+                            <label className="flex items-center space-x-1">
+                                <input
+                                    type="radio"
+                                    checked={round === "second"}
+                                    onChange={() => setRound("second")}
+                                />
+                                <span>{t("modal.round.second")}</span>
+                            </label>
+                        </div>
+                    )}
+    
+                    {/* time select */}
+                    <label className="block mb-1 text-sm font-medium">
+                        {t("modal.time")}
+                    </label>
+                    <select
+                        className="w-full border p-2 mb-3 rounded"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                    >
+                        {timeOptions.map((tOpt) => (
+                            <option key={tOpt} value={tOpt.slice(0, 5)}>
+                                {tOpt.slice(0, 5)}
+                            </option>
+                        ))}
+                    </select>
+    
+                    {error && <p className="text-red-600 mb-2">{error}</p>}
+    
+                    <div className="flex justify-between items-center">
+                        <button
+                            onClick={handleDelete}
+                            className="flex items-center text-red-600 hover:text-red-700 disabled:opacity-50"
+                            disabled={saving}
+                        >
+                            <IconTrash className="w-5 h-5 mr-1" />
+                            {t("modal.delete") || "Delete"}
+                        </button>
+    
+                        <div className="space-x-2">
+                            <button
+                                onClick={onClose}
+                                className="px-4 py-1 border rounded"
+                                disabled={saving}
+                            >
+                                {t("modal.close")}
+                            </button>
+                            <button
+                                onClick={handleSave}
+                                className="px-4 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+                                disabled={saving}
+                            >
+                                {saving ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <>
+                                        <IconDeviceFloppy className="w-4 h-4 mr-1" />
+                                        {t("modal.save")}
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    EditBookingModal.propTypes = {
+        booking: PropTypes.shape({
+            id:                PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+            full_name:         PropTypes.string,
+            total_adults:      PropTypes.number,
+            total_kids:        PropTypes.number,
+            phone:             PropTypes.string,
+            reserved_time:     PropTypes.string,
+            table_availability: PropTypes.object,
+        }).isRequired,
+        onClose: PropTypes.func.isRequired,
+        onSaved: PropTypes.func.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/futureBookings/FutureBookings.jsx
+    // frontend/src/components/admin/futureBookings/FutureBookings.jsx
+    
+    import React from "react";
+    import BookingsOverview from "../sharedBookings/BookingsOverview";
+    
+    // eslint-disable-next-line react/prop-types
+    export default function FutureBookings({ bookings }) {
+        return (
+            <BookingsOverview
+                mode="future"
+                bookings={bookings}
+                showChart={false}
+                allowDrill={true}
+            />
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/metrics/MetricsDashboard.jsx
+    // frontend/src/components/admin/metrics/MetricsDashboard.jsx
+    import React, { useState } from "react";
+    import PropTypes from "prop-types";
+    
+    import StatsGrid from "./StatsGrid";
+    import BookingsOverview from "../sharedBookings/BookingsOverview";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    export default function MetricsDashboard({ bookings }) {
+        const lang = getLanguage();
+        const t = (k, p) => translate(lang, k, p);
+    
+        /* keep track of the bookings slice for the KPI grid */
+        const [windowBookings, setWindowBookings] = useState(bookings);
+    
+        return (
+            <div className="space-y-8">
+                {/* KPI grid */}
+                <StatsGrid bookings={windowBookings} />
+    
+                {/* Explorer: FUTURE mode, with chart and explicit view toggle */}
+                <BookingsOverview
+                    mode="future"
+                    bookings={bookings}
+                    showChart={true}
+                    allowDrill={false}
+                    onWindowChange={setWindowBookings}
+                    customTitle={t("overview.bookings")}
+                    hideViewToggle={false}
+                />
+            </div>
+        );
+    }
+    
+    MetricsDashboard.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/metrics/StatsGrid.jsx
+    // frontend/src/components/admin/metrics/StatsGrid.jsx
+    import React, { useMemo } from "react";
+    import PropTypes from "prop-types";
+    import {
+        IconCalendarStats,
+        IconUsers,
+        IconLayoutGrid,
+        IconTrophy,
+    } from "@tabler/icons-react";
+    import { parseISO } from "date-fns";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    function computeMetrics(bookings) {
+        let totalBookings = 0;
+        let totalGuests   = 0;
+        const uniqueGuests = new Set();
+        const perDayGuests = {};
+    
+        bookings.forEach((b) => {
+            const dateStr = b.table_availability?.date || b.date;
+            if (!dateStr) return;
+    
+            const guests = (b.total_adults || 0) + (b.total_kids || 0);
+            totalBookings += 1;
+            totalGuests   += guests;
+    
+            /* per-day count */
+            const dKey = parseISO(dateStr).toISOString().slice(0,10);
+            perDayGuests[dKey] = (perDayGuests[dKey] || 0) + guests;
+    
+            /* unique guest counted by full name (fallback id) */
+            uniqueGuests.add(b.full_name?.trim() || `#${b.id}`);
+        });
+    
+        const peakGuests = Object.values(perDayGuests).reduce(
+            (m, v) => Math.max(m, v),
+            0
+        );
+    
+        return {
+            totalBookings,
+            totalGuests,
+            uniqueGuests: uniqueGuests.size,
+            avgGuests:    totalBookings === 0 ? 0 : (totalGuests / totalBookings).toFixed(1),
+            peakGuests,
+        };
+    }
+    
+    export default function StatsGrid({ bookings = [] }) {
+        const lang = getLanguage();
+        const t    = (k, vars) => translate(lang, k, vars);
+    
+        const m = useMemo(() => computeMetrics(bookings), [bookings]);
+    
+        const data = [
+            {
+                key:   "bookings",
+                title: t("overview.bookings"),
+                icon:  IconCalendarStats,
+                value: m.totalBookings,
+            },
+            {
+                key:   "guests",
+                title: t("overview.guests"),
+                icon:  IconUsers,
+                value: m.totalGuests,
+            },
+            {
+                key:   "avg",
+                title: t("overview.avgGuests"),
+                icon:  IconLayoutGrid,
+                value: m.avgGuests,
+            },
+            {
+                key:   "peak",
+                title: t("overview.peakDayGuests"),
+                icon:  IconTrophy,
+                value: m.peakGuests,
+            },
+            {
+                key:   "unique",
+                title: t("overview.uniqueNames"),
+                icon:  IconUsers,
+                value: m.uniqueGuests,
+            },
+        ];
+    
+        return (
+            <div className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
+                    {data.map((stat) => {
+                        const StatIcon = stat.icon;
+                        return (
+                            <div
+                                key={stat.key}
+                                className="border rounded-md p-4 shadow bg-white"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-gray-500 font-semibold uppercase">
+                                        {stat.title}
+                                    </p>
+                                    <StatIcon className="w-5 h-5 text-gray-400" />
+                                </div>
+                                <div className="mt-4 text-2xl font-bold text-gray-800">
+                                    {stat.value}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        );
+    }
+    
+    StatsGrid.propTypes = {
+        bookings: PropTypes.arrayOf(PropTypes.object),
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/metrics/VisualizeBookings.jsx
+    // frontend/src/components/admin/metrics/VisualizeBookings.jsx
+    
+    import React, { useState } from "react";
+    import { format } from "date-fns";
+    import {
+        enUS,
+        es as esLocale,
+        ca as caLocale,
+    } from "date-fns/locale";
+    import TableUsage from "./TableUsage";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    const localeMap = {
+        en: enUS,
+        es: esLocale,
+        ca: caLocale,
+    };
+    
+    export default function DaySchedule({
+                                            selectedDate,
+                                            bookings,
+                                            tableAvailability,
+                                            onClose,
+                                            enableZoom = false,
+                                        }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        // **Re-added** showFloor state:
+        const [showFloor, setShowFloor] = useState(false);
+    
+        if (!selectedDate) return null;
+    
+        const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
+        const dayInfo = tableAvailability[dateStr];
+    
+        if (!dayInfo || dayInfo === "closed") {
+            return (
+                <div className="mt-6 border rounded bg-white p-4 shadow">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold">
+                            {t("schedule.header", {
+                                date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
+                            })}
+                        </h3>
+                        <button onClick={onClose} className="text-sm text-red-500 underline">
+                            {t("admin.close")}
+                        </button>
+                    </div>
+                    <p
+                        className={
+                            dayInfo === "closed"
+                                ? "text-red-600 font-semibold"
+                                : "text-gray-700"
+                        }
+                    >
+                        {dayInfo === "closed"
+                            ? "CLOSED"
+                            : t("schedule.noBookings")}
+                    </p>
+                </div>
+            );
+        }
+    
+        const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
+            (rk) => rk in dayInfo
+        );
+        const roundBookings = {};
+        roundKeys.forEach((rk) => {
+            roundBookings[rk] = bookings
+                .filter((b) => {
+                    const d = b.table_availability?.date;
+                    if (d !== dateStr) return false;
+                    if (rk.includes("first")) return b.reserved_time < "15:00:00";
+                    if (rk.includes("second"))
+                        return (
+                            b.reserved_time >= "15:00:00" &&
+                            b.reserved_time < "20:00:00"
+                        );
+                    return b.reserved_time >= "20:00:00";
+                })
+                .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
+        });
+    
+        const fullStock = { 2: 0, 4: 0, 6: 0 };
+        roundKeys.forEach((rk) => {
+            const avail = dayInfo[rk]?.availability || {};
+            const bookedCounts = { 2: 0, 4: 0, 6: 0 };
+            roundBookings[rk].forEach((bk) => {
+                const cap = bk.table_availability?.capacity || 0;
+                bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
+            });
+            [2, 4, 6].forEach((cap) => {
+                const totalHere = (avail[cap] ?? 0) + bookedCounts[cap];
+                fullStock[cap] = Math.max(fullStock[cap], totalHere);
+            });
+        });
+    
+        const prettyRound = (key) => {
+            if (key.includes("first"))
+                return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+            if (key.includes("second"))
+                return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+            return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+        };
+    
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">
+                        {t("schedule.header", {
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
+                        })}
+                    </h3>
+                    <div className="space-x-3">
+                        {enableZoom && (
+                            <button
+                                onClick={() => setShowFloor((v) => !v)}
+                                className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
+                            >
+                                {showFloor
+                                    ? t("admin.hideFloor")
+                                    : t("admin.expandFloor")}
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-sm text-red-500 underline hover:text-red-700"
+                        >
+                            {t("admin.close")}
+                        </button>
+                    </div>
+                </div>
+    
+                {roundKeys.map((rk) => {
+                    const { lbl, bg } = prettyRound(rk);
+                    const rows        = roundBookings[rk];
+    
+                    return (
+                        <div key={rk} className="mb-8">
+                            <h4 className="text-md font-semibold mb-2">{lbl}</h4>
+                            {rows.length > 0 ? (
+                                <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
+                                    <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.time")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.name")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.totalClients")}
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {rows.map((bk) => (
+                                        <tr
+                                            key={bk.id}
+                                            className={`${bg} hover:bg-yellow-50 transition`}
+                                        >
+                                            <td className="px-3 py-2">
+                                                {bk.reserved_time.slice(0, 5)}
+                                            </td>
+                                            <td className="px-3 py-2 truncate max-w-[160px]">
+                                                {bk.full_name}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {bk.total_adults + bk.total_kids}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-gray-500 mb-3">
+                                    {t("schedule.noBookings")}
+                                </p>
+                            )}
+                            {showFloor && (
+                                <TableUsage
+                                    capacityTotals={fullStock}
+                                    bookings={rows}
+                                    expanded
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/settings/OperationalSettings.jsx
+    // frontend/src/components/admin/settings/OperationalSettings.jsx
+    import React, {
+        useState,
+        useEffect,
+        useCallback,
+        useMemo,
+    } from "react";
+    import { format }          from "date-fns";
+    import toast, { Toaster }   from "react-hot-toast";
+    
+    import BookingsCalendarView       from "../sharedBookings/BookingsCalendarView";
+    import SkeletonCalendar           from "./SkeletonCalendar.jsx"
+    
+    import {
+        clearAvailabilityCache,
+    } from "../../../services/bookingService";
+    import {
+        getDayMealTypes,
+    } from "../../../services/datePicker";
+    import {
+        fetchMealOverrides,
+        toggleMealOverride,
+    } from "../../../services/mealOverrides";
+    
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    /* ────── simple fetch helpers for open / close endpoints ────── */
+    async function toggleClosedDay(dateYMD) {
+        await fetch("/api/closed-days/toggle", {
+            method : "POST",
+            headers: { "Content-Type": "application/json" },
+            body   : JSON.stringify({ date: dateYMD }),
+        });
+    }
+    async function toggleOpenDay(dateYMD) {
+        await fetch("/api/open-days/toggle", {
+            method : "POST",
+            headers: { "Content-Type": "application/json" },
+            body   : JSON.stringify({ date: dateYMD }),
+        });
+    }
+    async function fetchClosedDays() {
+        const r = await fetch("/api/closed-days");
+        const j = await r.json();
+        return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+    }
+    async function fetchOpenDays() {
+        const r = await fetch("/api/open-days");
+        const j = await r.json();
+        return Array.isArray(j) ? j.map((d) => d.slice(0, 10)) : [];
+    }
+    
+    /* ──────────────────────────────────────────────────────────────
+       UI helpers
+    ────────────────────────────────────────────────────────────────*/
+    function PillButton({
+                            label,
+                            colour,           // "green" | "red" | "gray"
+                            onClick,
+                            disabled = false,
+                        }) {
+        const colours = {
+            green: "bg-green-600 hover:bg-green-700",
+            red  : "bg-red-600 hover:bg-red-700",
+            gray : "bg-gray-200 hover:bg-gray-300 text-gray-600",
+        };
+        return (
+            <button
+                type="button"
+                onClick={onClick}
+                disabled={disabled}
+                className={`px-4 py-2 rounded shadow text-white font-medium disabled:opacity-50 ${colours[colour]}`}
+            >
+                {label}
+            </button>
+        );
+    }
+    
+    function MealToggle({
+                            label,
+                            isOpen,
+                            onToggle,
+                        }) {
+        return (
+            <button
+                onClick={onToggle}
+                className={`
+            min-w-[110px] py-3 rounded text-white font-semibold shadow
+            ${isOpen ? "bg-green-600 hover:bg-green-700" : "bg-red-500 hover:bg-red-600"}
+          `}
+            >
+                {label}
+            </button>
+        );
+    }
+    
+    /* ──────────────────────────────────────────────────────────────
+       Main component
+    ────────────────────────────────────────────────────────────────*/
+    export default function OperationalSettings({
+                                                    bookings = [],
+                                                    onRefresh = () => {},
+                                                }) {
+        const t = (k, p) => translate(getLanguage(), k, p);
+    
+        /* ─── local state ─── */
+        const [selDate,         setSelDate] = useState(null);
+        const [closedDays,      setClosed]  = useState([]);
+        const [openDays,        setOpen]    = useState([]);
+        const [mealOverrides,   setMealOv]  = useState([]);
+        const [loading,         setLoad]    = useState(true);
+    
+        /* ─── pull future bookings for the calendar ─── */
+        const todayYMD = new Date().toISOString().slice(0, 10);
+        const futureBookings = useMemo(
+            () =>
+                bookings.filter((b) => {
+                    const d = (b.table_availability?.date || b.date || "").slice(0, 10);
+                    return d >= todayYMD;
+                }),
+            [bookings, todayYMD]
+        );
+    
+        /* ─── remote fetch helpers ─── */
+        const refreshClosed = useCallback(
+            async () => setClosed(await fetchClosedDays()),
+            []
+        );
+        const refreshOpen   = useCallback(
+            async () => setOpen(await fetchOpenDays()),
+            []
+        );
+        const refreshMealOv = useCallback(
+            async () => setMealOv(await fetchMealOverrides()),
+            []
+        );
+    
+        /* ─── initial load ─── */
+        useEffect(() => {
+            (async () => {
+                setLoad(true);
+                await Promise.all([refreshClosed(), refreshOpen(), refreshMealOv()]);
+                setLoad(false);
+            })();
+        }, [refreshClosed, refreshOpen, refreshMealOv]);
+    
+        /* ─── derive status for the selected day ─── */
+        const ymdKey = selDate && format(selDate, "yyyy-MM-dd");
+    
+        const scheduleMeals    = selDate ? getDayMealTypes(selDate.getDay()) : [];
+        const scheduleIsClosed = scheduleMeals.length === 0;
+    
+        const exceptionallyClosed = selDate && closedDays.includes(ymdKey);
+        const exceptionallyOpen   = selDate && openDays.includes(ymdKey);
+    
+        const mealRow =
+            mealOverrides.find((row) => row.date === ymdKey) || {};
+        const lunchClosed  = !!mealRow.lunch_closed;
+        const dinnerClosed = !!mealRow.dinner_closed;
+    
+        /* master flags */
+        const dayIsClosed =
+            (scheduleIsClosed && !exceptionallyOpen) ||
+            exceptionallyClosed ||
+            (lunchClosed && dinnerClosed);
+    
+        const dayIsOpen = !dayIsClosed;
+    
+        /* ─── action wrappers with toast feedback ─── */
+        const withToast = (label, fn) => async () => {
+            const id = toast.loading(label);
+            try {
+                await fn();
+                await Promise.all([refreshClosed(), refreshOpen(), refreshMealOv()]);
+                await onRefresh();
+                clearAvailabilityCache();
+                toast.success(t("settings.done"), { id });
+            } catch (e) {
+                console.error(e);
+                toast.error(e?.response?.data?.error || "Error", { id });
+            }
+        };
+    
+        /* ─── handlers ─── */
+        const handleToggleDay = withToast(
+            dayIsClosed ? t("settings.opening") : t("settings.closing"),
+            async () => {
+                if (dayIsClosed) {
+                    await toggleOpenDay(ymdKey);
+                } else {
+                    await toggleClosedDay(ymdKey);
+                }
+            }
+        );
+    
+        const handleToggleLunch = withToast(
+            lunchClosed ? t("settings.opening") : t("settings.closing"),
+            async () => {
+                await toggleMealOverride(ymdKey, "lunch");
+            }
+        );
+    
+        const handleToggleDinner = withToast(
+            dinnerClosed ? t("settings.opening") : t("settings.closing"),
+            async () => {
+                await toggleMealOverride(ymdKey, "dinner");
+            }
+        );
+    
+        /* ─── closed colouring for calendar ─── */
+        const closedEffective = [
+            ...closedDays.filter((d) => !openDays.includes(d)),
+            ...mealOverrides
+                .filter((o) => o.lunch_closed && o.dinner_closed)
+                .map((o) => o.date),
+        ];
+    
+        /* ─── UI ─── */
+        return (
+            <div className="relative space-y-6">
+                {/* react-hot-toast needs one toaster host */}
+                <Toaster position="top-center" />
+    
+                {loading ? (
+                    <SkeletonCalendar />
+                ) : (
+                    <BookingsCalendarView
+                        month={new Date()}
+                        onMonthChange={() => {}}
+                        selectedDate={selDate}
+                        onSelectDay={setSelDate}
+                        bookings={futureBookings}
+                        closedDays={closedEffective}
+                        openDays={openDays}
+                    />
+                )}
+    
+                {/* info + actions for the selected date */}
+                {selDate && (
+                    <div className="bg-white rounded shadow p-6 space-y-6">
+                        {/* headline */}
+                        <div className="flex items-start justify-between">
+                            <h2 className="text-xl font-bold">
+                                {format(selDate, "PPPP")}
+                            </h2>
+                            <button
+                                className="text-red-600 underline"
+                                onClick={() => setSelDate(null)}
+                            >
+                                {t("admin.close")}
+                            </button>
+                        </div>
+    
+                        {/* DAY status + toggle */}
+                        <div className="flex items-center gap-4">
+                <span
+                    className={`
+                    font-semibold
+                    ${dayIsOpen ? "text-green-600" : "text-red-600"}
+                  `}
+                >
+                  {dayIsOpen
+                      ? t("settings.open") + " "
+                      : t("settings.closed") + " "}
+                    ({t("settings.clickToToggle") || "clic per tancar"})
+                </span>
+    
+                            <PillButton
+                                label={
+                                    dayIsOpen
+                                        ? t("settings.closeDay")
+                                        : t("settings.openDay")
+                                }
+                                colour={dayIsOpen ? "red" : "green"}
+                                onClick={handleToggleDay}
+                            />
+                        </div>
+    
+                        {/* Meal toggles – only when the *day* is open */}
+                        {dayIsOpen && (
+                            <>
+                                <hr />
+    
+                                <div className="flex flex-col md:flex-row gap-6">
+                                    {/* Lunch */}
+                                    {scheduleMeals.includes("lunch") && (
+                                        <MealToggle
+                                            label={
+                                                lunchClosed
+                                                    ? t("settings.openLunch") || "Obrir Dinar"
+                                                    : t("settings.closeLunch") || "Tancar Dinar"
+                                            }
+                                            isOpen={!lunchClosed}
+                                            onToggle={handleToggleLunch}
+                                        />
+                                    )}
+    
+                                    {/* Dinner */}
+                                    {scheduleMeals.includes("dinner") && (
+                                        <MealToggle
+                                            label={
+                                                dinnerClosed
+                                                    ? t("settings.openDinner") || "Obrir Sopar"
+                                                    : t("settings.closeDinner") || "Tancar Sopar"
+                                            }
+                                            isOpen={!dinnerClosed}
+                                            onToggle={handleToggleDinner}
+                                        />
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/settings/SkeletonCalendar.jsx
+    import React from "react";
+    
+    export default function SkeletonCalendar() {
+        const cells = Array.from({ length: 42 });
+        return (
+            <div>
+                <div className="flex justify-between items-center mb-2">
+                    <div className="w-8 h-5 bg-gray-200 animate-pulse rounded" />
+                    <div className="w-32 h-5 bg-gray-200 animate-pulse rounded" />
+                    <div className="w-8 h-5 bg-gray-200 animate-pulse rounded" />
+                </div>
+                <div className="grid grid-cols-7 gap-2">
+                    {cells.map((_,i) => (
+                        <div key={i} className="w-10 h-10 bg-gray-200 rounded animate-pulse m-1" />
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+    // frontend/src/components/admin/sharedBookings/BookingsCalendarView.jsx
+    import React, { useState, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import {
+        format,
+        startOfMonth,
+        endOfMonth,
+        startOfWeek,
+        endOfWeek,
+        addDays,
+        addMonths,
+        subMonths,
+        isSameMonth,
+        isSameDay,
+    } from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    
+    import axios from "axios";
+    import { getDayMealTypes } from "../../../services/datePicker";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    
+    export default function BookingsCalendarView({
+                                                     month,                 // controlled month ← NEW
+                                                     onMonthChange = () => {},
+                                                     selectedDate = null,
+                                                     onSelectDay,
+                                                     bookings,
+                                                     closedDays = [],
+                                                     openDays = [],
+                                                 }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        // ─── booking-window horizon (days ahead guests may book) ───
+        const [bookingWindowDays, setBookingWindowDays] = useState(30);
+        useEffect(() => {
+            axios
+                .get("/api/meta/horizon-days")
+                .then(({ data }) => {
+                    const n = parseInt(data, 10);
+                    if (Number.isFinite(n) && n > 0) setBookingWindowDays(n);
+                })
+                .catch(() => {/* leave default */});
+        }, []);
+    
+        // keep internal state in-sync with controlled prop
+        const [monthToShow, setMonthToShow] = useState(month || new Date());
+        useEffect(() => { if (month) setMonthToShow(month); }, [month]);
+    
+        // inform parent whenever we change months
+        const jumpMonth = (dir) => {
+            const next = dir === -1 ? subMonths(monthToShow, 1) : addMonths(monthToShow, 1);
+            setMonthToShow(next);
+            onMonthChange(next);
+        };
+    
+        const today     = new Date();
+        const closedSet = new Set(closedDays);
+        const openSet   = new Set(openDays);
+    
+        /* helpers --------------------------------------------------- */
+        const weekdayLabels = Array.from({ length: 7 }).map((_, i) =>
+            format(
+                addDays(startOfWeek(new Date(), { weekStartsOn: 1, locale }), i),
+                "EEE",
+                { locale }
+            )
+        );
+    
+        const monthStart = startOfMonth(monthToShow);
+        const monthEnd   = endOfMonth(monthToShow);
+        const gridStart  = startOfWeek(monthStart, { weekStartsOn: 1, locale });
+        const gridEnd    = endOfWeek(monthEnd,   { weekStartsOn: 1, locale });
+    
+        const getDayStats = (date) => {
+            const key   = format(date, "yyyy-MM-dd");
+            const dayBk = bookings.filter(
+                (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
+            );
+            const tot = dayBk.reduce(
+                (n, b) => n + (b.total_adults || 0) + (b.total_kids || 0),
+                0
+            );
+            return { bookings: dayBk.length, clients: tot };
+        };
+    
+        /* colour helpers */
+        const isClosed = (d) => {
+            const key = format(d, "yyyy-MM-dd");
+            if (openSet.has(key)) return false;          // open override
+            return closedSet.has(key) ||
+                getDayMealTypes(d.getDay()).length === 0;  // schedule-closed
+        };
+        const isBlocked = (d) => d > addDays(today, bookingWindowDays);
+    
+        /* build calendar grid -------------------------------------- */
+        const rows = [];
+        let dayPtr = gridStart;
+        while (dayPtr <= gridEnd) {
+            const week = [];
+            for (let i = 0; i < 7; i++) {
+                const d         = dayPtr;
+                const { bookings: bc, clients } = getDayStats(d);
+                const inMonth   = isSameMonth(d, monthToShow);
+                const selected  = selectedDate && isSameDay(d, selectedDate);
+    
+                /* colour classes */
+                let bg  = "bg-white";
+                let txt = inMonth ? "text-gray-800" : "text-gray-400";
+    
+                if (isClosed(d))      { bg = "bg-red-200";    txt = "text-red-800"; }
+                else if (isBlocked(d)){ bg = "bg-yellow-100"; txt = "text-yellow-800"; }
+                if (selected)         { bg = "bg-blue-600";   txt = "text-white"; }
+    
+                week.push(
+                    <button
+                        key={d.toISOString()}
+                        onClick={() => onSelectDay(d)}
+                        className={`${bg} ${txt} relative p-2 h-24 border border-gray-200 flex flex-col items-center justify-center hover:bg-blue-50 transition`}
+                        style={{ minWidth: 50 }}
+                        title={format(d, "EEEE, MMMM d, yyyy", { locale })}
+                    >
+              <span className="text-sm font-semibold">
+                {format(d, "d", { locale })}
+              </span>
+    
+                        {bc > 0 && (
+                            <span className="text-[10px] mt-1 bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
+                  {bc} {t("calendar.badgeBookings")}
+                </span>
+                        )}
+                        {clients > 0 && (
+                            <span className="text-[10px] mt-1 bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">
+                  {clients} {t("calendar.badgeClients")}
+                </span>
+                        )}
+                    </button>
+                );
+    
+                dayPtr = addDays(dayPtr, 1);
+            }
+            rows.push(<div key={rows.length} className="grid grid-cols-7">{week}</div>);
+        }
+    
+        /* UI -------------------------------------------------------- */
+        return (
+            <div className="bg-white p-4 rounded shadow">
+                {/* month controls */}
+                <div className="flex items-center justify-between mb-2">
+                    <button
+                        onClick={() => jumpMonth(-1)}
+                        className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                    >
+                        {t("calendar.prev")}
+                    </button>
+                    <h3 className="font-semibold">
+                        {format(monthToShow, "MMMM yyyy", { locale })}
+                    </h3>
+                    <button
+                        onClick={() => jumpMonth(1)}
+                        className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                    >
+                        {t("calendar.next")}
+                    </button>
+                </div>
+    
+                {/* weekday headers */}
+                <div className="grid grid-cols-7 text-center font-bold text-xs mb-1">
+                    {weekdayLabels.map((lbl) => <div key={lbl}>{lbl}</div>)}
+                </div>
+    
+                {rows}
+            </div>
+        );
+    }
+    
+    BookingsCalendarView.propTypes = {
+        month:         PropTypes.instanceOf(Date),
+        onMonthChange: PropTypes.func,
+        selectedDate:  PropTypes.instanceOf(Date),
+        onSelectDay:   PropTypes.func.isRequired,
+        bookings:      PropTypes.arrayOf(PropTypes.object).isRequired,
+        closedDays:    PropTypes.arrayOf(PropTypes.string),
+        openDays:      PropTypes.arrayOf(PropTypes.string),
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/sharedBookings/BookingsChart.jsx
+    import React, { useMemo } from "react";
+    import PropTypes            from "prop-types";
+    import { Bar }              from "react-chartjs-2";
+    import {
+        Chart as ChartJS,
+        BarElement,
+        CategoryScale,
+        LinearScale,
+        Tooltip,
+        Legend,
+    }                           from "chart.js";
+    import { format, addDays }  from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+    
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    
+    export default function BookingsChart({ bookings, startDate, days }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        /* ─── aggregate guests per-day ─── */
+        const counts = useMemo(() => {
+            return bookings.reduce((map, b) => {
+                const d = b.table_availability?.date || b.date;
+                const g = (b.total_adults || 0) + (b.total_kids || 0);
+                map[d]  = (map[d] || 0) + g;
+                return map;
+            }, {});
+        }, [bookings]);
+    
+        /* ─── build labels + series for the required window ─── */
+        const { labels, data } = useMemo(() => {
+            const lab = [], dat = [];
+            for (let i = 0; i < days; i++) {
+                const d   = addDays(startDate, i);
+                const key = format(d, "yyyy-MM-dd");
+                lab.push(format(d, "MMM d", { locale }));
+                dat.push(counts[key] || 0);
+            }
+            return { labels: lab, data: dat };
+        }, [counts, startDate, days, locale]);
+    
+        const chartData = useMemo(() => ({
+            labels,
+            datasets: [{
+                id:    "guests",
+                label: t("chart.totalPeople"),
+                data,
+                backgroundColor: "#4F46E5",
+                borderRadius:    5,
+                barPercentage:   0.6,
+            }],
+        }), [labels, data, t]);
+    
+        const options = {
+            plugins: {
+                legend:  { display: false },
+                tooltip: {
+                    backgroundColor: "rgba(0,0,0,0.7)",
+                    titleFont: { size: 14 },
+                    bodyFont:  { size: 12 },
+                    padding:   10,
+                },
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { color: "#9CA3AF" } },
+                y: {
+                    beginAtZero: true,
+                    grid:  { color: "#E5E7EB" },
+                    ticks: { color: "#9CA3AF", stepSize: 1 },
+                },
+            },
+            maintainAspectRatio: false,
+        };
+    
+        return (
+            <div className="p-4 bg-white rounded shadow">
+                <h3 className="text-lg font-bold mb-4">
+                    {t("chart.titleTotalPeople")}
+                </h3>
+                <div className="w-full" style={{ height: 300 }}>
+                    <Bar data={chartData} options={options} />
+                </div>
+            </div>
+        );
+    }
+    
+    BookingsChart.propTypes = {
+        bookings:  PropTypes.arrayOf(PropTypes.object).isRequired,
+        startDate: PropTypes.instanceOf(Date).isRequired,
+        days:      PropTypes.number.isRequired,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/sharedBookings/BookingsCompactView.jsx
+    // frontend/src/components/admin/sharedBookings/BookingsCompactView.jsx
+    
+    import React, { useState, useEffect } from "react";
+    import PropTypes from "prop-types";
+    import { format, addDays, subDays, isSameDay } from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+    import axios from "axios";
+    import { getDayMealTypes } from "../../../services/datePicker";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    
+    /**
+     * Compact 7-day strip (future / past).
+     */
+    export default function BookingsCompactView({
+                                                    mode,
+                                                    rangeDays,
+                                                    offset,
+                                                    onOffsetChange,
+                                                    selectedDate = null,
+                                                    onSelectDay,
+                                                    bookings,
+                                                    closedDays = [],
+                                                }) {
+        const lang = getLanguage();
+        const t = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        // dynamic booking window horizon
+        const [bookingWindowDays, setBookingWindowDays] = useState(30);
+        useEffect(() => {
+            axios
+                .get("/api/meta/horizon-days")
+                .then(({ data }) => {
+                    const n = parseInt(data, 10);
+                    if (Number.isFinite(n) && n > 0) {
+                        setBookingWindowDays(n);
+                    }
+                })
+                .catch(() => {
+                    // fallback remains 30
+                });
+        }, []);
+    
+        const today = new Date();
+        const closedSet = new Set(closedDays);
+    
+        /* build day list for the current window */
+        const days = [];
+        if (mode === "future") {
+            for (let i = offset; i < offset + rangeDays; i++) {
+                days.push(addDays(today, i));
+            }
+        } else {
+            for (let i = 1 + offset; i <= rangeDays + offset; i++) {
+                days.push(subDays(today, i));
+            }
+        }
+    
+        /* aggregate stats */
+        const getDayStats = (day) => {
+            const key = format(day, "yyyy-MM-dd");
+            const dayBookings = bookings.filter(
+                (b) => (b.table_availability?.date || b.date || "").slice(0, 10) === key
+            );
+            const totalClients = dayBookings.reduce(
+                (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
+                0
+            );
+            return { bookings: dayBookings.length, clients: totalClients };
+        };
+    
+        /* colouring helpers */
+        const isClosed = (d) =>
+            closedSet.has(format(d, "yyyy-MM-dd")) ||
+            getDayMealTypes(d.getDay()).length === 0;
+        const isBlocked = (d) => d > addDays(today, bookingWindowDays);
+    
+        return (
+            <div className="relative flex w-full items-center">
+                {/* left chevron */}
+                <button
+                    onClick={() => onOffsetChange(offset - 1)}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                    aria-label={t("calendar.prev")}
+                >
+                    <IconChevronLeft className="w-5 h-5 text-gray-500" />
+                </button>
+    
+                {/* day buttons container */}
+                <div className="flex-1 flex justify-between space-x-4 p-4 bg-white rounded shadow overflow-x-auto">
+                    {days.map((day) => {
+                        const { bookings: bc, clients } = getDayStats(day);
+                        const isSel = selectedDate && isSameDay(day, selectedDate);
+    
+                        /* colour classes */
+                        let bg = "bg-gray-100";
+                        let txt = "text-gray-800";
+    
+                        if (isClosed(day)) {
+                            bg = "bg-red-200";
+                            txt = "text-red-800";
+                        } else if (isBlocked(day)) {
+                            bg = "bg-yellow-100";
+                            txt = "text-yellow-800";
+                        }
+                        if (isSel) {
+                            bg = "bg-blue-600";
+                            txt = "text-white";
+                        }
+    
+                        return (
+                            <button
+                                key={day.toISOString()}
+                                onClick={() => onSelectDay(day)}
+                                className={`${bg} ${txt} flex-shrink-0 flex flex-col items-center w-28 py-3 rounded hover:bg-blue-200 transition`}
+                                title={format(day, "EEEE, MMMM d, yyyy", { locale })}
+                            >
+                  <span className="text-xs font-semibold">
+                    {format(day, "E", { locale })}
+                  </span>
+                                <span className="text-2xl font-bold">
+                    {format(day, "d", { locale })}
+                  </span>
+                                <span className="text-sm">{format(day, "MMM", { locale })}</span>
+                                <span className="mt-2 text-xs leading-none">
+                    {bc} {t("calendar.badgeBookings")}
+                  </span>
+                                <span className="text-xs leading-none">
+                    {clients} {t("calendar.badgeClients")}
+                  </span>
+                            </button>
+                        );
+                    })}
+                </div>
+    
+                {/* right chevron */}
+                <button
+                    onClick={() => onOffsetChange(offset + 1)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 flex justify-center items-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
+                    aria-label={t("calendar.next")}
+                >
+                    <IconChevronRight className="w-5 h-5 text-gray-500" />
+                </button>
+            </div>
+        );
+    }
+    
+    BookingsCompactView.propTypes = {
+        mode: PropTypes.oneOf(["future", "past"]).isRequired,
+        rangeDays: PropTypes.number.isRequired,
+        offset: PropTypes.number.isRequired,
+        onOffsetChange: PropTypes.func.isRequired,
+        selectedDate: PropTypes.instanceOf(Date),
+        onSelectDay: PropTypes.func.isRequired,
+        bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
+        closedDays: PropTypes.arrayOf(PropTypes.string),
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/sharedBookings/BookingsOverview.jsx
+    import React, { useState, useEffect, useMemo } from "react";
+    import PropTypes from "prop-types";
+    import {
+        format,
+        addDays,
+        subDays,
+        parseISO,
+        startOfMonth,
+        endOfMonth,
+        startOfDay,
+        differenceInCalendarDays,
+    } from "date-fns";
+    
+    import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+    import BookingsCompactView  from "./BookingsCompactView";
+    import BookingsCalendarView from "./BookingsCalendarView";
+    import BookingsChart        from "./BookingsChart";
+    import DaySchedule          from "./DaySchedule";
+    import AddBookingModal      from "../currentBookings/AddBookingModal";
+    import { translate, getLanguage } from "../../../services/i18n";
+    
+    /* helper – stable “YYYY-MM-DD” */
+    const ymd = (d) => format(d, "yyyy-MM-dd");
+    
+    /* ────────────────────────────────────────────────────────────────
+       Segmented-control style toggle
+       ────────────────────────────────────────────────────────────────*/
+    function ViewToggle({ value, onChange }) {
+        const t = (k,p) => translate(getLanguage(), k, p);
+        const opts = [
+            { key: "compact",  label: t("admin.compact")  },
+            { key: "calendar", label: t("admin.calendar") },
+        ];
+        return (
+            <div className="inline-flex bg-gray-100 rounded-full p-1 shadow-inner">
+                {opts.map(({ key, label }) => (
+                    <button
+                        key={key}
+                        onClick={() => onChange(key)}
+                        className={`px-4 py-1 text-sm font-medium rounded-full transition
+                ${value===key
+                            ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow"
+                            : "text-gray-600 hover:text-gray-800"}`}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
+        );
+    }
+    ViewToggle.propTypes = { value: PropTypes.string.isRequired, onChange: PropTypes.func.isRequired };
+    
+    export default function BookingsOverview({
+                                                 mode,
+                                                 bookings,
+                                                 showChart      = true,
+                                                 allowDrill     = true,
+                                                 view: controlledView,
+                                                 hideViewToggle = false,
+                                                 onViewChange   = () => {},
+                                                 onWindowChange = () => {},
+                                                 customTitle    = null,
+                                             }) {
+        /* i18n */
+        const t = (k,v) => translate(getLanguage(), k, v);
+    
+        /* constants */
+        const rangeDays = 7;
+        const today     = useMemo(() => startOfDay(new Date()), []);
+    
+        /* ─────── view / window state ─────── */
+        const [viewState, setViewState] = useState("compact");
+        const view = controlledView ?? viewState;
+        const changeView = (v) => {
+            if (controlledView !== undefined) onViewChange(v);
+            else setViewState(v);
+        };
+    
+        /* compact offset (days); calendar uses month instead */
+        const [offset, setOffset] = useState(0);
+    
+        /* month being shown in calendar view (1st of month) */
+        const [calMonth, setCalMonth] = useState(startOfMonth(today));
+    
+        /* day selected for drill-down */
+        const [selDay, setSelDay] = useState(null);
+    
+        /* table-availability cache */
+        const [ta, setTA]       = useState({});
+        const [loadingTA, setL] = useState(false);
+    
+        /* CLOSED-days list */
+        const [closedDays, setClosedDays] = useState([]);
+        useEffect(() => {
+            fetch("/api/closed-days")
+                .then((r) => r.json())
+                .then((arr) => Array.isArray(arr) && setClosedDays(arr))
+                .catch(() => setClosedDays([]));
+        }, []);
+    
+        /* ─────── derive window boundaries ─────── */
+        const compactStart = useMemo(
+            () => mode==="future"
+                ? addDays(today, offset)
+                : subDays(today, rangeDays + offset),
+            [mode, today, offset]
+        );
+        const compactEnd   = useMemo(
+            () => mode==="future"
+                ? addDays(compactStart, rangeDays-1)
+                : subDays(today, 1+offset),
+            [mode, compactStart, today, offset]
+        );
+    
+        const viewWinStart = useMemo(
+            () => view==="calendar" ? calMonth : compactStart,
+            [view, calMonth, compactStart]
+        );
+        const viewWinEnd   = useMemo(
+            () => view==="calendar" ? endOfMonth(calMonth) : compactEnd,
+            [view, calMonth, compactEnd]
+        );
+    
+        /* slices for current window --------------------------------- */
+        const compactFiltered = useMemo(
+            () => bookings.filter((b) => {
+                const d = parseISO(b.table_availability?.date || b.date);
+                return d >= compactStart && d <= compactEnd;
+            }),
+            [bookings, compactStart, compactEnd]
+        );
+    
+        const calendarBookings = useMemo(
+            () => bookings.filter((b) => {
+                const d = parseISO(b.table_availability?.date || b.date);
+                return mode==="future" ? d >= today : d < today;
+            }),
+            [bookings, mode, today]
+        );
+    
+        const statsBookings = useMemo(
+            () => view==="calendar"
+                ? calendarBookings.filter((b) => {
+                    const d = parseISO(b.table_availability?.date || b.date);
+                    return d >= viewWinStart && d <= viewWinEnd;
+                })
+                : compactFiltered,
+            [view, calendarBookings, compactFiltered, viewWinStart, viewWinEnd]
+        );
+    
+        useEffect(() => { onWindowChange(statsBookings); }, [statsBookings]);
+    
+        /* KPI counters */
+        const totalBookings = statsBookings.length;
+        const totalClients  = statsBookings.reduce(
+            (s,b) => s + (b.total_adults||0) + (b.total_kids||0), 0
+        );
+    
+        /* ─────── table-availability fetch ─────── */
+        const winStartStr = ymd(viewWinStart);
+        const winEndStr   = ymd(viewWinEnd);
+    
+        useEffect(() => {
+            let cancelled = false;
+            setL(true);
+            Promise.all([
+                fetchTableAvailabilityRange(winStartStr, winEndStr, "lunch"),
+                fetchTableAvailabilityRange(winStartStr, winEndStr, "dinner"),
+            ])
+                .then(([lunch, dinner]) => {
+                    if (cancelled) return;
+                    const merged = {};
+                    [lunch, dinner].forEach((src) =>
+                        Object.entries(src).forEach(([d, info]) => {
+                            merged[d] = merged[d] ? { ...merged[d], ...info } : info;
+                        })
+                    );
+                    setTA(merged);
+                })
+                .catch(() => !cancelled && setTA({}))
+                .finally(() => !cancelled && setL(false));
+            return () => { cancelled = true; };
+        }, [winStartStr, winEndStr, view]);
+    
+        /* manual-add */
+        const [showModal, setShowModal] = useState(false);
+        const handleSaved = () => { setShowModal(false); window.location.reload(); };
+    
+        /* ─────── chart start / length ─────── */
+        const chartStart = view === "calendar" ? viewWinStart : compactStart;
+        const chartDays  = view === "calendar"
+            ? differenceInCalendarDays(viewWinEnd, viewWinStart) + 1
+            : rangeDays;
+    
+        /* ─────── UI ─────── */
+        return (
+            <div className="p-6 bg-white rounded shadow space-y-6">
+                {/* header */}
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold capitalize">
+                            {customTitle || t(`overview.${mode}Bookings`)}
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            {t("overview.dataWindow", { start: ymd(viewWinStart), end: ymd(viewWinEnd) })}
+                        </p>
+                    </div>
+                    {!hideViewToggle && <ViewToggle value={view} onChange={changeView} />}
+                </div>
+    
+                {/* KPI cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="bg-blue-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("overview.bookings")}</p>
+                        <p className="text-xl font-bold">{totalBookings}</p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded text-center">
+                        <p className="text-xs text-gray-600">{t("overview.guests")}</p>
+                        <p className="text-xl font-bold">{totalClients}</p>
+                    </div>
+                </div>
+    
+                {/* main view */}
+                {view === "compact" ? (
+                    <BookingsCompactView
+                        mode={mode}
+                        rangeDays={rangeDays}
+                        offset={offset}
+                        onOffsetChange={setOffset}
+                        selectedDate={allowDrill ? selDay : null}
+                        onSelectDay={allowDrill ? setSelDay : () => {}}
+                        bookings={statsBookings}
+                        closedDays={closedDays}
+                    />
+                ) : (
+                    <BookingsCalendarView
+                        month={calMonth}
+                        onMonthChange={(m) => setCalMonth(startOfMonth(m))}
+                        selectedDate={allowDrill ? selDay : null}
+                        onSelectDay={allowDrill ? setSelDay : () => {}}
+                        bookings={calendarBookings}
+                        closedDays={closedDays}
+                    />
+                )}
+    
+                {/* chart */}
+                {showChart && (
+                    <BookingsChart
+                        key={`${mode}-${offset}-${view}-${chartStart.toISOString()}`}
+                        bookings={statsBookings}
+                        startDate={chartStart}
+                        days={chartDays}
+                    />
+                )}
+    
+                {/* drill-down schedule */}
+                {allowDrill && selDay && (
+                    <div className="mt-4 relative">
+                        {mode === "future" && (
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="absolute right-0 -top-10 px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+                            >
+                                {t("admin.manualBooking")}
+                            </button>
+                        )}
+                        <DaySchedule
+                            selectedDate={selDay}
+                            bookings={bookings}
+                            tableAvailability={ta}
+                            onClose={() => setSelDay(null)}
+                            enableZoom
+                            onBookingClick={setEditingBooking}
+                        />
+                    </div>
+                )}
+    
+                {/* manual-add modal */}
+                {allowDrill && showModal && selDay && (
+                    <AddBookingModal
+                        dateObj={selDay}
+                        onClose={() => setShowModal(false)}
+                        onSaved={handleSaved}
+                    />
+                )}
+            </div>
+        );
+    }
+    
+    BookingsOverview.propTypes = {
+        mode:            PropTypes.oneOf(["future","past"]).isRequired,
+        bookings:        PropTypes.arrayOf(PropTypes.object).isRequired,
+        showChart:       PropTypes.bool,
+        allowDrill:      PropTypes.bool,
+        view:            PropTypes.oneOf(["compact","calendar"]),
+        hideViewToggle:  PropTypes.bool,
+        onViewChange:    PropTypes.func,
+        onWindowChange:  PropTypes.func,
+        customTitle:     PropTypes.string,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/sharedBookings/DaySchedule.jsx
+    // frontend/src/components/admin/sharedBookings/DaySchedule.jsx
+    import React, { useState } from "react";
+    import PropTypes from "prop-types";
+    import { format } from "date-fns";
+    import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
+    import TableUsage from "./TableUsage";
+    import { translate, getLanguage } from "../../../services/i18n";
+    import { IconPencil } from "@tabler/icons-react";
+    
+    const localeMap = { en: enUS, es: esLocale, ca: caLocale };
+    const getBookingDate = (b) =>
+        (b.table_availability?.date || b.date || "").slice(0, 10);
+    
+    export default function DaySchedule({
+                                            selectedDate,
+                                            bookings,
+                                            tableAvailability,
+                                            onClose,
+                                            enableZoom = false,
+                                            onBookingClick = () => {},
+                                            onRefresh = () => {},
+                                        }) {
+        const lang   = getLanguage();
+        const t      = (k, p) => translate(lang, k, p);
+        const locale = localeMap[lang] || enUS;
+    
+        const [showFloor, setShowFloor] = useState(false);
+        if (!selectedDate) return null;
+    
+        const dateStr   = format(selectedDate, "yyyy-MM-dd");
+        const dayInfo   = tableAvailability[dateStr];
+        const indicator = typeof dayInfo === "string" ? dayInfo : null; // "closed" | "blocked"
+        const dayObj    = indicator ? {} : (dayInfo || {});
+    
+        /* fixed round keys so we can still show bookings on closed / blocked days */
+        const roundKeys = ["first_round", "second_round", "dinner_round"];
+    
+        const roundBookings = {};
+        roundKeys.forEach((rk) => {
+            roundBookings[rk] = bookings
+                .filter((b) => {
+                    if (getBookingDate(b) !== dateStr) return false;
+                    if (rk.includes("first"))  return b.reserved_time < "15:00:00";
+                    if (rk.includes("second")) return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
+                    return b.reserved_time >= "20:00:00";
+                })
+                .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
+        });
+    
+        const fullStock = { 2: 0, 4: 0, 6: 0 };
+        roundKeys.forEach((rk) => {
+            const avail = dayObj[rk]?.availability || {};
+            const bookedCounts = {};
+            roundBookings[rk].forEach((bk) => {
+                const cap = bk.table_availability?.capacity || 0;
+                bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
+            });
+            [2, 4, 6].forEach((cap) => {
+                const totalHere = (avail[cap] || 0) + (bookedCounts[cap] || 0);
+                fullStock[cap] = Math.max(fullStock[cap], totalHere);
+            });
+        });
+    
+        const prettyRound = (key) => {
+            if (key.includes("first"))
+                return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
+            if (key.includes("second"))
+                return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
+            return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
+        };
+    
+        return (
+            <div className="mt-6 border rounded bg-white p-4 shadow">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold">
+                        {t("schedule.header", {
+                            date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
+                        })}
+                    </h3>
+                    <div className="space-x-3">
+                        {enableZoom && (
+                            <button
+                                onClick={() => setShowFloor((v) => !v)}
+                                className="text-sm px-2 py-1 border rounded hover:bg-gray-100"
+                            >
+                                {showFloor ? t("admin.hideFloor") : t("admin.expandFloor")}
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="text-sm text-red-500 underline hover:text-red-700"
+                        >
+                            {t("admin.close")}
+                        </button>
+                    </div>
+                </div>
+    
+                {indicator && (
+                    <p
+                        className={
+                            indicator === "closed"
+                                ? "text-red-600 font-semibold mb-4"
+                                : "text-yellow-600 font-semibold mb-4"
+                        }
+                    >
+                        {indicator.toUpperCase()}
+                    </p>
+                )}
+    
+                {roundKeys.map((rk) => {
+                    const { lbl, bg } = prettyRound(rk);
+                    const rows        = roundBookings[rk] || [];
+    
+                    return (
+                        <div key={rk} className="mb-8">
+                            <h4 className="text-md font-semibold mb-2">{lbl}</h4>
+    
+                            {rows.length > 0 ? (
+                                <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
+                                    <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.time")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.name")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.totalClients")}
+                                        </th>
+                                        <th className="px-3 py-2 text-left font-semibold">
+                                            {t("schedule.table.edit") || "Edit"}
+                                        </th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {rows.map((bk) => (
+                                        <tr
+                                            key={bk.id}
+                                            className={`${bg} hover:bg-yellow-50 transition cursor-pointer`}
+                                            onClick={() => onBookingClick(bk)}
+                                        >
+                                            <td className="px-3 py-2">
+                                                {bk.reserved_time.slice(0, 5)}
+                                            </td>
+                                            <td className="px-3 py-2 truncate max-w-[160px]">
+                                                {bk.full_name}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {bk.total_adults + bk.total_kids}
+                                            </td>
+                                            <td className="px-3 py-2 text-center">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onBookingClick(bk);
+                                                    }}
+                                                    className="text-gray-600 hover:text-gray-900"
+                                                    title={t("schedule.table.edit") || "Edit"}
+                                                >
+                                                    <IconPencil className="w-4 h-4" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    </tbody>
+                                </table>
+                            ) : (
+                                <p className="text-gray-500 mb-3">
+                                    {t("schedule.noBookings")}
+                                </p>
+                            )}
+    
+                            {showFloor && (
+                                <TableUsage
+                                    capacityTotals={fullStock}
+                                    bookings={rows}
+                                    expanded
+                                    onRefresh={onRefresh}
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        );
+    }
+    
+    DaySchedule.propTypes = {
+        selectedDate:      PropTypes.instanceOf(Date),
+        bookings:          PropTypes.arrayOf(PropTypes.object).isRequired,
+        tableAvailability: PropTypes.object.isRequired,
+        onClose:           PropTypes.func.isRequired,
+        enableZoom:        PropTypes.bool,
+        onBookingClick:    PropTypes.func,
+        onRefresh:         PropTypes.func,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/sharedBookings/TableUsage.jsx
+    // frontend/src/components/admin/sharedBookings/TableUsage.jsx
+    import React, { useState } from "react";
+    import PropTypes           from "prop-types";
+    import { updateBooking }   from "../../../services/bookingService";
+    import { translate, getLanguage } from "../../../services/i18n";
+    import { IconArrowsShuffle } from "@tabler/icons-react";
+    
+    export default function TableUsage({
+                                           capacityTotals = {},
+                                           bookings       = [],
+                                           expanded       = false,
+                                           seatSize       = 35,
+                                           onRefresh      = () => {},
+                                       }) {
+        /* ── i18n helpers ────────────────────────────────────────── */
+        const lang = getLanguage();
+        const t    = (k,p) => translate(lang, k, p);
+    
+        /* ── local UI state ──────────────────────────────────────── */
+        const [moveMode,      setMoveMode]      = useState(false);
+        const [sourceBk,      setSourceBk]      = useState(null); // booking obj
+        const [sourceIdx,     setSourceIdx]     = useState(null); // table index
+        const [bounceIdx,     setBounceIdx]     = useState(null); // anim target
+        const [status,        setStatus]        = useState("");
+    
+        const resetMove = () => {
+            setMoveMode(false);
+            setSourceBk(null);
+            setSourceIdx(null);
+            setBounceIdx(null);
+            setStatus("");
+        };
+    
+        /* ── build table grid  (same algorithm as before) ────────── */
+        const caps = Object.keys(capacityTotals)
+            .map(Number)
+            .filter(Number.isFinite)
+            .sort((a,b) => a-b);
+    
+        const tables = [];       // flattened grid
+        caps.forEach(cap => {
+            for (let i=0;i<(capacityTotals[cap]||0);i++){
+                tables.push({ cap, booked:false, booking:null });
+            }
+        });
+    
+        /* place bookings */
+        const ptr = {}; caps.forEach(c => (ptr[c]=0));
+        bookings.forEach(bk=>{
+            const cap = bk.table_availability?.capacity || 0;
+            let idx=-1, seen=0;
+            for (let i=0;i<tables.length;i++){
+                if (tables[i].cap===cap){
+                    if (seen===ptr[cap]){ idx=i; break; }
+                    seen++;
+                }
+            }
+            if (idx!==-1){
+                tables[idx] = {
+                    cap,
+                    booked : true,
+                    booking: bk,
+                    name   : bk.full_name,
+                    guests : (bk.total_adults||0)+(bk.total_kids||0),
+                };
+            }
+            ptr[cap]++;
+        });
+    
+        /* ── helpers for style / pointer / clickability ──────────── */
+        const scale  = expanded ? 1.6 : 1;
+        const sizePx = (cap)=>cap*seatSize*scale;
+    
+        const selectable = (tbl) => {
+            if (!moveMode) return false;
+            if (!sourceBk)               return tbl.booked;                 // step 1
+            /* step 2 – any EMPTY table is ok */
+            return !tbl.booked;
+        };
+    
+        const classForTable = (tbl, idx) => {
+            let cls = `relative flex flex-col items-center justify-center 
+                       border rounded-2xl shadow-sm ${
+                tbl.booked ? "bg-green-300" : "bg-gray-200"
+            }`;
+    
+            if (idx===sourceIdx) cls += " ring-4 ring-amber-400 bg-amber-200";
+            if (idx===bounceIdx) cls += " animate-bounce";
+            if (selectable(tbl))  cls += " cursor-pointer hover:ring-2 hover:ring-indigo-400";
+            if (moveMode && !selectable(tbl)) cls += " cursor-not-allowed opacity-50";
+    
+            return cls;
+        };
+    
+        /* ── click handler ───────────────────────────────────────── */
+        const handleClick = async (tbl, idx)=>{
+            if (!moveMode) return;
+    
+            /* step ① – pick a booked source table */
+            if (!sourceBk){
+                if (!tbl.booked) return;
+                setSourceBk(tbl.booking);
+                setSourceIdx(idx);
+                setStatus(t("tableUsage.pickTarget")||"Tap an empty table");
+                return;
+            }
+    
+            /* step ② – pick ANY empty table */
+            if (tbl.booked) return;
+    
+            try{
+                setStatus(t("tableUsage.moving")||"Moving…");
+                await updateBooking(sourceBk.id,{ capacity_override: tbl.cap });
+                setBounceIdx(idx);
+                setStatus(t("tableUsage.done")||"Done!");
+    
+                /* let the bounce play, then refresh */
+                setTimeout(async ()=>{
+                    await onRefresh();
+                    window.location.reload();
+                }, 550);
+            }catch(err){
+                console.error(err);
+                setStatus(err.response?.data?.error || "Error");
+                setTimeout(resetMove, 1500);
+            }
+        };
+    
+        /* ── render ──────────────────────────────────────────────── */
+        return (
+            <div className="mt-3 space-y-3">
+                {/* header row */}
+                <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{t("tableUsage.title")}</p>
+    
+                    <button
+                        onClick={()=>{
+                            if (moveMode) resetMove();
+                            else{
+                                setMoveMode(true);
+                                setStatus(t("tableUsage.pickSource")||"Tap a booked table");
+                            }
+                        }}
+                        className={`flex items-center gap-1 px-3 py-1 rounded text-sm font-medium shadow
+                            ${
+                            moveMode
+                                ? "bg-red-600 text-white hover:bg-red-700"
+                                : "bg-indigo-600 text-white hover:bg-indigo-700"
+                        }`}
+                    >
+                        <IconArrowsShuffle className="w-4 h-4"/>
+                        {moveMode
+                            ? t("tableUsage.cancel")||"Cancel"
+                            : t("tableUsage.move")  ||"Move booking"}
+                    </button>
+                </div>
+    
+                {status && <p className="text-xs italic text-gray-600">{status}</p>}
+    
+                {/* table grid */}
+                <div className="flex flex-wrap gap-3 select-none">
+                    {tables.map((tbl,idx)=>(
+                        <div
+                            key={idx}
+                            className={classForTable(tbl,idx)}
+                            style={{ width:sizePx(tbl.cap), height:sizePx(tbl.cap)*0.75 }}
+                            title={tbl.booked
+                                ? `${tbl.name} (${tbl.guests})`
+                                : `${tbl.cap}-top`}
+                            onClick={()=>handleClick(tbl,idx)}
+                        >
+                            {tbl.booked ? (
+                                <>
+                                    <span className="text-xs font-semibold truncate px-1 max-w-[90%]">
+                                        {tbl.name}
+                                    </span>
+                                    <span className="text-xs">
+                                        {tbl.guests}/{tbl.cap}
+                                    </span>
+                                </>
+                            ):(
+                                <span className="text-xs text-gray-600">
+                                    {tbl.cap}
+                                </span>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+    
+    TableUsage.propTypes = {
+        capacityTotals: PropTypes.objectOf(PropTypes.number),
+        bookings:       PropTypes.array,
+        expanded:       PropTypes.bool,
+        seatSize:       PropTypes.number,
+        onRefresh:      PropTypes.func,
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/admin/utils/LanguagePicker.jsx
+    // frontend/src/components/admin/utils/LanguagePicker.jsx
+    
+    import { useState, Fragment } from "react";
+    import { Listbox, Transition } from "@headlessui/react";
+    import { ChevronDownIcon } from "@heroicons/react/20/solid";
+    
+    const options = [
+        { label: "Català",   code: "ca" },
+        { label: "Español",  code: "es" },
+        { label: "English",  code: "en" },
+    ];
+    
+    export default function LanguagePicker({ onChange, selectedCode }) {
+        const initial = options.find((opt) => opt.code === selectedCode) || options[0];
+        const [selected, setSelected] = useState(initial);
+    
+        const handleChange = (opt) => {
+            setSelected(opt);
+            onChange(opt.code);
+        };
+    
+        return (
+            <div className="w-48 relative">
+                <Listbox value={selected} onChange={handleChange}>
+                    <div className="relative">
+                        <Listbox.Button className="w-full bg-white border border-gray-300 rounded-md px-3 py-2 flex items-center justify-between text-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <span>{selected.label}</span>
+                            <ChevronDownIcon className="w-4 h-4 text-gray-500" aria-hidden="true" />
+                        </Listbox.Button>
+    
+                        <Transition
+                            as={Fragment}
+                            leave="transition ease-in duration-100"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                        >
+                            <Listbox.Options className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+                                {options.map((opt) => (
+                                    <Listbox.Option
+                                        key={opt.code}
+                                        value={opt}
+                                        className={({ active }) =>
+                                            `cursor-pointer select-none relative px-3 py-2 text-sm ${
+                                                active ? "bg-indigo-100 text-indigo-900" : "text-gray-700"
+                                            }`
+                                        }
+                                    >
+                                        {({ selected: isSel }) => (
+                                            <span className={`${isSel ? "font-semibold" : "font-normal"}`}>
+                          {opt.label}
+                        </span>
+                                        )}
+                                    </Listbox.Option>
+                                ))}
+                            </Listbox.Options>
+                        </Transition>
+                    </div>
+                </Listbox>
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/layout/AnimatedBackground.jsx
+    import React from "react";
+    
+    const AnimatedBackground = () => {
+        return (
+            <div
+                className="fixed inset-0 -z-10"
+                style={{
+                    background: "linear-gradient(135deg, #f8fafc, #e2e8f0)",
+                }}
+            >
+                {/* A subtle, professional watermark */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                    <h1 className="text-gray-600 text-4xl font-bold">Stellar Progress</h1>
+                </div>
+            </div>
+        );
+    };
+    
+    export default AnimatedBackground;
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/layout/Layout.jsx
+    import "react";
+    import { Link } from "react-router-dom";
+    
+    const Layout = ({ children }) => {
+        return (
+            <div>
+                {/* Global Navigation Bar */}
+                <nav className="bg-gray-800 p-4 text-white flex justify-between">
+                    <div>
+                        <Link to="/" className="hover:text-gray-300 mr-4">
+                            Home
+                        </Link>
+                        <Link to="/booking" className="hover:text-gray-300 mr-4">
+                            Booking
+                        </Link>
+                    </div>
+                    <div>
+                        <Link to="/admin" className="hover:text-gray-300">
+                            Admin
+                        </Link>
+                    </div>
+                </nav>
+                {/* Page Content */}
+                <main>{children}</main>
+            </div>
+        );
+    };
+    
+    export default Layout;
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/components/layout/ProtectedRoute.jsx
+    // src/components/ProtectedRoute.jsx
+    import "react";
+    import { Navigate } from "react-router-dom";
+    import PropTypes from "prop-types";
+    
+    function ProtectedRoute({ children }) {
+        const isAuthenticated = localStorage.getItem("isAuthenticated");
+    
+        // If user is NOT authenticated, redirect to /login
+        if (!isAuthenticated) {
+            return <Navigate to="/login" replace />;
+        }
+    
+        // Otherwise, render the protected component (AdminDashboard)
+        return children;
+    }
+    
+    ProtectedRoute.propTypes = {
+        children: PropTypes.node.isRequired,
+    };
+    export default ProtectedRoute;
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/index.css
+    /* src/index.css or src/main.css */
+    
+    @tailwind base;
+    @tailwind components;
+    @tailwind utilities;
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/main.jsx
+    // src/main.jsx
+    import React from "react";
+    import ReactDOM from "react-dom/client";
+    import App from "./App";
+    import "./index.css"; // or "./main.css" — your Tailwind file
+    
+    ReactDOM.createRoot(document.getElementById("root")).render(
+        <React.StrictMode>
+            <App />
+        </React.StrictMode>
+    );
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/pages/AdminDashboard.jsx
+    // frontend/src/pages/AdminDashboard.jsx
+    import React, { useState, useEffect, useCallback } from "react";
+    import { useNavigate } from "react-router-dom";
+    
+    import {
+        IconCalendarClock,
+        IconClock,
+        IconChartBar,
+        IconSettings,
+        IconLogout,
+    } from "@tabler/icons-react";
+    
+    import LanguagePicker       from "../components/admin/utils/LanguagePicker.jsx";
+    import { fetchAllBookings } from "../services/bookingService";
+    import CurrentBookings      from "../components/admin/currentBookings/CurrentBookings";
+    import BookingsOverview     from "../components/admin/sharedBookings/BookingsOverview";
+    import AlgorithmTester      from "../components/admin/algorithmTest/AlgorithmTester";
+    import MetricsDashboard     from "../components/admin/metrics/MetricsDashboard";
+    import OperationalSettings  from "../components/admin/settings/OperationalSettings.jsx";
+    import { translate, setLanguage } from "../services/i18n";
+    
+    const navMeta = [
+        { key: "current",  icon: IconClock },
+        { key: "future",   icon: IconCalendarClock },
+        { key: "metrics",  icon: IconChartBar },
+        { key: "tester",   icon: IconChartBar },
+        { key: "settings", icon: IconSettings },
+    ];
+    
+    export default function AdminDashboard() {
+        const navigate = useNavigate();
+    
+        /* ─── language ─── */
+        const [lang, setLang] = useState(
+            () => localStorage.getItem("adminLang") || "ca"
+        );
+        const t = (key, vars) => translate(lang, key, vars);
+        const changeLang = (lng) => {
+            setLanguage(lng);
+            setLang(lng);
+        };
+    
+        /* ─── booking data ─── */
+        const [active,   setActive]   = useState("current");
+        const [bookings, setBookings] = useState([]);
+        const [loading,  setLoading]  = useState(true);
+    
+        const loadBookings = useCallback(async () => {
+            setLoading(true);
+            try {
+                const data = await fetchAllBookings();
+                if (Array.isArray(data)) setBookings(data);
+            } catch (err) {
+                console.error("Failed to fetch bookings:", err);
+            } finally {
+                setLoading(false);
+            }
+        }, []);
+    
+        useEffect(() => { loadBookings(); }, [loadBookings]);
+    
+        /* ─── auth ─── */
+        const logout = () => {
+            localStorage.removeItem("isAuthenticated");
+            navigate("/login");
+        };
+    
+        const renderPanel = () => {
+            if (loading) return <p>{t("tester.loadingTA")}</p>;
+    
+            switch (active) {
+                case "current":
+                    return (
+                        <CurrentBookings
+                            bookings={bookings}
+                            onDataRefresh={loadBookings}
+                        />
+                    );
+                case "future":
+                    return (
+                        <BookingsOverview
+                            mode="future"
+                            bookings={bookings}
+                            showChart={false}
+                            allowDrill={true}
+                        />
+                    );
+                case "metrics":
+                    return <MetricsDashboard bookings={bookings} />;
+                case "tester":
+                    return (
+                        <AlgorithmTester
+                            bookings={bookings}
+                            onRefresh={loadBookings}
+                        />
+                    );
+                case "settings":
+                    /* ★ PASS bookings + refresher so that closing a day
+                       can purge its bookings and reload the list */
+                    return (
+                        <OperationalSettings
+                            bookings={bookings}
+                            onRefresh={loadBookings}
+                        />
+                    );
+                default:
+                    return null;
+            }
+        };
+    
+        const version = import.meta.env.VITE_APP_VERSION || "1.0.3";
+    
+        return (
+            <div className="flex min-h-screen bg-gray-100">
+                {/* ───────── sidebar ───────── */}
+                <aside className="relative w-64 bg-white border-r flex flex-col overflow-y-auto">
+                    <div className="border-b">
+                        <div className="flex items-center justify-between p-4">
+                <span className="text-xl font-semibold">
+                  {t("admin.title")}
+                </span>
+                            <code className="text-sm text-gray-500">
+                                {t("admin.versionPrefix")}{version}
+                            </code>
+                        </div>
+                        <div className="px-4 pb-4">
+                            <LanguagePicker onChange={changeLang} />
+                        </div>
+                    </div>
+    
+                    <div className="flex-1 p-4 space-y-1">
+                        {navMeta.map(({ key, icon: IconCmp }) => (
+                            <button
+                                key={key}
+                                onClick={() => setActive(key)}
+                                className={`w-full flex items-center p-2 rounded-md ${
+                                    active === key
+                                        ? "bg-blue-100 text-blue-700 font-medium"
+                                        : "text-gray-700 hover:bg-gray-50"
+                                }`}
+                            >
+                                <IconCmp className="mr-3 h-5 w-5 text-gray-400" />
+                                {t(`admin.nav.${key}`)}
+                            </button>
+                        ))}
+                    </div>
+    
+                    {/* ─── logout ─── */}
+                    <div className="sticky bottom-0 left-0 w-full bg-white p-4 border-t">
+                        <button
+                            onClick={logout}
+                            className="w-full flex items-center p-2 rounded-md text-gray-700 hover:bg-gray-50"
+                        >
+                            <IconLogout className="mr-3 h-5 w-5 text-gray-400" />
+                            {t("admin.logout")}
+                        </button>
+                    </div>
+                </aside>
+    
+                {/* ───────── main ───────── */}
+                <main className="flex-1 p-6 overflow-auto">
+                    {renderPanel()}
+                </main>
+            </div>
+        );
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/pages/LoginPage.jsx
+    // src/pages/LoginPage.jsx
+    import React, { useState } from "react";
+    import { useNavigate } from "react-router-dom";
+    
+    function LoginPage() {
+        const navigate = useNavigate();
+    
+        // Form state
+        const [username, setUsername] = useState("");
+        const [password, setPassword] = useState("");
+        const [error, setError] = useState("");
+    
+        function handleSubmit(e) {
+            e.preventDefault();
+    
+            // Hard-coded credentials
+            if (username === "admin" && password === "1234") {
+                localStorage.setItem("isAuthenticated", "true");
+                navigate("/admin");
+            } else {
+                setError("Invalid credentials. Try admin / 1234.");
+            }
+        }
+    
+        return (
+            <div className="flex min-h-screen">
+                {/* Left side background image: hidden on small screens */}
+                <div
+                    className="hidden md:block w-1/2 bg-cover bg-center"
+                    style={{
+                        backgroundImage:
+                            'url("https://images.unsplash.com/photo-1484242857719-4b9144542727?auto=format&fit=crop&w=1280&q=80")',
+                    }}
+                ></div>
+    
+                {/* Right side login form */}
+                <div className="w-full md:w-1/2 p-8 flex flex-col justify-center bg-white">
+                    <h2 className="text-3xl font-bold mb-6 text-center">Welcome back!</h2>
+    
+                    {/* Error message */}
+                    {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+    
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {/* USERNAME FIELD */}
+                        <div>
+                            <label className="block mb-1 font-medium text-gray-700">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="admin"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full border border-gray-300 rounded px-3 py-2"
+                            />
+                        </div>
+    
+                        {/* PASSWORD FIELD */}
+                        <div>
+                            <label className="block mb-1 font-medium text-gray-700">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                placeholder="1234"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full border border-gray-300 rounded px-3 py-2"
+                            />
+                        </div>
+    
+                        {/* 'Keep me logged in' */}
+                        <div className="flex items-center justify-between mt-2">
+                            <label className="flex items-center space-x-2">
+                                <input type="checkbox" className="form-checkbox" />
+                                <span className="text-sm text-gray-600">Keep me logged in</span>
+                            </label>
+                        </div>
+    
+                        {/* SUBMIT */}
+                        <button
+                            type="submit"
+                            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors"
+                        >
+                            Login
+                        </button>
+                    </form>
+    
+                    <p className="text-center mt-4">
+                        Don&apos;t have an account?{" "}
+                        <a href="#" className="text-blue-600 font-semibold">
+                            Register
+                        </a>
+                    </p>
+                </div>
+            </div>
+        );
+    }
+    
+    export default LoginPage;
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/bookingService.js
+    import axios from "axios";
+    axios.defaults.baseURL = ""; // proxy via Vite
+    
+    /*──────────────────────────────────────────────
+      Simple in-memory cache for table availability
+    ──────────────────────────────────────────────*/
+    const _taCache = new Map();
+    const buildKey = (start, end, meal) => `${start}|${end}|${meal}`;
+    
+    /**
+     * Clear every cached /api/table-availability-range response.
+     * Call this after any action (e.g. closing/opening a day)
+     * that could invalidate previously-fetched data.
+     */
+    export function clearAvailabilityCache() {
+        _taCache.clear();
+    }
+    
+    export async function fetchTableAvailabilityRange(
+        start,
+        end,
+        mealType = "lunch"
+    ) {
+        const key = buildKey(start, end, mealType);
+        const hit = _taCache.get(key);
+    
+        if (hit?.status === "resolved") return hit.data;
+    
+        if (hit?.status === "pending") return hit.promise;
+    
+        const promise = axios
+            .get("/api/table-availability-range", {
+                params: { start, end, mealType },
+            })
+            .then((res) => {
+                _taCache.set(key, { status: "resolved", data: res.data });
+                return res.data;
+            })
+            .catch((err) => {
+                _taCache.delete(key);
+                throw err;
+            });
+    
+        _taCache.set(key, { status: "pending", promise });
+        return promise;
+    }
+    
+    /*──────────────────────────────────────────────
+      Other booking-related helpers
+    ──────────────────────────────────────────────*/
+    export async function fetchAvailableTimeSlots(params) {
+        const { data } = await axios.get("/api/table-availability", { params });
+        return data;
+    }
+    
+    export async function fetchAllBookings() {
+        const { data } = await axios.get("/api/bookings");
+        return data.data;
+    }
+    
+    export async function createBooking(payload) {
+        const { data } = await axios.post("/api/bookings", payload);
+        return data;
+    }
+    
+    export async function updateBooking(id, payload) {
+        const { data } = await axios.patch(`/api/bookings/${id}`, payload);
+        return data;
+    }
+    
+    export async function deleteBooking(id) {
+        const { data } = await axios.delete(`/api/bookings/${id}`);
+        return data;
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/datePicker.js
+    import { isBefore, isAfter, format } from "date-fns";
+    
+    /**
+     * dayOfWeek: 0=Sun,1=Mon…6=Sat
+     */
+    export function getDayMealTypes(dayOfWeek) {
+        switch (dayOfWeek) {
+            case 1: // Mon
+            case 2: // Tue
+                return []; // closed
+            case 3: // Wed
+            case 4: // Thu
+                return ["lunch"];
+            case 5: // Fri
+            case 6: // Sat
+            case 0: // Sun
+                return ["lunch", "dinner"];
+            default:
+                return [];
+        }
+    }
+    
+    export function sumAvailability(dayAvailability) {
+        if (!dayAvailability || typeof dayAvailability !== "object") return 0;
+        let sum = 0;
+    
+        // lunch rounds
+        ["first_round", "second_round"].forEach((rk) => {
+            Object.values(dayAvailability[rk]?.availability || {}).forEach((v) => {
+                sum += v;
+            });
+        });
+    
+        // dinner
+        Object.values(dayAvailability.dinner_round?.availability || {}).forEach((v) => {
+            sum += v;
+        });
+    
+        return sum;
+    }
+    
+    /**
+     * true if dateA < dateB or same calendar day
+     */
+    export function isBeforeOrSameDay(dateA, dateB) {
+        return isBefore(dateA, dateB) || format(dateA, "yyyy-MM-dd") === format(dateB, "yyyy-MM-dd");
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/i18n.js
+    // frontend/src/services/i18n.js
+    
+    import ca from "./languages/ca";
+    import es from "./languages/es";
+    import en from "./languages/en";
+    
+    const translations = { ca, es, en };
+    
+    // Look first in either storage key for a saved language, default to Catalan
+    const STORAGE_KEYS = ["adminLang", "lang"];
+    function detectStoredLang() {
+        for (const key of STORAGE_KEYS) {
+            const v = localStorage.getItem(key);
+            if (v && translations[v]) return v;
+        }
+        return "ca";
+    }
+    
+    let currentLang = detectStoredLang();
+    
+    export function setLanguage(lang) {
+        if (!translations[lang]) return;
+        currentLang = lang;
+        STORAGE_KEYS.forEach((k) => localStorage.setItem(k, lang));
+    }
+    
+    export function getLanguage() {
+        return currentLang;
+    }
+    
+    /**
+     * translate()
+     *
+     * Usage:
+     *   translate("en", "admin.nav.current")
+     *   translate("modal.dateDisplay", { weekday, day, month, year })
+     */
+    export function translate(arg1, arg2, arg3, arg4) {
+        let lang, fullPath, params = {};
+    
+        if (translations[arg1]) {
+            // Style A: translate(lang, "section.path", params?)
+            lang = arg1;
+            if (typeof arg2 === "string" && (arg3 === undefined || typeof arg3 === "object")) {
+                fullPath = arg2;
+                params   = arg3 || {};
+            } else {
+                fullPath = [arg2, arg3].filter((x) => typeof x === "string").join(".");
+                params   = arg4 || {};
+            }
+        } else {
+            // Style B: translate("section.path", params?)
+            lang     = currentLang;
+            fullPath = arg1;
+            params   = arg2 || {};
+        }
+    
+        const deepGet = (obj, path) =>
+            path.split(".").reduce((acc, key) =>
+                acc && acc[key] !== undefined ? acc[key] : null, obj
+            );
+    
+        let text =
+            deepGet(translations[lang], fullPath) ||
+            deepGet(translations.en,   fullPath) ||
+            `!${fullPath}!`;
+    
+        // interpolate {tokens}
+        if (typeof text === "string" && text.includes("{")) {
+            text = text.replace(/\{(\w+?)\}/g, (_, token) =>
+                Object.prototype.hasOwnProperty.call(params, token)
+                    ? params[token]
+                    : `{${token}}`
+            );
+        }
+    
+        return text;
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/languages/ca.js
+    export default {
+        admin: {
+            title: "El meu Admin",
+            versionPrefix: "v",
+            language: "Llengua",
+            nav: {
+                current: "Reserves actuals",
+                future: "Reserves futures",
+                past: "Reserves passades",
+                metrics: "Mètriques",
+                tester: "Prova d'algorisme",
+                settings: "Ajustos",
+            },
+            refresh: "Actualitza",
+            logout: "Tanca sessió",
+            manualBooking: "+ Reserva manual",
+            today: "Avui",
+            bookings: "Reserves",
+            totalClients: "Total Clients",
+            expandFloor: "Expandir sala",
+            hideFloor: "Amaga sala",
+            close: "Tanca",
+            compact: "Compacte",
+            calendar: "Calendari",
+        },
+    
+        overview: {
+            bookings: "Reserves",
+            guests: "Clients",
+            futureBookings: "Reserves futures",
+            pastBookings: "Reserves passades",
+            dataWindow: "Finestra de dades: {start} → {end}",
+            bookings30d: "Reserves (30 d)",
+            guests30d: "Clients (30 d)",
+            avgGuests: "Mitjana clients / reserva",
+            uniqueNames: "Noms únics",
+            vsPrevious: "vs 30 d anteriors",
+            upcomingRange: "Properes {n} d",
+            pastRange: "Passades {n} d",
+            peakDayGuests: "Màxim clients en un dia", // ← added
+        },
+    
+        modal: {
+            addTitle:      "Afegir reserva manual",
+            dateDisplay:   "{weekday}, {day} {month} {year}",
+            fullName:      "Nom complet",
+            guests:        "Clients",
+            phoneOptional: "Telèfon (opcional)",
+            meal:  { lunch: "Dinar", dinner: "Sopar" },
+            round: { first: "1a Torn", second: "2a Torn" },
+            time:        "Hora",
+            close:       "Tanca",
+            save:        "Desa",
+            closedDay:   "Ho sentim, estem tancats aquell dia.",
+            errorRequired: "Si us plau omple tots els camps obligatoris.",
+            saveError:     "Error en desar — torna-ho a provar.",
+        },
+    
+        datePicker: {
+            upcoming: "Properes {n} d",
+            past:     "Passades {n} d",
+        },
+    
+        tester: {
+            title:        "Prova d'algorisme",
+            partySizes:   "Mides de grup (separades per comes)",
+            date:         "Data",
+            meal:         "Àpat",
+            startingTime: "Hora inicial",
+            runTest:      "Executa prova",
+            results:      "Resultats",
+            ok:           "Correcte",
+            rejected:     "Rebutjat",
+            loadingTA:    "Carregant disponibilitat de taules…",
+        },
+    
+        schedule: {
+            header:       "Horari per a {date}",
+            round: {
+                lunchFirst:  "Dinar–1r Torn",
+                lunchSecond: "Dinar–2n Torn",
+                dinner:      "Sopar",
+            },
+            table: {
+                time:         "Hora",
+                name:         "Nom",
+                totalClients: "Clients totals",
+            },
+            noBookings:   "Cap reserva en aquest torn.",
+        },
+    
+        calendar: {
+            prev:           "Ant.",
+            next:           "Seg.",
+            badgeBookings:  "Reserves",
+            badgeClients:   "Clients",
+        },
+    
+        chart: {
+            titleTotalPeople: "Gràfic de persones totals",
+            totalPeople:      "Persones totals",
+        },
+    
+        tableUsage: "Ús de taules",
+    
+        settings: {
+            bookingWindowFrom: "Acceptar reserves a partir de",
+            closeDay:          "Tancar un dia",
+            openDay:           "Obrir un dia",
+            openUntil:         "Obrir reserves fins a aquest dia",
+            save:              "Desa",
+            closed:            "Tancat (clic per obrir)",
+            open:              "Obert (clic per tancar)",
+            chooseDay:         "Tria un dia",
+            successClosed:     "Dia tancat!",
+            successOpened:     "Dia obert!",
+            closing:           "Tancant…",
+            opening:           "Obrint…",
+            lunch:              "Dinar",
+            dinner:             "Sopar",
+            processing:         "Processant…",
+            done:               "Fet",
+        },
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/languages/en.js
+    // frontend/src/services/languages/en.js
+    
+    export default {
+        admin: {
+            title: "My Admin",
+            versionPrefix: "v",
+            language: "Language",
+            nav: {
+                current: "Current Bookings",
+                future: "Future Bookings",
+                past: "Past Bookings",
+                metrics: "Metrics",
+                tester: "Algorithm Tester",
+                settings: "Settings",
+            },
+            refresh: "Refresh",
+            logout: "Log Out",
+            manualBooking: "+ Manual Booking",
+            today: "Today",
+            bookings: "Bookings",
+            totalClients: "Total Clients",
+            expandFloor: "Expand floor",
+            hideFloor: "Hide floor",
+            close: "Close",
+            compact: "Compact",
+            calendar: "Calendar",
+        },
+    
+        overview: {
+            bookings: "Bookings",
+            guests: "Guests",
+            futureBookings: "Future Bookings",
+            pastBookings: "Past Bookings",
+            dataWindow: "Data window: {start} → {end}",
+            bookings30d: "Bookings (30 d)",
+            guests30d: "Guests (30 d)",
+            avgGuests: "Avg Guests / Booking",
+            uniqueNames: "Unique Names",
+            vsPrevious: "vs previous 30 d",
+            upcomingRange: "Upcoming {n} d",
+            pastRange: "Past {n} d",
+            peakDayGuests: "Peak Day Guests",
+        },
+    
+        modal: {
+            addTitle: "Add Manual Booking",
+            editTitle: "Edit Booking",
+            dateDisplay: "{weekday}, {month} {day}, {year}",
+            fullName: "Full Name",
+            guests: "Guests",
+            phoneOptional: "Phone (optional)",
+            meal: { lunch: "Lunch", dinner: "Dinner" },
+            round: { first: "1st Round", second: "2nd Round" },
+            time: "Time",
+            close: "Close",
+            save: "Save",
+            delete: "Delete",
+            confirmDelete: "Delete this booking?",
+            deleteError: "Error deleting booking",
+            closedDay: "Sorry, we’re closed that day.",
+            errorRequired: "Please fill in all required fields.",
+            saveError: "Error saving — please try again.",
+        },
+    
+        datePicker: {
+            upcoming: "Upcoming {n} d",
+            past: "Past {n} d",
+        },
+    
+        tester: {
+            title: "Algorithm Tester",
+            partySizes: "Party sizes (comma-separated)",
+            date: "Date",
+            meal: "Meal",
+            startingTime: "Starting time",
+            runTest: "Run Test",
+            results: "Results",
+            ok: "OK",
+            rejected: "Rejected",
+            loadingTA: "Loading table availability…",
+        },
+    
+        schedule: {
+            header: "Schedule for {date}",
+            round: {
+                lunchFirst: "Lunch–1st Round",
+                lunchSecond: "Lunch–2nd Round",
+                dinner: "Dinner",
+            },
+            table: {
+                time: "Time",
+                name: "Name",
+                totalClients: "Total Clients",
+                edit: "Edit",
+            },
+            noBookings: "No bookings in this round.",
+        },
+    
+        calendar: {
+            prev: "Prev",
+            next: "Next",
+            badgeBookings: "Bookings",
+            badgeClients: "Clients",
+        },
+    
+        chart: {
+            titleTotalPeople: "Total People Chart",
+            totalPeople: "Total People",
+        },
+    
+        tableUsage: {
+            title: "Table Usage",
+            move: "Move booking",
+            cancel: "Cancel",
+            pickSource: "Pick booking to move",
+            pickTarget: "Pick target table",
+            moving: "Moving…",
+            done: "Done!",
+        },
+    
+        settings: {
+            bookingWindowFrom: "Accept bookings from",
+            closeDay: "Close a day",
+            openDay: "Open a day",
+            openUntil: "Open bookings until that day",
+            save: "Save",
+            closed: "Closed (click to open)",
+            open: "Open (click to close)",
+            chooseDay: "Choose a day",
+            successClosed: "Day closed!",
+            successOpened: "Day opened!",
+            closing: "Closing…",
+            opening: "Opening…",
+            clickToToggle: "click to toggle",
+            openLunch: "Open lunch",
+            closeLunch: "Close lunch",
+            openDinner: "Open dinner",
+            closeDinner: "Close dinner",
+            lunch: "Lunch",
+            dinner: "Dinner",
+            processing: "Processing…",
+            done: "Done",
+        },
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/languages/es.js
+    export default {
+        admin: {
+            title:         "Mi Admin",
+            versionPrefix: "v",
+            language:      "Idioma",
+            nav: {
+                current:  "Reservas actuales",
+                future:   "Reservas futuras",
+                past:     "Reservas pasadas",
+                metrics:  "Métricas",
+                tester:   "Probador de algoritmo",
+                settings: "Ajustes",
+            },
+            refresh:       "Actualizar",
+            logout:        "Cerrar sesión",
+            manualBooking: "+ Reserva manual",
+            today:         "Hoy",
+            bookings:      "Reservas",
+            totalClients:  "Total Clientes",
+            expandFloor:   "Expandir sala",
+            hideFloor:     "Ocultar sala",
+            close:         "Cerrar",
+            compact:       "Compacto",
+            calendar:      "Calendario",
+        },
+    
+        overview: {
+            bookings: "Reservas",
+            guests: "Clientes",
+            futureBookings: "Reservas futuras",
+            pastBookings: "Reservas pasadas",
+            dataWindow: "Ventana de datos: {start} → {end}",
+            bookings30d: "Reservas (30 d)",
+            guests30d: "Clientes (30 d)",
+            avgGuests: "Prom Clientes / Reserva",
+            uniqueNames: "Nombres únicos",
+            vsPrevious: "vs 30 d anteriores",
+            upcomingRange: "Próximos {n} d",
+            pastRange: "Últimos {n} d",
+            peakDayGuests: "Máximo clientes en un día", // ← added
+        },
+    
+        modal: {
+            addTitle:      "Añadir reserva manual",
+            dateDisplay:   "{weekday}, {day} {month} {year}",
+            fullName:      "Nombre completo",
+            guests:        "Clientes",
+            phoneOptional: "Teléfono (opcional)",
+            meal:  { lunch: "Comida", dinner: "Cena" },
+            round: { first: "1ª Turno", second: "2ª Turno" },
+            time:        "Hora",
+            close:       "Cerrar",
+            save:        "Guardar",
+            closedDay:   "Lo sentimos, ese día estamos cerrados.",
+            errorRequired: "Por favor complete todos los campos obligatorios.",
+            saveError:     "Error al guardar — inténtalo de nuevo.",
+        },
+    
+        datePicker: {
+            upcoming: "Próximos {n} d",
+            past:     "Últimos {n} d",
+        },
+    
+        tester: {
+            title:        "Probador de algoritmo",
+            partySizes:   "Tamaños de grupo (separados por coma)",
+            date:         "Fecha",
+            meal:         "Comida",
+            startingTime: "Hora inicial",
+            runTest:      "Ejecutar prueba",
+            results:      "Resultados",
+            ok:           "OK",
+            rejected:     "Rechazado",
+            loadingTA:    "Cargando disponibilidad de mesas…",
+        },
+    
+        schedule: {
+            header:       "Horario para {date}",
+            round: {
+                lunchFirst:  "Comida–1er Turno",
+                lunchSecond: "Comida–2º Turno",
+                dinner:      "Cena",
+            },
+            table: {
+                time:         "Hora",
+                name:         "Nombre",
+                totalClients: "Clientes totales",
+            },
+            noBookings:   "Sin reservas en este turno.",
+        },
+    
+        calendar: {
+            prev:           "Anterior",
+            next:           "Siguiente",
+            badgeBookings:  "Reservas",
+            badgeClients:   "Clientes",
+        },
+    
+        chart: {
+            titleTotalPeople: "Gráfico de personas totales",
+            totalPeople:      "Personas totales",
+        },
+    
+        tableUsage: "Uso de mesas",
+    
+        settings: {
+            bookingWindowFrom: "Aceptar reservas a partir de",
+            closeDay:          "Cerrar un día",
+            openDay:           "Abrir un día",
+            openUntil:         "Abrir reservas hasta ese día",
+            save:              "Guardar",
+            closed:            "Cerrado (clic para abrir)",
+            open:              "Abierto (clic para cerrar)",
+            chooseDay:         "Elige un día",
+            successClosed:     "Día cerrado",
+            successOpened:     "¡Día abierto!",
+            closing:           "Cerrando…",
+            opening:           "Abriendo…",
+            lunch:   "Comida",
+            dinner:  "Cena",
+            processing: "Procesando…",
+            done:       "Hecho",
+        },
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/mealOverrides.js
+    /* Simple fetch helpers for meal-override endpoints */
+    
+    export async function fetchMealOverrides() {
+        const resp = await fetch("/api/meal-overrides");
+        const data = await resp.json();
+        return Array.isArray(data) ? data : [];
+    }
+    
+    export async function toggleMealOverride(dateYMD, mealType) {
+        await fetch("/api/meal-overrides/toggle", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date: dateYMD, meal_type: mealType }),
+        });
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/src/services/settingsService.js
+    import axios from "axios";
+    
+    /* ───────────────────────────────
+       Close / open a specific day
+       ─────────────────────────────── */
+    
+    /**
+     * Mark a calendar day as “closed”.
+     * Backend will usually toggle, but we expose
+     * a single-purpose helper for clarity.
+     *
+     * @param {string} dateYMD – “YYYY-MM-DD”
+     */
+    export async function closeSpecificDay(dateYMD) {
+        const { data } = await axios.post("/api/closed-days/toggle", {
+            date: dateYMD,
+        });
+        return data;           // whatever the API echoes back
+    }
+    
+    /* ───────────────────────────────
+       Booking-window helpers
+       ─────────────────────────────── */
+    
+    /**
+     * Extend the booking window so guests can
+     * book **up to and including** this date.
+     *
+     * @param {string} dateYMD – “YYYY-MM-DD”
+     */
+    export async function openBookingWindowUntil(dateYMD) {
+        const { data } = await axios.put("/api/settings/booking-open-until", {
+            booking_open_until: dateYMD,
+        });
+        return data.booking_open_until;
+    }
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/tailwind.config.js
+    // tailwind.config.js
+    
+    /** @type {import('tailwindcss').Config} */
+    module.exports = {
+      content: [
+        "./index.html",
+        "./src/**/*.{js,jsx,ts,tsx}",
+      ],
+      theme: {
+        extend: {},
+      },
+      plugins: [],
+    };
+
+––––––––––––––––––––––––
+/mnt/c/Users/sterr/PhpstormProjects/myProject/frontend-admin/vite.config.js
+    // vite.config.js
+    import { defineConfig } from 'vite'
+    import react from '@vitejs/plugin-react'
+    
+    export default defineConfig({
+      plugins: [react()],
+      server: {
+        proxy: {
+          '/api': 'http://localhost:8000',
+        },
+      },
+    })
+

@@ -9,16 +9,6 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Deterministic “smallest-waste” allocation engine.
- *
- * Signature matches what the controller already expects:
- *   tryAllocate($date, $mealType, $reservedTime, $partySize, $longStay = false): array
- *
- * It returns a list like
- *   [
- *     ['capacity' => 4, 'extra_chair' => false],
- *     ['capacity' => 2, 'extra_chair' => true],
- *   ]
- * or `['error' => '…']` when seating is impossible.
  */
 class BookingAlgorithmService
 {
@@ -41,109 +31,115 @@ class BookingAlgorithmService
         string $mealType,
         string $reservedTime,
         int    $partySize,
-        bool   $longStay = false
+        bool   $longStay = false,
+        ?string $room    = null,
     ): array {
-        return DB::transaction(function () use ($date, $mealType, $reservedTime, $partySize, $longStay) {
+        return DB::transaction(function () use (
+            $date, $mealType, $reservedTime, $partySize, $longStay, $room
+        ) {
 
-            /* ── lock stock rows for this service ───────────────────*/
+            /* lock stock rows (optionally filtered by room) */
             $rows = TableAvailability::where('date', $date)
                 ->where('meal_type', $mealType)
+                ->when($room, fn ($q) => $q->where('room', $room))
                 ->lockForUpdate()
-                ->get()
-                ->keyBy('capacity');
+                ->get();
 
             if ($rows->isEmpty()) {
-                return ['error' => 'No tables configured for the selected date / service.'];
+                return ['error' => 'No tables configured for the selected criteria.'];
             }
 
-            /* ── free-table counts for the chosen round ─────────────*/
+            $rowsByCapacity = $rows->groupBy('capacity');
+
+            /* free-table counts within this round ------------------ */
             $roundKey   = $this->detectRound($reservedTime, $mealType);
             $roundTimes = $this->roundTimeWindow($mealType, $roundKey);
 
             $free = [];
             foreach ($this->capacities as $cap) {
-                $row = $rows->get($cap);
-                if (! $row) {
-                    $free[$cap] = 0;
-                    continue;
-                }
+                $capRows = $rowsByCapacity[$cap] ?? collect();
+                $totalFree = 0;
 
-                // bookings occupying this capacity in the *same* round
-                $booked = Booking::where('table_availability_id', $row->id)
-                    ->whereBetween('reserved_time', [$roundTimes['start'], $roundTimes['end']])
-                    ->count();
-
-                // spill-over from 1st → 2nd lunch when long-stay
-                if ($roundKey === 'second_round') {
-                    $booked += Booking::where('table_availability_id', $row->id)
-                        ->where('reserved_time', '<', $roundTimes['start'])
-                        ->where('long_stay', true)
+                foreach ($capRows as $row) {
+                    $booked = Booking::where('table_availability_id', $row->id)
+                        ->whereBetween('reserved_time', [$roundTimes['start'], $roundTimes['end']])
                         ->count();
-                }
 
-                $free[$cap] = max($row->available_count - $booked, 0);
+                    if ($roundKey === 'second_round') {
+                        $booked += Booking::where('table_availability_id', $row->id)
+                            ->where('reserved_time', '<', $roundTimes['start'])
+                            ->where('long_stay', true)
+                            ->count();
+                    }
+                    $totalFree += max($row->available_count - $booked, 0);
+                }
+                $free[$cap] = $totalFree;
             }
 
-            /* ── greedy “smallest-waste” packer ─────────────────────*/
+            /* greedy packer --------------------------------------- */
             $required = $partySize;
             $assign   = [];
 
-            sort($this->capacities);                // 2 → 4 → 6, always
+            sort($this->capacities);
 
             while ($required > 0) {
-
-                $eps = $this->epsMap[$required] ?? 0;
+                $eps     = $this->epsMap[$required] ?? 0;
                 $bestCap = null;
 
-                /* ① perfect / ε-fit on the smallest possible table */
+                /* ① perfect/ε fit */
                 foreach ($this->capacities as $cap) {
-                    if ($free[$cap] <= 0) {
-                        continue;
-                    }
+                    if ($free[$cap] <= 0) continue;
                     if ($required <= $cap && ($cap - $required) <= $eps) {
-                        $bestCap = $cap;
-                        break;
+                        $bestCap = $cap; break;
                     }
                 }
 
-                /* ② otherwise: largest table that is ≤ seats-remaining */
+                /* ② otherwise largest ≤ required */
                 if ($bestCap === null) {
                     foreach (array_reverse($this->capacities) as $cap) {
                         if ($free[$cap] > 0 && $cap <= $required) {
-                            $bestCap = $cap;
-                            break;
+                            $bestCap = $cap; break;
                         }
                     }
                 }
 
-                /* ③ still nothing? grab the absolutely smallest free table */
+                /* ③ fallback smallest free anywhere */
                 if ($bestCap === null) {
                     foreach ($this->capacities as $cap) {
-                        if ($free[$cap] > 0) {
-                            $bestCap = $cap;
-                            break;
-                        }
+                        if ($free[$cap] > 0) { $bestCap = $cap; break; }
                     }
                 }
 
                 if ($bestCap === null) {
-                    return ['error' => 'Not enough free tables to seat this party.'];
+                    return ['error' => 'Not enough free tables.'];
                 }
 
-                /* record assignment */
-                $extraChair = ($required > $bestCap);        // ε case
-                $assign[]   = [
-                    'capacity'    => $bestCap,
-                    'extra_chair' => $extraChair,
-                ];
-
-                /* update counters */
                 $free[$bestCap]--;
                 $required -= min($required, $bestCap);
+
+                $assign[] = [
+                    'capacity'    => $bestCap,
+                    'room'        => $this->pickRoomForCapacity($rowsByCapacity[$bestCap]),
+                    'extra_chair' => ($required > 0 && $required < 1),
+                ];
             }
 
             return $assign;
         });
+    }
+
+    /*--------------------------------------------------------------
+ | pickRoomForCapacity – first room that still has stock
+ *-------------------------------------------------------------*/
+    private function pickRoomForCapacity($rows)
+    {
+        foreach ($rows as $row) {
+            $current = Booking::where('table_availability_id', $row->id)->count();
+            if ($current < $row->available_count) {
+                return $row->room;
+            }
+        }
+        return $rows->first()->room;   // shouldn’t happen
     }
 
     /*───────────────────────────────────────────────────────────

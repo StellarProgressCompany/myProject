@@ -7,7 +7,7 @@ use App\Models\BookingDetail;
 use App\Models\TableAvailability;
 use App\Models\ClosedDay;
 use App\Models\SystemSetting;
-use App\Models\MealOverride;                          // ← NEW
+use App\Models\MealOverride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -16,6 +16,7 @@ use App\Mail\BookingReminderMail;
 use App\Mail\BookingFeedbackMail;
 use Carbon\Carbon;
 use App\Services\BookingAlgorithmService;
+use Illuminate\Validation\Rule;
 
 class BookingController extends Controller
 {
@@ -36,6 +37,8 @@ class BookingController extends Controller
     ───────────────────────────────────────────────────────────*/
     public function store(Request $request)
     {
+        $rooms = array_keys(config('restaurant_dataset.rooms', []));
+
         $validated = $request->validate([
             'date'             => 'required|date_format:Y-m-d',
             'meal_type'        => 'required|in:lunch,dinner',
@@ -49,6 +52,7 @@ class BookingController extends Controller
             'gdpr_consent'     => 'boolean',
             'marketing_opt_in' => 'boolean',
             'long_stay'        => 'boolean',
+            'room'             => ['nullable', 'string', Rule::in($rooms)],
         ]);
 
         /* ❌ booking-window not yet open */
@@ -80,6 +84,7 @@ class BookingController extends Controller
         /* run allocation algorithm */
         $partySize = $validated['total_adults'] + $validated['total_kids'];
         $longStay  = $validated['long_stay'] ?? false;
+        $room      = $validated['room']      ?? null;
 
         $algo   = new BookingAlgorithmService();
         $assign = $algo->tryAllocate(
@@ -88,6 +93,7 @@ class BookingController extends Controller
             $validated['reserved_time'],
             $partySize,
             $longStay,
+            $room,
         );
 
         if (isset($assign['error'])) {
@@ -101,6 +107,7 @@ class BookingController extends Controller
             foreach ($assign as $i => $slot) {
                 $ta = TableAvailability::where('date',        $validated['date'])
                     ->where('meal_type',   $validated['meal_type'])
+                    ->where('room',        $slot['room'])
                     ->where('capacity',    $slot['capacity'])
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -129,7 +136,7 @@ class BookingController extends Controller
                 }
             }
 
-            /* optional e-mails */
+            /* optional e-mails (unchanged) */
             if ($master->email) {
                 Mail::to($master->email)->send(new BookingConfirmationMail($master));
 
@@ -178,6 +185,7 @@ class BookingController extends Controller
             $origTA   = $booking->tableAvailability;  // eager-loaded
             $date     = $origTA->date;
             $mealType = $origTA->meal_type;
+            $room     = $origTA->room;
 
             /*────────────────────────────────────────────────
               1) Manual re-assign (no algorithm)
@@ -188,7 +196,8 @@ class BookingController extends Controller
 
                 $target = TableAvailability::where('date', $date)
                     ->where('meal_type', $mealType)
-                    ->where('capacity', $cap)
+                    ->where('room',      $room)
+                    ->where('capacity',  $cap)
                     ->lockForUpdate()
                     ->first();
 
@@ -226,7 +235,8 @@ class BookingController extends Controller
                     $mealType,
                     $timeHHMM,
                     $partySize,
-                    $longStay
+                    $longStay,
+                    $room
                 );
 
                 if (isset($assign['error'])) {
@@ -241,6 +251,7 @@ class BookingController extends Controller
                 foreach ($assign as $slot) {
                     $ta = TableAvailability::where('date',      $date)
                         ->where('meal_type', $mealType)
+                        ->where('room',      $slot['room'])
                         ->where('capacity',  $slot['capacity'])
                         ->lockForUpdate()
                         ->firstOrFail();

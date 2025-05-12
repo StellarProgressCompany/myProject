@@ -1,62 +1,63 @@
 <?php
 /**
- * Operational dataset used by seeders and runtime code.
- * Edit this file to adapt the software to a new venue – no code changes required.
+ * Operational dataset – edit to adapt the engine
+ * to a concrete venue (no code changes required)
  */
 
 return [
 
-    /*
-    |--------------------------------------------------------------------------
-    | How far ahead to pre-generate stock (in days)
-    |--------------------------------------------------------------------------
-    */
-    'seeding_horizon_days' => 90,   // ← updated from 30 → 90
+    /*--------------------------------------------------------------
+     | How far ahead to pre-generate stock (in days)
+     *-------------------------------------------------------------*/
+    'seeding_horizon_days' => 90,
 
-    /*
-    |--------------------------------------------------------------------------
-    | Table mix
-    |--------------------------------------------------------------------------
-    | One entry per table size you own:
-    |   capacity  → seats per table
-    |   available_count → how many such tables exist
-    */
-    'table_types' => [
-        ['capacity' => 2, 'available_count' => 4],
-        ['capacity' => 4, 'available_count' => 7],
-        ['capacity' => 6, 'available_count' => 7],
+    /*--------------------------------------------------------------
+     | SPACE / ROOM definition
+     | key  – slug (dns-safe, lowercase, no spaces)
+     | label- human-readable name (shown in dashboards/widgets)
+     | position – sort order in admin UI
+     | table_types – capacity mix for THIS room only
+     *-------------------------------------------------------------*/
+    'rooms' => [
+
+        'interior' => [
+            'label'       => 'Interior',
+            'position'    => 1,
+            'table_types' => [
+                ['capacity' => 2, 'available_count' => 4],
+                ['capacity' => 4, 'available_count' => 6],
+                ['capacity' => 6, 'available_count' => 2],
+            ],
+        ],
+
+        'terrace' => [
+            'label'       => 'Terraza',
+            'position'    => 2,
+            'table_types' => [
+                ['capacity' => 2, 'available_count' => 4],
+                ['capacity' => 4, 'available_count' => 4],
+            ],
+        ],
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Weekly service schedule
-    |--------------------------------------------------------------------------
-    | Keys are Carbon day-of-week integers (0 = Sun … 6 = Sat).
-    | Value is an array of meal types served that day.
-    | Empty array ⇒ restaurant closed.
-    */
+    /*--------------------------------------------------------------
+     | Weekly service schedule
+     | (unchanged – still global, not room-specific)
+     *-------------------------------------------------------------*/
     'service_schedule' => [
-        0 => ['lunch', 'dinner'], // Sunday
-        1 => [],                  // Monday    (closed)
-        2 => [],                  // Tuesday   (closed)
-        3 => ['lunch'],           // Wednesday
-        4 => ['lunch'],           // Thursday
-        5 => ['lunch', 'dinner'], // Friday
-        6 => ['lunch', 'dinner'], // Saturday
+        0 => ['lunch', 'dinner'], // Sun
+        1 => [],                  // Mon
+        2 => [],                  // Tue
+        3 => ['lunch'],           // Wed
+        4 => ['lunch'],           // Thu
+        5 => ['lunch', 'dinner'], // Fri
+        6 => ['lunch', 'dinner'], // Sat
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | Default slot used by the demo-booking seeder
-    |--------------------------------------------------------------------------
-    */
+    /*--------------------------------------------------------------
+     | Demo booking toggle etc. (unchanged)
+     *-------------------------------------------------------------*/
     'default_reserved_time' => '12:30:00',
-
-    /*
-    |--------------------------------------------------------------------------
-    | Demo booking (turn off in production)
-    |--------------------------------------------------------------------------
-    */
     'demo_booking' => [
         'enabled'          => true,
         'full_name'        => 'Test User',

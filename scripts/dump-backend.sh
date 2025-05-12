@@ -25,6 +25,7 @@ FILES=(
   "backend/app/Http/Controllers/OpenDayController.php"
   "backend/app/Http/Controllers/ClosedDayController.php"
   "backend/app/Http/Controllers/SystemSettingController.php"
+  "backend/app/Http/Controllers/MetaController.php"
 
   # resources
   "backend/app/Http/Resources/BookingDetailResource.php"
@@ -60,7 +61,7 @@ FILES=(
   "backend/database/migrations/2025_05_04_155330_create_system_settings_table.php"
   "backend/database/migrations/2025_05_04_182837_create_calendar_overrides_table.php"
   "backend/database/migrations/2025_05_04_184511_create_open_days_table.php"
-
+  "2025_05_12_081618_add_room_to_table_availabilities_table.php"
 
   # seeders
   "backend/database/seeders/BookingSeeder.php"

@@ -18,6 +18,7 @@ class BookingDetailResource extends JsonResource
             'id'                     => $this->id,
             'capacity'              => $this->capacity,
             'extra_chair'           => (bool) $this->extra_chair,
+            'room'                  => $this->tableAvailability->room,   // NEW
             'table_availability_id' => $this->table_availability_id,
             // Optional: You could nest further details about TableAvailability here.
             'table_availability'    => $this->whenLoaded('tableAvailability', [

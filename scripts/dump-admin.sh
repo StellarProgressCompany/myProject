@@ -3,7 +3,7 @@ set -e
 
 # ── Locate the project root via Git
 PROJECT_ROOT="$(git rev-parse --show-toplevel)"
-SRC="$PROJECT_ROOT/frontend-admin"
+SRC="$PROJECT_ROOT/frontend-admin/src"
 
 # ── Prepare a dumps directory under scripts/
 DUMP_DIR="$PROJECT_ROOT/scripts/dumps"

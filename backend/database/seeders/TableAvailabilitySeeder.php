@@ -11,22 +11,27 @@ class TableAvailabilitySeeder extends Seeder
 {
     public function run(): void
     {
-        /* ─── read dataset ─── */
-        // ⬇️ drop the 'important.' prefix
         $ds = Config::get('restaurant_dataset', []);
 
-        $horizonDays     = $ds['seeding_horizon_days'] ?? 30;
-        $tableTypes      = $ds['table_types']          ?? [];
-        $serviceSchedule = $ds['service_schedule']     ?? [];
+        $horizonDays = $ds['seeding_horizon_days'] ?? 30;
+        $rooms       = $ds['rooms']                ?? [];
 
-        /* ─── fallback ─── */
-        if (empty($tableTypes)) {
-            $tableTypes = [
-                ['capacity' => 2, 'available_count' => 4],
-                ['capacity' => 4, 'available_count' => 7],
-                ['capacity' => 6, 'available_count' => 7],
+        /* legacy fallback – single room */
+        if (empty($rooms)) {
+            $rooms = [
+                'default' => [
+                    'label'       => 'Main',
+                    'position'    => 1,
+                    'table_types' => $ds['table_types'] ?? [
+                            ['capacity' => 2, 'available_count' => 4],
+                            ['capacity' => 4, 'available_count' => 7],
+                            ['capacity' => 6, 'available_count' => 7],
+                        ],
+                ],
             ];
         }
+
+        $serviceSchedule = $ds['service_schedule'] ?? [];
 
         $start = Carbon::today();
         $end   = Carbon::today()->addDays($horizonDays - 1);
@@ -35,22 +40,21 @@ class TableAvailabilitySeeder extends Seeder
             $dow       = $d->dayOfWeek;               // 0 = Sun … 6 = Sat
             $mealTypes = $serviceSchedule[$dow] ?? [];
 
-            if (empty($mealTypes)) {
-                continue;                            // closed
-            }
-
             foreach ($mealTypes as $meal) {
-                foreach ($tableTypes as $t) {
-                    TableAvailability::create([
-                        'date'            => $d->toDateString(),
-                        'meal_type'       => $meal,
-                        'capacity'        => $t['capacity'],
-                        'available_count' => $t['available_count'],
-                    ]);
+                foreach ($rooms as $slug => $def) {
+                    foreach ($def['table_types'] as $tbl) {
+                        TableAvailability::create([
+                            'date'            => $d->toDateString(),
+                            'meal_type'       => $meal,
+                            'room'            => $slug,
+                            'capacity'        => $tbl['capacity'],
+                            'available_count' => $tbl['available_count'],
+                        ]);
+                    }
                 }
             }
         }
 
-        $this->command->info('✅ Table availability stock generated.');
+        $this->command->info('✅ Table availability stock (multi-room) generated.');
     }
 }

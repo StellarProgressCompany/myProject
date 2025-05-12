@@ -6,14 +6,14 @@ use App\Models\TableAvailability;
 use App\Models\Booking;
 use App\Models\ClosedDay;
 use App\Models\SystemSetting;
-use App\Models\MealOverride;                       // ← NEW
+use App\Models\MealOverride;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Config;
 use App\Services\CalendarService;
 
 /**
- * Table-availability endpoints
+ * Table-availability endpoints (single-day / range).
  */
 class TableAvailabilityController extends Controller
 {
@@ -93,6 +93,7 @@ class TableAvailabilityController extends Controller
     {
         $date     = trim($request->query('date', ''));
         $mealType = trim($request->query('mealType', ''));
+        $room     = trim($request->query('room', ''));
 
         if (! $date || ! in_array($mealType, ['lunch', 'dinner'], true)) {
             return response()->json([], 400);
@@ -120,6 +121,7 @@ class TableAvailabilityController extends Controller
         /* normal availability build */
         $rows = TableAvailability::where('date', $date)
             ->where('meal_type', $mealType)
+            ->when($room, fn ($q) => $q->where('room', $room))
             ->get()
             ->keyBy('capacity');
 
@@ -148,6 +150,7 @@ class TableAvailabilityController extends Controller
         $start    = $request->query('start');
         $end      = $request->query('end');
         $mealType = $request->query('mealType');
+        $room     = $request->query('room');
 
         if (! $start || ! $end || ! in_array($mealType, ['lunch', 'dinner'], true)) {
             return response()->json(['error' => 'Missing parameters (start,end,mealType)'], 400);
@@ -166,6 +169,7 @@ class TableAvailabilityController extends Controller
 
         $rows = TableAvailability::whereBetween('date', [$start, $end])
             ->where('meal_type', $mealType)
+            ->when($room, fn ($q) => $q->where('room', $room))
             ->get();
 
         $availabilityIds = $rows->pluck('id');

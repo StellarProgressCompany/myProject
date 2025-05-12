@@ -25,4 +25,22 @@ class MetaController extends Controller
             Config::get('restaurant_dataset.service_schedule', [])
         );
     }
+
+    /** GET /api/meta/rooms → ordered list for front-end drop-downs */
+    public function rooms()
+    {
+        $rooms = Config::get('restaurant_dataset.rooms', []);
+
+        $payload = collect($rooms)
+            ->map(fn ($def, $slug) => [
+                'key'      => $slug,
+                'label'    => $def['label']      ?? ucfirst($slug),
+                'position' => $def['position']   ?? 999,
+            ])
+            ->values()
+            ->sortBy('position')
+            ->all();
+
+        return response()->json($payload);
+    }
 }

@@ -41,3 +41,4 @@ Route::put ('/settings/booking-open-from', [SystemSettingController::class,'upda
 /* ─── Meta helpers consumed by the SPA ────────────────────────────── */
 Route::get('/meta/horizon-days',     [MetaController::class,'horizonDays']);
 Route::get('/meta/service-schedule', [MetaController::class,'serviceSchedule']);
+Route::get('/meta/rooms', [MetaController::class, 'rooms']);

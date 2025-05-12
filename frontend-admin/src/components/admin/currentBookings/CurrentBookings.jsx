@@ -1,22 +1,16 @@
 import React, { useState, useMemo, useEffect } from "react";
 import PropTypes from "prop-types";
 import { format, addDays } from "date-fns";
-import {
-    IconChevronLeft,
-    IconChevronRight,
-} from "@tabler/icons-react";
-import { enUS, es as esLocale, ca as caLocale } from "date-fns/locale";
-
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 import AddBookingModal from "./AddBookingModal";
 import EditBookingModal from "./EditBookingModal";
 import DaySchedule from "../sharedBookings/DaySchedule";
-import { fetchTableAvailabilityRange } from "../../../services/bookingService";
+import { fetchTableAvailabilityMulti } from "../../../services/bookingService";
 import { translate, getLanguage } from "../../../services/i18n";
 
 /* ───────── helpers ───────── */
-const localeMap = { en: enUS, es: esLocale, ca: caLocale };
 const getBookingDate = (b) =>
-    (b.table_availability?.date || b.date || "").slice(0, 10); // always "YYYY-MM-DD"
+    (b.table_availability?.date || b.date || "").slice(0, 10); // "YYYY-MM-DD"
 
 function SkeletonDaySchedule() {
     return (
@@ -30,16 +24,15 @@ function SkeletonDaySchedule() {
 }
 
 export default function CurrentBookings({ bookings, onDataRefresh }) {
-    const lang   = getLanguage();
-    const t      = (key, vars) => translate(lang, key, vars);
-    const locale = localeMap[lang] || enUS;
+    const lang = getLanguage();
+    const t = (key, vars) => translate(lang, key, vars);
 
-    const [offset, setOffset]                 = useState(0);
-    const [isAdding, setIsAdding]             = useState(false);
+    const [offset, setOffset] = useState(0);
+    const [isAdding, setIsAdding] = useState(false);
     const [editingBooking, setEditingBooking] = useState(null);
 
     const [tableAvailability, setTableAvailability] = useState({});
-    const [loadingTA, setLoadingTA]                 = useState(false);
+    const [loadingTA, setLoadingTA] = useState(false);
 
     const dateObj = useMemo(() => addDays(new Date(), offset), [offset]);
     const dateStr = format(dateObj, "yyyy-MM-dd");
@@ -51,36 +44,34 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     );
 
     const totalBookings = todaysBookings.length;
-    const totalClients  = todaysBookings.reduce(
+    const totalClients = todaysBookings.reduce(
         (sum, b) => sum + (b.total_adults || 0) + (b.total_kids || 0),
         0
     );
 
-    /* ─── load table-availability for the chosen date ─── */
+    /* ─── load ALL-rooms availability for the chosen date ─── */
     useEffect(() => {
         let cancelled = false;
         setLoadingTA(true);
 
-        Promise.all([
-            fetchTableAvailabilityRange(dateStr, dateStr, "lunch"),
-            fetchTableAvailabilityRange(dateStr, dateStr, "dinner"),
-        ])
-            .then(([lunch, dinner]) => {
-                if (cancelled) return;
-                const merged = {};
-                [lunch, dinner].forEach((src) =>
-                    Object.entries(src).forEach(([d, info]) => {
-                        merged[d] = merged[d] ? { ...merged[d], ...info } : info;
-                    })
-                );
-                setTableAvailability(merged);
-            })
-            .catch(() => {
+        (async () => {
+            try {
+                const [lunch, dinner] = await Promise.all([
+                    fetchTableAvailabilityMulti(dateStr, "lunch"),
+                    fetchTableAvailabilityMulti(dateStr, "dinner"),
+                ]);
+
+                if (!cancelled) {
+                    setTableAvailability({
+                        [dateStr]: { ...lunch, ...dinner },
+                    });
+                }
+            } catch {
                 if (!cancelled) setTableAvailability({});
-            })
-            .finally(() => {
+            } finally {
                 if (!cancelled) setLoadingTA(false);
-            });
+            }
+        })();
 
         return () => {
             cancelled = true;
@@ -90,9 +81,8 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
     const title =
         offset === 0
             ? t("admin.today")
-            : format(dateObj, "EEEE, MMMM d", { locale });
+            : format(dateObj, "EEEE, MMMM d", { locale: undefined });
 
-    /* handler when clicking a booking in the schedule */
     const handleBookingClick = (booking) => {
         setEditingBooking(booking);
     };
@@ -152,7 +142,7 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
                 />
             )}
 
-            {/* add / edit modals */}
+            {/* modals */}
             {isAdding && (
                 <AddBookingModal
                     dateObj={dateObj}
@@ -178,6 +168,6 @@ export default function CurrentBookings({ bookings, onDataRefresh }) {
 }
 
 CurrentBookings.propTypes = {
-    bookings:      PropTypes.array.isRequired,
+    bookings: PropTypes.array.isRequired,
     onDataRefresh: PropTypes.func.isRequired,
 };

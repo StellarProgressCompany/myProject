@@ -1,4 +1,4 @@
-// frontend/src/components/admin/sharedBookings/DaySchedule.jsx
+// frontend-admin/src/components/admin/sharedBookings/DaySchedule.jsx
 import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { format } from "date-fns";
@@ -11,6 +11,20 @@ const localeMap = { en: enUS, es: esLocale, ca: caLocale };
 const getBookingDate = (b) =>
     (b.table_availability?.date || b.date || "").slice(0, 10);
 
+/**
+ * Renders a single-day schedule **with multi-room support**.
+ *
+ * • Accepts data from the new `/api/table-availability-multi` endpoint:
+ *   ```js
+ *   {
+ *     first_round : { time, note, rooms:{ interior:{2:4,4:6,…}, terrace:{…} } },
+ *     second_round: { … },
+ *     dinner_round: { … }
+ *   }
+ *   ```
+ *
+ * • Continues to accept legacy shapes so nothing else breaks.
+ */
 export default function DaySchedule({
                                         selectedDate,
                                         bookings,
@@ -20,63 +34,93 @@ export default function DaySchedule({
                                         onBookingClick = () => {},
                                         onRefresh = () => {},
                                     }) {
-    const lang   = getLanguage();
-    const t      = (k, p) => translate(lang, k, p);
+    /* ─── i18n helpers ───────────────────────────────────────────── */
+    const lang = getLanguage();
+    const t = (k, p) => translate(lang, k, p);
     const locale = localeMap[lang] || enUS;
 
+    /* ─── local state ───────────────────────────────────────────── */
     const [showFloor, setShowFloor] = useState(false);
     if (!selectedDate) return null;
 
-    const dateStr   = format(selectedDate, "yyyy-MM-dd");
-    const dayInfo   = tableAvailability[dateStr];
-    const indicator = typeof dayInfo === "string" ? dayInfo : null; // "closed" | "blocked"
-    const dayObj    = indicator ? {} : (dayInfo || {});
+    /* ─── pull data for this day ────────────────────────────────── */
+    const dateStr = format(selectedDate, "yyyy-MM-dd", { locale });
+    const dayInfo = tableAvailability[dateStr];
+    const indicator = typeof dayInfo === "string" ? dayInfo : null;
+    const dayObj = indicator ? {} : dayInfo || {};
 
-    /* fixed round keys so we can still show bookings on closed / blocked days */
-    const roundKeys = ["first_round", "second_round", "dinner_round"];
+    const roundKeys = ["first_round", "second_round", "dinner_round"].filter(
+        (rk) => rk in dayObj
+    );
 
+    /* group bookings by round */
     const roundBookings = {};
     roundKeys.forEach((rk) => {
         roundBookings[rk] = bookings
+            .filter((b) => getBookingDate(b) === dateStr)
             .filter((b) => {
-                if (getBookingDate(b) !== dateStr) return false;
-                if (rk.includes("first"))  return b.reserved_time < "15:00:00";
-                if (rk.includes("second")) return b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00";
-                return b.reserved_time >= "20:00:00";
+                if (rk === "first_round") return b.reserved_time < "15:00:00";
+                if (rk === "second_round")
+                    return (
+                        b.reserved_time >= "15:00:00" && b.reserved_time < "20:00:00"
+                    );
+                return b.reserved_time >= "20:00:00"; // dinner
             })
             .sort((a, b) => a.reserved_time.localeCompare(b.reserved_time));
     });
 
-    const fullStock = { 2: 0, 4: 0, 6: 0 };
+    /* build   room → { cap → avail }   map on every round */
     roundKeys.forEach((rk) => {
-        const avail = dayObj[rk]?.availability || {};
-        const bookedCounts = {};
-        roundBookings[rk].forEach((bk) => {
-            const cap = bk.table_availability?.capacity || 0;
-            bookedCounts[cap] = (bookedCounts[cap] || 0) + 1;
-        });
-        [2, 4, 6].forEach((cap) => {
-            const totalHere = (avail[cap] || 0) + (bookedCounts[cap] || 0);
-            fullStock[cap] = Math.max(fullStock[cap], totalHere);
-        });
+        const info = dayObj[rk];
+        if (!info) return;
+
+        let perRoom = {};
+
+        /* ── NEW SHAPE ── */
+        if (info.rooms && typeof info.rooms === "object") {
+            perRoom = { ...info.rooms };
+        }
+
+        /* ── LEGACY SHAPES (keep backward compatibility) ── */
+        else if (info.availability) {
+            const raw = info.availability;
+            const keys = Object.keys(raw);
+            if (keys.length && isNaN(Number(keys[0]))) {
+                // { interior:{2:4,4:6}, terrace:{…} }
+                perRoom = { ...raw };
+            } else {
+                // { "2":4,"4":6 } → single pseudo-room “all”
+                perRoom = { all: raw };
+            }
+        }
+
+        /* Derive __roomTotals so TableUsage renders correctly */
+        info.__roomTotals = perRoom;
+
+        /* Hide the synthetic “all” bucket when real rooms exist */
+        const realRooms = Object.keys(perRoom).filter((r) => r !== "all");
+        if (realRooms.length > 0) delete perRoom.all;
     });
 
-    const prettyRound = (key) => {
-        if (key.includes("first"))
+    const prettyRound = (rk) => {
+        if (rk === "first_round")
             return { lbl: t("schedule.round.lunchFirst"), bg: "bg-green-50" };
-        if (key.includes("second"))
+        if (rk === "second_round")
             return { lbl: t("schedule.round.lunchSecond"), bg: "bg-orange-50" };
         return { lbl: t("schedule.round.dinner"), bg: "bg-purple-50" };
     };
 
+    /* ─── render ────────────────────────────────────────────────── */
     return (
         <div className="mt-6 border rounded bg-white p-4 shadow">
+            {/* header --------------------------------------------------- */}
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">
                     {t("schedule.header", {
                         date: format(selectedDate, "EEEE, MMMM d, yyyy", { locale }),
                     })}
                 </h3>
+
                 <div className="space-x-3">
                     {enableZoom && (
                         <button
@@ -95,6 +139,7 @@ export default function DaySchedule({
                 </div>
             </div>
 
+            {/* CLOSED / HOLIDAY indicator ------------------------------ */}
             {indicator && (
                 <p
                     className={
@@ -107,14 +152,18 @@ export default function DaySchedule({
                 </p>
             )}
 
+            {/* one block per round ------------------------------------- */}
             {roundKeys.map((rk) => {
                 const { lbl, bg } = prettyRound(rk);
-                const rows        = roundBookings[rk] || [];
+                const rows = roundBookings[rk] || [];
+                const roomTotals = dayObj[rk]?.__roomTotals || {};
+                const rooms = Object.keys(roomTotals);
 
                 return (
                     <div key={rk} className="mb-8">
                         <h4 className="text-md font-semibold mb-2">{lbl}</h4>
 
+                        {/* BOOKINGS TABLE ------------------------------------ */}
                         {rows.length > 0 ? (
                             <table className="min-w-full divide-y divide-gray-200 text-sm mb-3">
                                 <thead>
@@ -166,14 +215,14 @@ export default function DaySchedule({
                                 </tbody>
                             </table>
                         ) : (
-                            <p className="text-gray-500 mb-3">
-                                {t("schedule.noBookings")}
-                            </p>
+                            <p className="text-gray-500 mb-3">{t("schedule.noBookings")}</p>
                         )}
 
+                        {/* TABLE-USAGE GRIDS -------------------------------- */}
                         {showFloor && (
                             <TableUsage
-                                capacityTotals={fullStock}
+                                rooms={rooms}
+                                capacityTotalsByRoom={roomTotals}
                                 bookings={rows}
                                 expanded
                                 onRefresh={onRefresh}
@@ -187,11 +236,11 @@ export default function DaySchedule({
 }
 
 DaySchedule.propTypes = {
-    selectedDate:      PropTypes.instanceOf(Date),
-    bookings:          PropTypes.arrayOf(PropTypes.object).isRequired,
+    selectedDate: PropTypes.instanceOf(Date),
+    bookings: PropTypes.arrayOf(PropTypes.object).isRequired,
     tableAvailability: PropTypes.object.isRequired,
-    onClose:           PropTypes.func.isRequired,
-    enableZoom:        PropTypes.bool,
-    onBookingClick:    PropTypes.func,
-    onRefresh:         PropTypes.func,
+    onClose: PropTypes.func.isRequired,
+    enableZoom: PropTypes.bool,
+    onBookingClick: PropTypes.func,
+    onRefresh: PropTypes.func,
 };

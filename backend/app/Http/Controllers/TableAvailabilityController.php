@@ -13,10 +13,11 @@ use Illuminate\Support\Facades\Config;
 use App\Services\CalendarService;
 
 /**
- * Table-availability endpoints (single-day / range).
+ * Table-availability endpoints (single-day / range / multi-room).
  */
 class TableAvailabilityController extends Controller
 {
+    /** Payload string flags */
     private const CLOSED_INDICATOR  = 'closed';
     private const BLOCKED_INDICATOR = 'blocked';
 
@@ -27,14 +28,12 @@ class TableAvailabilityController extends Controller
         $this->calendar = $calendar;
     }
 
-    /*────────────────── helpers ──────────────────*/
+    /* ================================================================
+     *  Common helpers
+     * ============================================================= */
     private function minutesStep(): int
     {
-        $step = Config::get('restaurant.slot_step');
-        if ($step === null) {
-            throw new \RuntimeException('Missing config: restaurant.slot_step');
-        }
-        return (int) $step;
+        return (int) Config::get('restaurant.slot_step', 15);
     }
 
     private function serviceSchedule(): array
@@ -54,8 +53,14 @@ class TableAvailabilityController extends Controller
         return $slots;
     }
 
-    private function computeRoundAvailability($tableAvailabilities, array $roundTimes, $allBookings = null)
-    {
+    /**
+     * Compute availability for **one room** (or the collection passed in).
+     */
+    private function computeRoundAvailability(
+        $tableAvailabilities,
+        array $roundTimes,
+        $allBookings = null
+    ): array {
         if ($allBookings === null) {
             $ids         = $tableAvailabilities->pluck('id');
             $allBookings = Booking::whereIn('table_availability_id', $ids)->get();
@@ -72,6 +77,7 @@ class TableAvailabilityController extends Controller
         foreach ($caps as $cap) {
             $taRow  = $tableAvailabilities->firstWhere('capacity', $cap);
             $seeded = $taRow?->available_count ?? 0;
+
             $booked = $allBookings
                 ->where('table_availability_id', $taRow?->id)
                 ->filter(function ($b) use ($roundTimes, $isSecond) {
@@ -88,7 +94,9 @@ class TableAvailabilityController extends Controller
         return $availability;
     }
 
-    /*────────────────── single-day endpoint ──────────────────*/
+    /* ================================================================
+     *  (A)  ORIGINAL single-room endpoint  (/api/table-availability)
+     * ============================================================= */
     public function index(Request $request)
     {
         $date     = trim($request->query('date', ''));
@@ -102,7 +110,7 @@ class TableAvailabilityController extends Controller
         /* seed stock if needed */
         $this->calendar->ensureStockForDate($date);
 
-        /* quick-out indicators */
+        /* quick-out indicators (closed / blocked) */
         if (ClosedDay::where('date', $date)->exists()) {
             return response()->json(self::CLOSED_INDICATOR);
         }
@@ -118,7 +126,7 @@ class TableAvailabilityController extends Controller
             return response()->json(self::BLOCKED_INDICATOR);
         }
 
-        /* normal availability build */
+        /* fetch rows (optionally filtered by room) */
         $rows = TableAvailability::where('date', $date)
             ->where('meal_type', $mealType)
             ->when($room, fn ($q) => $q->where('room', $room))
@@ -144,7 +152,10 @@ class TableAvailabilityController extends Controller
         return response()->json($payload);
     }
 
-    /*────────────────── multi-day endpoint ──────────────────*/
+
+    /* ================================================================
+     *  (B)  ORIGINAL multi-day endpoint (/api/table-availability-range)
+     * ============================================================= */
     public function range(Request $request)
     {
         $start    = $request->query('start');
@@ -245,5 +256,70 @@ class TableAvailabilityController extends Controller
         }
 
         return response()->json($results);
+    }
+
+    /* ================================================================
+ *  (C)  NEW  multi-room endpoint  (/api/table-availability-multi)
+ *       returns ALL rooms in one payload
+ * ============================================================= */
+    public function multi(Request $request)
+    {
+        $date     = trim($request->query('date', ''));
+        $mealType = trim($request->query('mealType', ''));
+
+        if (! $date || ! in_array($mealType, ['lunch', 'dinner'], true)) {
+            return response()->json(['error' => 'date and mealType required'], 400);
+        }
+
+        /* seed stock */
+        $this->calendar->ensureStockForDate($date);
+
+        /* same close / block guards as single-room */
+        if (ClosedDay::where('date', $date)->exists()) {
+            return response()->json(self::CLOSED_INDICATOR);
+        }
+        if (
+            MealOverride::where('date', $date)
+                ->where("{$mealType}_closed", true)
+                ->exists()
+        ) {
+            return response()->json(self::CLOSED_INDICATOR);
+        }
+        $openFrom = SystemSetting::getValue('booking_open_from');
+        if ($openFrom && $date < $openFrom) {
+            return response()->json(self::BLOCKED_INDICATOR);
+        }
+
+        /* pull ALL rooms’ rows */
+        $rows = TableAvailability::where('date', $date)
+            ->where('meal_type', $mealType)
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $roundCfg  = Config::get("restaurant.rounds.$mealType");
+        $bookings  = Booking::whereIn('table_availability_id', $rows->pluck('id'))->get();
+        $grouped   = $rows->groupBy('room');
+        $payload   = [];
+
+        foreach ($roundCfg as $roundKey => $def) {
+            $payload[$roundKey] = [
+                'time'  => $def['start'],
+                'note'  => $def['note'],
+                'rooms' => [],
+            ];
+        }
+
+        foreach ($grouped as $roomSlug => $roomRows) {
+            foreach ($roundCfg as $roundKey => $def) {
+                $grid = $this->buildTimeGrid($def['start'], $def['end']);
+                $payload[$roundKey]['rooms'][$roomSlug] =
+                    $this->computeRoundAvailability($roomRows, $grid, $bookings);
+            }
+        }
+
+        return response()->json($payload);
     }
 }

@@ -34,4 +34,4 @@
 Thumbs.db
 
 # ─── Miscellaneous build artifacts ───────────────────────────────────────
-/scripts/dumps/                  # if you keep database dumps around
+/scripts                # if you keep database dumps around

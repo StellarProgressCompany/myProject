@@ -23,7 +23,7 @@ class Booking extends Model
         'long_stay',
     ];
 
-    /* ──────────── relations ──────────── */
+    /* ──────────── relations ──────────── */
 
     public function tableAvailability()
     {

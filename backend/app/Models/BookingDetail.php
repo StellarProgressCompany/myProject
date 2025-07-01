@@ -16,17 +16,11 @@ class BookingDetail extends Model
         'extra_chair',
     ];
 
-    /**
-     * BookingDetail belongs to a master booking.
-     */
     public function booking()
     {
         return $this->belongsTo(Booking::class);
     }
 
-    /**
-     * BookingDetail references a TableAvailability record.
-     */
     public function tableAvailability()
     {
         return $this->belongsTo(TableAvailability::class);

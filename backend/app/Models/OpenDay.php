@@ -9,6 +9,7 @@ class OpenDay extends Model
     public $incrementing = false;
     public $timestamps   = true;
     protected $primaryKey = 'date';
-    protected $keyType    = 'string';      // “YYYY-MM-DD”
-    protected $fillable   = ['date'];
+    protected $keyType    = 'string';
+
+    protected $fillable = ['date'];
 }

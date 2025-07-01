@@ -24,10 +24,13 @@ class RouteServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        parent::boot();
+
         RateLimiter::for('api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // default API routes stay where they are
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')
@@ -36,5 +39,16 @@ class RouteServiceProvider extends ServiceProvider
             Route::middleware('web')
                 ->group(base_path('routes/web.php'));
         });
+
+
+
+        Route::domain('{slug}.stellarprogress.es')
+            ->middleware(['web', 'tenant'])
+            ->group(base_path('routes/booking.php'));
+
+        Route::domain('admin.stellarprogress.es')
+            ->prefix('admin/{slug}')
+            ->middleware(['web', 'tenant'])
+            ->group(base_path('routes/admin.php'));
     }
 }

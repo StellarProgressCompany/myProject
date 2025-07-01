@@ -44,6 +44,7 @@ class BookingSeeder extends Seeder
                 $count     = $maxToBook > 0 ? rand(0, $maxToBook) : 0;
 
                 for ($i = 0; $i < $count; $i++) {
+// inside the foreach where Booking::create([ … ]) is called:
                     Booking::create([
                         'table_availability_id' => $stock->id,
                         'total_adults'          => min($stock->capacity, rand(1, $stock->capacity)),
@@ -57,6 +58,7 @@ class BookingSeeder extends Seeder
                         'marketing_opt_in'      => $faker->boolean(30),
                         'long_stay'             => $faker->boolean(10),
                     ]);
+
                 }
             }
         });
